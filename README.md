@@ -1,5 +1,7 @@
 # Shopizer
 
+![Shopizer](image-4.png)
+
 Shopizer is enterprise open source e-commerce software for retailers who want flexibility, speed and control of their commerce platform. Shopizer is a software solution that gives organizations the ultimate flexibility to take an experience-first approach to commerce, with simple powerful APIs and built in stores models.
 
 **Key technical benefits**
