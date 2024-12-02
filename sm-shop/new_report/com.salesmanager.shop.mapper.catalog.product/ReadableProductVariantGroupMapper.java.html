@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReadableProductVariantGroupMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.mapper.catalog.product</a> &gt; <span class="el_source">ReadableProductVariantGroupMapper.java</span></div><h1>ReadableProductVariantGroupMapper.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.mapper.catalog.product;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import javax.inject.Inject;
+
+import org.jsoup.helper.Validate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Component;
+
+import com.salesmanager.core.model.catalog.product.variant.ProductVariantImage;
+import com.salesmanager.core.model.catalog.product.variant.ProductVariant;
+import com.salesmanager.core.model.catalog.product.variant.ProductVariantGroup;
+import com.salesmanager.core.model.content.FileContentType;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.mapper.Mapper;
+import com.salesmanager.shop.model.catalog.product.ReadableImage;
+import com.salesmanager.shop.model.catalog.product.product.variant.ReadableProductVariant;
+import com.salesmanager.shop.model.catalog.product.product.variantGroup.ReadableProductVariantGroup;
+import com.salesmanager.shop.utils.ImageFilePath;
+
+@Component
+<span class="fc" id="L30">public class ReadableProductVariantGroupMapper implements Mapper&lt;ProductVariantGroup, ReadableProductVariantGroup&gt; {</span>
+
+	
+	@Autowired
+	private ReadableProductVariantMapper readableProductVariantMapper;
+	
+	@Inject
+	@Qualifier(&quot;img&quot;)
+	private ImageFilePath imageUtils;
+	
+	@Override
+	public ReadableProductVariantGroup convert(ProductVariantGroup source, MerchantStore store, Language language) {
+<span class="nc" id="L42">		Validate.notNull(source, &quot;productVariantGroup cannot be null&quot;);</span>
+<span class="nc" id="L43">		Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);</span>
+<span class="nc" id="L44">		Validate.notNull(language, &quot;Language cannot be null&quot;);</span>
+<span class="nc" id="L45">		return this.merge(source, new ReadableProductVariantGroup(), store, language);</span>
+	}
+
+	@Override
+	public ReadableProductVariantGroup merge(ProductVariantGroup source, ReadableProductVariantGroup destination,
+			MerchantStore store, Language language) {
+<span class="nc" id="L51">		Validate.notNull(source, &quot;productVariantGroup cannot be null&quot;);</span>
+<span class="nc" id="L52">		Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);</span>
+<span class="nc" id="L53">		Validate.notNull(language, &quot;Language cannot be null&quot;);</span>
+<span class="nc bnc" id="L54" title="All 2 branches missed.">		if(destination == null) {</span>
+<span class="nc" id="L55">			destination = new ReadableProductVariantGroup();</span>
+		}
+		
+<span class="nc" id="L58">		destination.setId(source.getId());</span>
+		
+<span class="nc" id="L60">		Set&lt;ProductVariant&gt; instances = source.getProductVariants();</span>
+<span class="nc" id="L61">		destination.setproductVariants(instances.stream().map(i -&gt; this.instance(i, store, language)).collect(Collectors.toList()));</span>
+		
+		//image id should be unique in the list
+		
+<span class="nc" id="L65">		Map&lt;Long,ReadableImage&gt; finalList = new HashMap&lt;Long, ReadableImage&gt;();</span>
+		
+<span class="nc" id="L67">		List&lt;ReadableImage&gt; originalList = source.getImages().stream()</span>
+<span class="nc" id="L68">				.map(i -&gt; this.image(finalList, i, store, language))</span>
+<span class="nc" id="L69">				.collect(Collectors.toList());</span>
+		
+
+<span class="nc" id="L72">		destination.setImages(new ArrayList&lt;ReadableImage&gt;(finalList.values()));</span>
+		
+<span class="nc" id="L74">		return destination;</span>
+	}
+	
+	private ReadableProductVariant instance(ProductVariant instance, MerchantStore store, Language language) {
+		
+<span class="nc" id="L79">		return readableProductVariantMapper.convert(instance, store, language);</span>
+	}
+	
+	private ReadableImage image(Map&lt;Long,ReadableImage&gt; finalList , ProductVariantImage img, MerchantStore store, Language language) {
+<span class="nc" id="L83">		ReadableImage readable = null;</span>
+<span class="nc bnc" id="L84" title="All 2 branches missed.">		if(!finalList.containsKey(img.getId())) {</span>
+<span class="nc" id="L85">			readable = new ReadableImage();</span>
+<span class="nc" id="L86">			readable.setId(img.getId());</span>
+<span class="nc" id="L87">			readable.setImageName(img.getProductImage());</span>
+<span class="nc" id="L88">			readable.setImageUrl(imageUtils.buildCustomTypeImageUtils(store, img.getProductImage(), FileContentType.VARIANT));</span>
+<span class="nc" id="L89">			readable.setDefaultImage(img.isDefaultImage());</span>
+<span class="nc" id="L90">			finalList.put(img.getId(), readable);</span>
+			
+		}
+<span class="nc" id="L93">		return readable;</span>
+
+	}
+
+}
+
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

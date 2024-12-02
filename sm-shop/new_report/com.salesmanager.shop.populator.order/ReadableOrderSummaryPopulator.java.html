@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReadableOrderSummaryPopulator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.populator.order</a> &gt; <span class="el_source">ReadableOrderSummaryPopulator.java</span></div><h1>ReadableOrderSummaryPopulator.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.populator.order;
+
+import org.apache.commons.lang3.Validate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.util.CollectionUtils;
+
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.services.catalog.pricing.PricingService;
+import com.salesmanager.core.business.utils.AbstractDataPopulator;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.order.OrderTotal;
+import com.salesmanager.core.model.order.OrderTotalSummary;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.model.order.ReadableOrderTotalSummary;
+import com.salesmanager.shop.model.order.total.ReadableOrderTotal;
+import com.salesmanager.shop.utils.LabelUtils;
+
+<span class="nc" id="L19">public class ReadableOrderSummaryPopulator extends AbstractDataPopulator&lt;OrderTotalSummary, ReadableOrderTotalSummary&gt; {</span>
+
+<span class="nc" id="L21">	private static final Logger LOGGER = LoggerFactory</span>
+<span class="nc" id="L22">			.getLogger(ReadableOrderSummaryPopulator.class);</span>
+	
+	private PricingService pricingService;
+	
+	private LabelUtils messages;
+	
+
+
+	@Override
+	public ReadableOrderTotalSummary populate(OrderTotalSummary source, ReadableOrderTotalSummary target,
+			MerchantStore store, Language language) throws ConversionException {
+		
+<span class="nc" id="L34">		Validate.notNull(pricingService,&quot;PricingService must be set&quot;);</span>
+<span class="nc" id="L35">		Validate.notNull(messages,&quot;LabelUtils must be set&quot;);</span>
+		
+<span class="nc bnc" id="L37" title="All 2 branches missed.">		if(target==null) {</span>
+<span class="nc" id="L38">			target = new ReadableOrderTotalSummary();</span>
+		}
+		
+		try {
+		
+<span class="nc bnc" id="L43" title="All 2 branches missed.">			if(source.getSubTotal() != null) {</span>
+<span class="nc" id="L44">				target.setSubTotal(pricingService.getDisplayAmount(source.getSubTotal(), store));</span>
+			}
+<span class="nc bnc" id="L46" title="All 2 branches missed.">			if(source.getTaxTotal()!=null) {</span>
+<span class="nc" id="L47">				target.setTaxTotal(pricingService.getDisplayAmount(source.getTaxTotal(), store));</span>
+			}
+<span class="nc bnc" id="L49" title="All 2 branches missed.">			if(source.getTotal() != null) {</span>
+<span class="nc" id="L50">				target.setTotal(pricingService.getDisplayAmount(source.getTotal(), store));</span>
+			}
+			
+<span class="nc bnc" id="L53" title="All 2 branches missed.">			if(!CollectionUtils.isEmpty(source.getTotals())) {</span>
+<span class="nc" id="L54">				ReadableOrderTotalPopulator orderTotalPopulator = new ReadableOrderTotalPopulator();</span>
+<span class="nc" id="L55">				orderTotalPopulator.setMessages(messages);</span>
+<span class="nc" id="L56">				orderTotalPopulator.setPricingService(pricingService);</span>
+<span class="nc bnc" id="L57" title="All 2 branches missed.">				for(OrderTotal orderTotal : source.getTotals()) {</span>
+<span class="nc" id="L58">					ReadableOrderTotal t = new ReadableOrderTotal();</span>
+<span class="nc" id="L59">					orderTotalPopulator.populate(orderTotal, t, store, language);</span>
+<span class="nc" id="L60">					target.getTotals().add(t);</span>
+<span class="nc" id="L61">				}</span>
+			}
+			
+		
+<span class="nc" id="L65">		} catch(Exception e) {</span>
+<span class="nc" id="L66">			LOGGER.error(&quot;Error during amount formatting &quot; + e.getMessage());</span>
+<span class="nc" id="L67">			throw new ConversionException(e);</span>
+<span class="nc" id="L68">		}</span>
+		
+<span class="nc" id="L70">		return target;</span>
+		
+	}
+
+	@Override
+	protected ReadableOrderTotalSummary createTarget() {
+		// TODO Auto-generated method stub
+<span class="nc" id="L77">		return null;</span>
+	}
+	
+	
+	public PricingService getPricingService() {
+<span class="nc" id="L82">		return pricingService;</span>
+	}
+
+	public void setPricingService(PricingService pricingService) {
+<span class="nc" id="L86">		this.pricingService = pricingService;</span>
+<span class="nc" id="L87">	}</span>
+	
+	public LabelUtils getMessages() {
+<span class="nc" id="L90">		return messages;</span>
+	}
+
+	public void setMessages(LabelUtils messages) {
+<span class="nc" id="L94">		this.messages = messages;</span>
+<span class="nc" id="L95">	}</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

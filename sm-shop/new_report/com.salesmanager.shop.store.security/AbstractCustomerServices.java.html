@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AbstractCustomerServices.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.security</a> &gt; <span class="el_source">AbstractCustomerServices.java</span></div><h1>AbstractCustomerServices.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.security;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.customer.CustomerService;
+import com.salesmanager.core.business.services.user.GroupService;
+import com.salesmanager.core.business.services.user.PermissionService;
+import com.salesmanager.core.model.customer.Customer;
+import com.salesmanager.core.model.user.Group;
+import com.salesmanager.core.model.user.Permission;
+import com.salesmanager.shop.admin.security.SecurityDataAccessException;
+import com.salesmanager.shop.constants.Constants;
+
+public abstract class AbstractCustomerServices implements UserDetailsService{
+	
+<span class="fc" id="L29">	private static final Logger LOGGER = LoggerFactory.getLogger(AbstractCustomerServices.class);</span>
+	
+	protected CustomerService customerService;
+	protected PermissionService  permissionService;
+	protected GroupService   groupService;
+	
+	public final static String ROLE_PREFIX = &quot;ROLE_&quot;;//Spring Security 4
+	
+	public AbstractCustomerServices(
+			CustomerService customerService, 
+			PermissionService permissionService, 
+<span class="fc" id="L40">			GroupService groupService) {</span>
+		
+<span class="fc" id="L42">		this.customerService = customerService;</span>
+<span class="fc" id="L43">		this.permissionService = permissionService;</span>
+<span class="fc" id="L44">		this.groupService = groupService;</span>
+<span class="fc" id="L45">	}</span>
+	
+	protected abstract UserDetails userDetails(String userName, Customer customer, Collection&lt;GrantedAuthority&gt; authorities);
+	
+
+	public UserDetails loadUserByUsername(String userName)
+			throws UsernameNotFoundException, DataAccessException {
+<span class="fc" id="L52">		Customer user = null;</span>
+<span class="fc" id="L53">		Collection&lt;GrantedAuthority&gt; authorities = new ArrayList&lt;GrantedAuthority&gt;();</span>
+
+		try {
+			
+<span class="fc" id="L57">				LOGGER.debug(&quot;Loading user by user id: {}&quot;, userName);</span>
+
+<span class="fc" id="L59">				user = customerService.getByNick(userName);</span>
+			
+<span class="pc bpc" id="L61" title="1 of 2 branches missed.">				if(user==null) {</span>
+					//return null;
+<span class="nc" id="L63">					throw new UsernameNotFoundException(&quot;User &quot; + userName + &quot; not found&quot;);</span>
+				}
+	
+	
+
+<span class="fc" id="L68">			GrantedAuthority role = new SimpleGrantedAuthority(ROLE_PREFIX + Constants.PERMISSION_CUSTOMER_AUTHENTICATED);//required to login</span>
+<span class="fc" id="L69">			authorities.add(role); </span>
+			
+<span class="fc" id="L71">			List&lt;Integer&gt; groupsId = new ArrayList&lt;Integer&gt;();</span>
+<span class="fc" id="L72">			List&lt;Group&gt; groups = user.getGroups();</span>
+<span class="fc bfc" id="L73" title="All 2 branches covered.">			for(Group group : groups) {</span>
+<span class="fc" id="L74">				groupsId.add(group.getId());</span>
+<span class="fc" id="L75">			}</span>
+			
+	
+<span class="pc bpc" id="L78" title="1 of 2 branches missed.">			if(CollectionUtils.isNotEmpty(groupsId)) {</span>
+<span class="fc" id="L79">		    	List&lt;Permission&gt; permissions = permissionService.getPermissions(groupsId);</span>
+<span class="fc bfc" id="L80" title="All 2 branches covered.">		    	for(Permission permission : permissions) {</span>
+<span class="fc" id="L81">		    		GrantedAuthority auth = new SimpleGrantedAuthority(permission.getPermissionName());</span>
+<span class="fc" id="L82">		    		authorities.add(auth);</span>
+<span class="fc" id="L83">		    	}</span>
+			}
+			
+
+<span class="nc" id="L87">		} catch (ServiceException e) {</span>
+<span class="nc" id="L88">			LOGGER.error(&quot;Exception while querrying customer&quot;,e);</span>
+<span class="nc" id="L89">			throw new SecurityDataAccessException(&quot;Cannot authenticate customer&quot;,e);</span>
+<span class="fc" id="L90">		}</span>
+
+<span class="fc" id="L92">		return userDetails(userName, user, authorities);</span>
+		
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

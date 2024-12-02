@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ImagesController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.controller</a> &gt; <span class="el_source">ImagesController.java</span></div><h1>ImagesController.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.controller;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+
+import javax.annotation.PostConstruct;
+import javax.inject.Inject;
+import javax.servlet.http.HttpServletRequest;
+
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Controller;
+import org.springframework.util.ResourceUtils;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.catalog.product.image.ProductImageService;
+import com.salesmanager.core.business.services.content.ContentService;
+import com.salesmanager.core.model.catalog.product.file.ProductImageSize;
+import com.salesmanager.core.model.content.FileContentType;
+import com.salesmanager.core.model.content.OutputContentFile;
+
+/**
+ * When handling images and files from the application server
+ * @author c.samson
+ *
+ */
+@Controller
+<span class="fc" id="L33">public class ImagesController {</span>
+	
+<span class="fc" id="L35">	private static final Logger LOGGER = LoggerFactory.getLogger(ImagesController.class);</span>
+	
+
+	
+	@Inject
+	private ContentService contentService;
+	
+	@Inject
+	private ProductImageService productImageService;
+	
+<span class="fc" id="L45">	private byte[] tempImage = null;</span>
+	
+	@PostConstruct
+	public void init() {
+		try {
+<span class="fc" id="L50">			File file = ResourceUtils.getFile(&quot;classpath:static/not-found.png&quot;);</span>
+<span class="pc bpc" id="L51" title="1 of 2 branches missed.">			if(file != null) {</span>
+<span class="fc" id="L52">				byte[] bFile = Files.readAllBytes(file.toPath());</span>
+<span class="fc" id="L53">				this.tempImage = bFile;</span>
+			}
+
+			
+<span class="nc" id="L57">		} catch (Exception e) {</span>
+<span class="nc" id="L58">			LOGGER.error(&quot;Can't load temporary default image&quot;, e);</span>
+<span class="fc" id="L59">		}</span>
+<span class="fc" id="L60">	}</span>
+	
+	/**
+	 * Logo, content image
+	 * @param storeId
+	 * @param imageType (LOGO, CONTENT, IMAGE)
+	 * @param imageName
+	 * @return
+	 * @throws IOException
+	 * @throws ServiceException 
+	 */
+	@RequestMapping(&quot;/static/files/{storeCode}/{imageType}/{imageName}.{extension}&quot;)
+	public @ResponseBody byte[] printImage(@PathVariable final String storeCode, @PathVariable final String imageType, @PathVariable final String imageName, @PathVariable final String extension) throws IOException, ServiceException {
+
+		// example -&gt; /static/files/DEFAULT/CONTENT/myImage.png
+		
+<span class="nc" id="L76">		FileContentType imgType = null;</span>
+		
+<span class="nc bnc" id="L78" title="All 2 branches missed.">		if(FileContentType.LOGO.name().equals(imageType)) {</span>
+<span class="nc" id="L79">			imgType = FileContentType.LOGO;</span>
+		}
+		
+<span class="nc bnc" id="L82" title="All 2 branches missed.">		if(FileContentType.IMAGE.name().equals(imageType)) {</span>
+<span class="nc" id="L83">			imgType = FileContentType.IMAGE;</span>
+		}
+		
+<span class="nc bnc" id="L86" title="All 2 branches missed.">		if(FileContentType.PROPERTY.name().equals(imageType)) {</span>
+<span class="nc" id="L87">			imgType = FileContentType.PROPERTY;</span>
+		}
+		
+<span class="nc" id="L90">		OutputContentFile image =contentService.getContentFile(storeCode, imgType, new StringBuilder().append(imageName).append(&quot;.&quot;).append(extension).toString());</span>
+		
+		
+<span class="nc bnc" id="L93" title="All 2 branches missed.">		if(image!=null) {</span>
+<span class="nc" id="L94">			return image.getFile().toByteArray();</span>
+		} else {
+<span class="nc" id="L96">			return tempImage;</span>
+		}
+
+	}
+	
+
+	/**
+	 * For product images
+	 * @Deprecated
+	 * @param storeCode
+	 * @param productCode
+	 * @param imageType
+	 * @param imageName
+	 * @param extension
+	 * @return
+	 * @throws IOException
+	 */
+	@RequestMapping(&quot;/static/{storeCode}/{imageType}/{productCode}/{imageName}.{extension}&quot;)
+	public @ResponseBody byte[] printImage(@PathVariable final String storeCode, @PathVariable final String productCode, @PathVariable final String imageType, @PathVariable final String imageName, @PathVariable final String extension) throws IOException {
+
+		// product image
+		// example small product image -&gt; /static/DEFAULT/products/TB12345/product1.jpg
+		
+		// example large product image -&gt; /static/DEFAULT/products/TB12345/product1.jpg
+
+		
+		/**
+		 * List of possible imageType
+		 * 
+		 */
+		
+
+<span class="nc" id="L128">		ProductImageSize size = ProductImageSize.SMALL;</span>
+		
+<span class="nc bnc" id="L130" title="All 2 branches missed.">		if(imageType.equals(FileContentType.PRODUCTLG.name())) {</span>
+<span class="nc" id="L131">			size = ProductImageSize.LARGE;</span>
+		} 
+		
+
+		
+<span class="nc" id="L136">		OutputContentFile image = null;</span>
+		try {
+<span class="nc" id="L138">			image = productImageService.getProductImage(storeCode, productCode, new StringBuilder().append(imageName).append(&quot;.&quot;).append(extension).toString(), size);</span>
+<span class="nc" id="L139">		} catch (ServiceException e) {</span>
+<span class="nc" id="L140">			LOGGER.error(&quot;Cannot retrieve image &quot; + imageName, e);</span>
+<span class="nc" id="L141">		}</span>
+<span class="nc bnc" id="L142" title="All 2 branches missed.">		if(image!=null) {</span>
+<span class="nc" id="L143">			return image.getFile().toByteArray();</span>
+		} else {
+			//empty image placeholder
+<span class="nc" id="L146">			return tempImage;</span>
+		}
+
+	}
+	
+	/**
+	 * Exclusive method for dealing with product images
+	 * @param storeCode
+	 * @param productCode
+	 * @param imageName
+	 * @param extension
+	 * @param request
+	 * @return
+	 * @throws IOException
+	 */
+	@RequestMapping(value=&quot;/static/products/{storeCode}/{productCode}/{imageSize}/{imageName}.{extension}&quot;,
+			produces = {&quot;image/gif&quot;, &quot;image/jpg&quot;, &quot;image/png&quot;, &quot;application/octet-stream&quot;})
+	public @ResponseBody byte[] printImage(@PathVariable final String storeCode, @PathVariable final String productCode, @PathVariable final String imageSize, @PathVariable final String imageName, @PathVariable final String extension, HttpServletRequest request) throws IOException {
+
+		// product image small
+		// example small product image -&gt; /static/products/DEFAULT/TB12345/SMALL/product1.jpg
+		
+		// example large product image -&gt; /static/products/DEFAULT/TB12345/LARGE/product1.jpg
+
+
+		/**
+		 * List of possible imageType
+		 * 
+		 */
+		
+		
+<span class="nc" id="L177">		ProductImageSize size = ProductImageSize.SMALL;</span>
+		
+<span class="nc bnc" id="L179" title="All 2 branches missed.">		if(FileContentType.PRODUCTLG.name().equals(imageSize)) {</span>
+<span class="nc" id="L180">			size = ProductImageSize.LARGE;</span>
+		} 
+		
+	
+
+		
+<span class="nc" id="L186">		OutputContentFile image = null;</span>
+		try {
+<span class="nc" id="L188">			image = productImageService.getProductImage(storeCode, productCode, new StringBuilder().append(imageName).append(&quot;.&quot;).append(extension).toString(), size);</span>
+<span class="nc" id="L189">		} catch (ServiceException e) {</span>
+<span class="nc" id="L190">			LOGGER.error(&quot;Cannot retrieve image &quot; + imageName, e);</span>
+<span class="nc" id="L191">		}</span>
+<span class="nc bnc" id="L192" title="All 2 branches missed.">		if(image!=null) {</span>
+<span class="nc" id="L193">			return image.getFile().toByteArray();</span>
+		} else {
+			//empty image placeholder
+<span class="nc" id="L196">			return tempImage;</span>
+		}
+
+	}
+	
+	/**
+	 * Exclusive method for dealing with product images
+	 * @param storeCode
+	 * @param productCode
+	 * @param imageName
+	 * @param extension
+	 * @param request
+	 * @return
+	 * @throws IOException
+	 */
+	@RequestMapping(value=&quot;/static/products/{storeCode}/{productCode}/{imageName}.{extension}&quot;,
+	produces = {&quot;image/gif&quot;, &quot;image/jpg&quot;, &quot;image/png&quot;, &quot;application/octet-stream&quot;})
+	public @ResponseBody byte[] printImage(@PathVariable final String storeCode, @PathVariable final String productCode, @PathVariable final String imageName, @PathVariable final String extension, HttpServletRequest request) throws IOException {
+
+		// product image
+		// example small product image -&gt; /static/products/DEFAULT/TB12345/product1.jpg?size=small
+		
+		// example large product image -&gt; /static/products/DEFAULT/TB12345/product1.jpg
+		// or
+		//example large product image -&gt; /static/products/DEFAULT/TB12345/product1.jpg?size=large
+		
+
+		/**
+		 * List of possible imageType
+		 * 
+		 */
+		
+
+<span class="nc" id="L229">		ProductImageSize size = ProductImageSize.LARGE;</span>
+		
+				
+<span class="nc bnc" id="L232" title="All 2 branches missed.">		if(StringUtils.isNotBlank(request.getParameter(&quot;size&quot;))) {</span>
+<span class="nc" id="L233">			String requestSize = request.getParameter(&quot;size&quot;);</span>
+<span class="nc bnc" id="L234" title="All 2 branches missed.">			if(requestSize.equals(ProductImageSize.SMALL.name())) {</span>
+<span class="nc" id="L235">				size = ProductImageSize.SMALL;</span>
+			} 
+		}
+		
+
+		
+<span class="nc" id="L241">		OutputContentFile image = null;</span>
+		try {
+<span class="nc" id="L243">			image = productImageService.getProductImage(storeCode, productCode, new StringBuilder().append(imageName).append(&quot;.&quot;).append(extension).toString(), size);</span>
+<span class="nc" id="L244">		} catch (ServiceException e) {</span>
+<span class="nc" id="L245">			LOGGER.error(&quot;Cannot retrieve image &quot; + imageName, e);</span>
+<span class="nc" id="L246">		}</span>
+<span class="nc bnc" id="L247" title="All 2 branches missed.">		if(image!=null) {</span>
+<span class="nc" id="L248">			return image.getFile().toByteArray();</span>
+		} else {
+			//empty image placeholder
+<span class="nc" id="L251">			return tempImage;</span>
+		}
+
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

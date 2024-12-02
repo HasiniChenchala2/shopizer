@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuthenticationTokenFilter.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.security</a> &gt; <span class="el_source">AuthenticationTokenFilter.java</span></div><h1>AuthenticationTokenFilter.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.security;
+
+import java.io.IOException;
+import java.util.Enumeration;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import javax.inject.Inject;
+import javax.servlet.FilterChain;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import com.salesmanager.core.model.common.UserContext;
+import com.salesmanager.shop.store.security.common.CustomAuthenticationManager;
+import com.salesmanager.shop.utils.GeoLocationUtils;
+
+
+<span class="fc" id="L24">public class AuthenticationTokenFilter extends OncePerRequestFilter {</span>
+
+
+<span class="fc" id="L27">	private static final Logger LOGGER = LoggerFactory.getLogger(AuthenticationTokenFilter.class);</span>
+
+    
+    @Value(&quot;${authToken.header}&quot;)
+    private String tokenHeader;
+    
+    private final static String BEARER_TOKEN =&quot;Bearer &quot;;
+    
+    private final static String FACEBOOK_TOKEN =&quot;FB &quot;;
+    
+    //private final static String privateApiPatternString = &quot;/api/v*/private&quot;;
+    
+    //private final static Pattern pattern = Pattern.compile(privateApiPatternString);
+    
+
+    
+    @Inject
+    private CustomAuthenticationManager jwtCustomCustomerAuthenticationManager;
+    
+    @Inject
+    private CustomAuthenticationManager jwtCustomAdminAuthenticationManager;
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws ServletException, IOException {
+        
+
+<span class="fc" id="L53">    	String origin = &quot;*&quot;;</span>
+<span class="pc bpc" id="L54" title="1 of 2 branches missed.">    	if(!StringUtils.isBlank(request.getHeader(&quot;origin&quot;))) {</span>
+<span class="nc" id="L55">    		origin = request.getHeader(&quot;origin&quot;);</span>
+    	}
+    	//in flight
+<span class="fc" id="L58">    	response.setHeader(&quot;Access-Control-Allow-Methods&quot;, &quot;POST, GET, PUT, OPTIONS, DELETE, PATCH&quot;);</span>
+<span class="fc" id="L59">    	response.setHeader(&quot;Access-Control-Allow-Origin&quot;, origin);</span>
+<span class="fc" id="L60">    	response.setHeader(&quot;Access-Control-Allow-Headers&quot;, &quot;X-Auth-Token, Content-Type, Authorization, Cache-Control, X-Requested-With&quot;);</span>
+<span class="fc" id="L61">    	response.setHeader(&quot;Access-Control-Allow-Credentials&quot;, &quot;true&quot;);</span>
+
+    	try {
+    		
+<span class="fc" id="L65">    		String ipAddress = GeoLocationUtils.getClientIpAddress(request);</span>
+    		
+<span class="fc" id="L67">    		UserContext userContext = UserContext.create();</span>
+<span class="fc" id="L68">    		userContext.setIpAddress(ipAddress);</span>
+    		
+<span class="nc" id="L70">    	} catch(Exception s) {</span>
+<span class="nc" id="L71">    		LOGGER.error(&quot;Error while getting ip address &quot;, s);</span>
+<span class="fc" id="L72">    	}</span>
+    	
+<span class="fc" id="L74">    	String requestUrl = request.getRequestURL().toString();</span>
+
+
+<span class="pc bpc" id="L77" title="1 of 2 branches missed.">    	if(requestUrl.contains(&quot;/api/v1/auth&quot;)) {</span>
+    		//setHeader(request,response);   	
+<span class="nc" id="L79">	    	final String requestHeader = request.getHeader(this.tokenHeader);//token</span>
+	    	
+	    	try {
+<span class="nc bnc" id="L82" title="All 4 branches missed.">		        if (requestHeader != null &amp;&amp; requestHeader.startsWith(BEARER_TOKEN)) {//Bearer</span>
+		        	
+<span class="nc" id="L84">		        	jwtCustomCustomerAuthenticationManager.authenticateRequest(request, response);</span>
+	
+<span class="nc bnc" id="L86" title="All 4 branches missed.">		        } else if(requestHeader != null &amp;&amp; requestHeader.startsWith(FACEBOOK_TOKEN)) {</span>
+		        	//Facebook
+		        	//facebookCustomerAuthenticationManager.authenticateRequest(request, response);
+		        } else {
+<span class="nc" id="L90">		        	LOGGER.warn(&quot;couldn't find any authorization token, will ignore the header&quot;);</span>
+		        }
+	        
+<span class="nc" id="L93">	    	} catch(Exception e) {</span>
+<span class="nc" id="L94">	    		throw new ServletException(e);</span>
+<span class="nc" id="L95">	    	}</span>
+    	}
+ 
+    	
+<span class="fc bfc" id="L99" title="All 4 branches covered.">    	if(requestUrl.contains(&quot;/api/v1/private&quot;) || requestUrl.contains(&quot;/api/v2/private&quot;)) {</span>
+    		
+    		//setHeader(request,response);  
+    		
+<span class="fc" id="L103">    		Enumeration&lt;String&gt; headers = request.getHeaderNames();</span>
+    		//while(headers.hasMoreElements()) {
+    			//LOGGER.debug(headers.nextElement());
+    		//}
+
+<span class="fc" id="L108">	    	final String requestHeader = request.getHeader(this.tokenHeader);//token</span>
+	    	
+	    	try {
+<span class="pc bpc" id="L111" title="1 of 4 branches missed.">		        if (requestHeader != null &amp;&amp; requestHeader.startsWith(BEARER_TOKEN)) {//Bearer</span>
+		        	
+<span class="fc" id="L113">		        	jwtCustomAdminAuthenticationManager.authenticateRequest(request, response);</span>
+	
+		        } else {
+<span class="fc" id="L116">		        	LOGGER.warn(&quot;couldn't find any authorization token, will ignore the header, might be a preflight check&quot;);</span>
+		        }
+	        
+<span class="nc" id="L119">	    	} catch(Exception e) {</span>
+<span class="nc" id="L120">	    		throw new ServletException(e);</span>
+<span class="fc" id="L121">	    	}</span>
+    	}
+
+<span class="fc" id="L124">        chain.doFilter(request, response);</span>
+<span class="fc" id="L125">        postFilter(request, response, chain);</span>
+<span class="fc" id="L126">    }</span>
+    
+    
+    private void postFilter(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws ServletException, IOException {
+    	
+    	try {
+    		
+<span class="fc" id="L133">    		UserContext userContext = UserContext.getCurrentInstance();</span>
+<span class="pc bpc" id="L134" title="1 of 2 branches missed.">    		if(userContext!=null) {</span>
+<span class="fc" id="L135">    			userContext.close();</span>
+    		}
+    		
+<span class="nc" id="L138">    	} catch(Exception s) {</span>
+<span class="nc" id="L139">    		LOGGER.error(&quot;Error while getting ip address &quot;, s);</span>
+<span class="fc" id="L140">    	}</span>
+    	
+<span class="fc" id="L142">    }</span>
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

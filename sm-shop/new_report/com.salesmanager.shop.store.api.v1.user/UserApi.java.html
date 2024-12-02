@@ -1,0 +1,285 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserApi.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.api.v1.user</a> &gt; <span class="el_source">UserApi.java</span></div><h1>UserApi.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.api.v1.user;
+
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
+
+import java.security.Principal;
+import java.util.Arrays;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import javax.inject.Inject;
+import javax.servlet.http.HttpServletRequest;
+import javax.validation.Valid;
+
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.core.model.user.UserCriteria;
+import com.salesmanager.shop.constants.Constants;
+import com.salesmanager.shop.model.entity.EntityExists;
+import com.salesmanager.shop.model.entity.UniqueEntity;
+import com.salesmanager.shop.model.user.PersistableUser;
+import com.salesmanager.shop.model.user.ReadableUser;
+import com.salesmanager.shop.model.user.ReadableUserList;
+import com.salesmanager.shop.model.user.UserPassword;
+import com.salesmanager.shop.store.api.exception.ResourceNotFoundException;
+import com.salesmanager.shop.store.api.exception.UnauthorizedException;
+import com.salesmanager.shop.store.controller.user.facade.UserFacade;
+
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiImplicitParams;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
+import io.swagger.annotations.SwaggerDefinition;
+import io.swagger.annotations.Tag;
+import springfox.documentation.annotations.ApiIgnore;
+
+/** Api for managing admin users */
+@RestController
+@RequestMapping(value = &quot;/api/v1&quot;)
+@Api(tags = { &quot;User management resource (User Management Api)&quot; })
+@SwaggerDefinition(tags = { @Tag(name = &quot;User management resource&quot;, description = &quot;Manage administration users&quot;) })
+<span class="fc" id="L61">public class UserApi {</span>
+
+<span class="fc" id="L63">	private static final Logger LOGGER = LoggerFactory.getLogger(UserApi.class);</span>
+
+
+	@Inject
+	private UserFacade userFacade;
+
+	/**
+	 * Get userName by merchant code and userName
+	 *
+	 * @param storeCode
+	 * @param name
+	 * @param request
+	 * @return
+	 */
+	@ResponseStatus(HttpStatus.OK)
+	@GetMapping({ &quot;/private/users/{id}&quot; })
+	@ApiOperation(httpMethod = &quot;GET&quot;, value = &quot;Get a specific user profile by user id&quot;, notes = &quot;&quot;, produces = MediaType.APPLICATION_JSON_VALUE, response = ReadableUser.class)
+	@ApiResponses(value = {
+			@ApiResponse(code = 200, message = &quot;Success&quot;, responseContainer = &quot;User&quot;, response = ReadableUser.class),
+			@ApiResponse(code = 400, message = &quot;Error while getting User&quot;),
+			@ApiResponse(code = 401, message = &quot;Login required&quot;) })
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;string&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;string&quot;, defaultValue = &quot;en&quot;) })
+	public ReadableUser get(@ApiIgnore MerchantStore merchantStore, @ApiIgnore Language language, @PathVariable Long id,
+			HttpServletRequest request) {
+
+<span class="fc" id="L89">		String authenticatedUser = userFacade.authenticatedUser();</span>
+<span class="pc bpc" id="L90" title="1 of 2 branches missed.">		if (authenticatedUser == null) {</span>
+<span class="nc" id="L91">			throw new UnauthorizedException();</span>
+		}
+		// only admin and superadmin allowed
+<span class="fc" id="L94">		userFacade.authorizedGroup(authenticatedUser, Stream.of(Constants.GROUP_SUPERADMIN, Constants.GROUP_ADMIN, Constants.GROUP_ADMIN_RETAIL).collect(Collectors.toList()));</span>
+
+<span class="fc" id="L96">		return userFacade.findById(id, merchantStore, language);</span>
+	}
+
+	/**
+	 * Creates a new user
+	 *
+	 * @param store
+	 * @param user
+	 * @return
+	 */
+	@ResponseStatus(HttpStatus.OK)
+	@PostMapping(value = { &quot;/private/user/&quot; }, produces = MediaType.APPLICATION_JSON_VALUE)
+	@ApiOperation(httpMethod = &quot;POST&quot;, value = &quot;Creates a new user&quot;, notes = &quot;&quot;, response = ReadableUser.class)
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	public ReadableUser create(
+			@ApiIgnore MerchantStore merchantStore, 
+			@ApiIgnore Language language,
+			@Valid @RequestBody PersistableUser user, HttpServletRequest request) {
+		/** Must be superadmin or admin */
+<span class="fc" id="L116">		String authenticatedUser = userFacade.authenticatedUser();</span>
+<span class="pc bpc" id="L117" title="1 of 2 branches missed.">		if (authenticatedUser == null) {</span>
+<span class="nc" id="L118">			throw new UnauthorizedException();</span>
+		}
+		// only admin and superadmin allowed
+<span class="fc" id="L121">		userFacade.authorizedGroup(authenticatedUser, Stream.of(Constants.GROUP_SUPERADMIN, Constants.GROUP_ADMIN, Constants.GROUP_ADMIN_RETAIL).collect(Collectors.toList()));</span>
+
+		/** if user is admin, user must be in that store */
+<span class="pc bpc" id="L124" title="1 of 2 branches missed.">		if (!userFacade.userInRoles(authenticatedUser, Arrays.asList(Constants.GROUP_SUPERADMIN))) {</span>
+<span class="nc bnc" id="L125" title="All 2 branches missed.">			if (!userFacade.authorizedStore(authenticatedUser, merchantStore.getCode())) {</span>
+<span class="nc" id="L126">				throw new UnauthorizedException(&quot;Operation unauthorized for user [&quot; + authenticatedUser</span>
+<span class="nc" id="L127">						+ &quot;] and store [&quot; + merchantStore.getCode() + &quot;]&quot;);</span>
+			}
+		}
+
+<span class="fc" id="L131">		return userFacade.create(user, merchantStore);</span>
+	}
+
+	@ResponseStatus(HttpStatus.OK)
+	@PutMapping(value = { &quot;/private/user/{id}&quot; }, produces = MediaType.APPLICATION_JSON_VALUE)
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	@ApiOperation(httpMethod = &quot;PUT&quot;, value = &quot;Updates a user&quot;, notes = &quot;&quot;, response = ReadableUser.class)
+	public ReadableUser update(@Valid @RequestBody PersistableUser user, @PathVariable Long id,
+			@ApiIgnore MerchantStore merchantStore, @ApiIgnore Language language
+
+	) {
+
+<span class="nc" id="L144">		String authenticatedUser = userFacade.authenticatedUser();// requires</span>
+																	// user
+																	// doing
+																	// action
+
+<span class="nc" id="L149">		userFacade.authorizedGroups(authenticatedUser, user);</span>
+
+<span class="nc" id="L151">		return userFacade.update(id, authenticatedUser, merchantStore, user);</span>
+	}
+
+	@ResponseStatus(HttpStatus.OK)
+	@PatchMapping(value = { &quot;/private/user/{id}/password&quot; }, produces = MediaType.APPLICATION_JSON_VALUE)
+	@ApiOperation(httpMethod = &quot;PATCH&quot;, value = &quot;Updates a user password&quot;, notes = &quot;&quot;, response = Void.class)
+	public void password(@Valid @RequestBody UserPassword password, @PathVariable Long id) {
+
+<span class="fc" id="L159">		String authenticatedUser = userFacade.authenticatedUser();</span>
+<span class="pc bpc" id="L160" title="1 of 2 branches missed.">		if (authenticatedUser == null) {</span>
+<span class="nc" id="L161">			throw new UnauthorizedException();</span>
+		}
+<span class="fc" id="L163">		userFacade.changePassword(id, authenticatedUser, password);</span>
+<span class="fc" id="L164">	}</span>
+
+	@ResponseStatus(HttpStatus.OK)
+	@GetMapping(value = { &quot;/private/users&quot; }, produces = MediaType.APPLICATION_JSON_VALUE)
+	@ApiOperation(httpMethod = &quot;GET&quot;, value = &quot;Get list of user&quot;, notes = &quot;&quot;, response = ReadableUserList.class)
+	@ApiImplicitParams({ 
+		@ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+		@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	public ReadableUserList list(
+			@ApiIgnore MerchantStore merchantStore, 
+			@ApiIgnore Language language,
+			@RequestParam(value = &quot;page&quot;, required = false, defaultValue = &quot;0&quot;) Integer page,
+			@RequestParam(value = &quot;count&quot;, required = false, defaultValue = &quot;20&quot;) Integer count,
+			@RequestParam(value = &quot;emailAddress&quot;, required = false) String emailAddress) {
+
+<span class="nc" id="L179">		String authenticatedUser = userFacade.authenticatedUser();</span>
+<span class="nc bnc" id="L180" title="All 2 branches missed.">		if (authenticatedUser == null) {</span>
+<span class="nc" id="L181">			throw new UnauthorizedException();</span>
+		}
+
+<span class="nc" id="L184">		UserCriteria criteria = new UserCriteria();</span>
+<span class="nc bnc" id="L185" title="All 2 branches missed.">		if(!StringUtils.isBlank(emailAddress)) {</span>
+<span class="nc" id="L186">			criteria.setAdminEmail(emailAddress);</span>
+		}
+		
+<span class="nc" id="L189">		criteria.setStoreCode(merchantStore.getCode());</span>
+
+<span class="nc bnc" id="L191" title="All 2 branches missed.">		if (!userFacade.userInRoles(authenticatedUser, Arrays.asList(Constants.GROUP_SUPERADMIN))) {</span>
+<span class="nc bnc" id="L192" title="All 2 branches missed.">			if (!userFacade.authorizedStore(authenticatedUser, merchantStore.getCode())) {</span>
+<span class="nc" id="L193">				throw new UnauthorizedException(&quot;Operation unauthorized for user [&quot; + authenticatedUser</span>
+						+ &quot;] and store [&quot; + merchantStore + &quot;]&quot;);
+			}
+		}
+
+<span class="nc" id="L198">		userFacade.authorizedGroup(authenticatedUser, Stream.of(Constants.GROUP_SUPERADMIN, Constants.GROUP_ADMIN, Constants.GROUP_ADMIN_RETAIL).collect(Collectors.toList()));</span>
+<span class="nc" id="L199">		return userFacade.listByCriteria(criteria, page, count, language);</span>
+	}
+	
+	@PatchMapping(value = &quot;/private/user/{id}/enabled&quot;, produces = { APPLICATION_JSON_VALUE })
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;string&quot;, defaultValue = &quot;DEFAULT&quot;) })
+	public void updateEnabled(
+			@PathVariable Long id, 
+			@Valid @RequestBody PersistableUser user,
+			@ApiIgnore MerchantStore merchantStore
+			) {
+		
+		// superadmin, admin and retail_admin
+<span class="nc" id="L211">		String authenticatedUser = userFacade.authenticatedUser();</span>
+<span class="nc bnc" id="L212" title="All 2 branches missed.">		if (authenticatedUser == null) {</span>
+<span class="nc" id="L213">			throw new UnauthorizedException();</span>
+		}
+
+<span class="nc" id="L216">		userFacade.authorizedGroup(authenticatedUser, Stream.of(Constants.GROUP_SUPERADMIN, Constants.GROUP_ADMIN, Constants.GROUP_ADMIN_RETAIL).collect(Collectors.toList()));</span>
+
+<span class="nc" id="L218">		user.setId(id);</span>
+<span class="nc" id="L219">		userFacade.updateEnabled(merchantStore, user);</span>
+<span class="nc" id="L220">	}</span>
+
+	@ResponseStatus(HttpStatus.OK)
+	@DeleteMapping(value = { &quot;/private/user/{id}&quot; })
+	@ApiOperation(httpMethod = &quot;DELETE&quot;, value = &quot;Deletes a user&quot;, notes = &quot;&quot;, response = Void.class)
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;string&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;string&quot;, defaultValue = &quot;en&quot;) })
+	public void delete(@ApiIgnore MerchantStore merchantStore, @ApiIgnore Language language, @PathVariable Long id,
+			HttpServletRequest request) {
+
+		/** Must be superadmin or admin */
+<span class="nc" id="L231">		String authenticatedUser = userFacade.authenticatedUser();</span>
+<span class="nc bnc" id="L232" title="All 2 branches missed.">		if (authenticatedUser == null) {</span>
+<span class="nc" id="L233">			throw new UnauthorizedException();</span>
+		}
+
+<span class="nc bnc" id="L236" title="All 2 branches missed.">		if (!userFacade.userInRoles(authenticatedUser, Arrays.asList(Constants.GROUP_SUPERADMIN))) {</span>
+<span class="nc" id="L237">			userFacade.authorizedStore(authenticatedUser, merchantStore.getCode());</span>
+		}
+
+<span class="nc" id="L240">		userFacade.authorizedGroup(authenticatedUser, Stream.of(Constants.GROUP_SUPERADMIN, Constants.GROUP_ADMIN, Constants.GROUP_ADMIN_RETAIL).collect(Collectors.toList()));</span>
+
+<span class="nc" id="L242">		userFacade.delete(id, merchantStore.getCode());</span>
+<span class="nc" id="L243">	}</span>
+
+	@ResponseStatus(HttpStatus.OK)
+	@PostMapping(value = { &quot;/private/user/unique&quot; }, produces = MediaType.APPLICATION_JSON_VALUE)
+	@ApiOperation(httpMethod = &quot;POST&quot;, value = &quot;Check if username already exists&quot;, notes = &quot;&quot;, response = EntityExists.class)
+	public ResponseEntity&lt;EntityExists&gt; exists(@ApiIgnore MerchantStore merchantStore, @ApiIgnore Language language,
+			@RequestBody UniqueEntity userName) {
+
+<span class="nc" id="L251">		boolean isUserExist = true;// default user exist</span>
+		try {
+			// will throw an exception if not fount
+<span class="nc" id="L254">			userFacade.findByUserName(userName.getUnique(), userName.getMerchant(), language);</span>
+
+<span class="nc" id="L256">		} catch (ResourceNotFoundException e) {</span>
+<span class="nc" id="L257">			isUserExist = false;</span>
+<span class="nc" id="L258">		}</span>
+<span class="nc" id="L259">		return new ResponseEntity&lt;EntityExists&gt;(new EntityExists(isUserExist), HttpStatus.OK);</span>
+	}
+
+	/**
+	 * Get logged in customer profile
+	 * 
+	 * @param merchantStore
+	 * @param language
+	 * @param request
+	 * @return
+	 */
+	@GetMapping(&quot;/private/user/profile&quot;)
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;string&quot;, defaultValue = &quot;en&quot;) })
+	public ReadableUser getAuthUser(@ApiIgnore Language language, HttpServletRequest request) {
+<span class="nc" id="L273">		Principal principal = request.getUserPrincipal();</span>
+<span class="nc" id="L274">		String userName = principal.getName();</span>
+<span class="nc" id="L275">		ReadableUser user = userFacade.findByUserName(userName, null, language);</span>
+
+<span class="nc bnc" id="L277" title="All 2 branches missed.">		if (!user.isActive()) {</span>
+<span class="nc" id="L278">			throw new UnauthorizedException(&quot;User &quot; + userName + &quot; not not active&quot;);</span>
+		}
+
+<span class="nc" id="L281">		return user;</span>
+
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

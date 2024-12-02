@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReadableUserPopulator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.populator.user</a> &gt; <span class="el_source">ReadableUserPopulator.java</span></div><h1>ReadableUserPopulator.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.populator.user;
+
+import org.apache.commons.lang3.Validate;
+
+import com.salesmanager.core.business.constants.Constants;
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.utils.AbstractDataPopulator;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.core.model.user.Group;
+import com.salesmanager.core.model.user.User;
+import com.salesmanager.shop.model.security.ReadableGroup;
+import com.salesmanager.shop.model.user.ReadableUser;
+import com.salesmanager.shop.utils.DateUtil;
+
+/**
+ * Converts user model to readable user
+ * 
+ * @author carlsamson
+ *
+ */
+<span class="fc" id="L22">public class ReadableUserPopulator extends AbstractDataPopulator&lt;User, ReadableUser&gt; {</span>
+
+  @Override
+  public ReadableUser populate(User source, ReadableUser target, MerchantStore store,
+      Language language) throws ConversionException {
+<span class="fc" id="L27">    Validate.notNull(source, &quot;User cannot be null&quot;);</span>
+
+<span class="pc bpc" id="L29" title="1 of 2 branches missed.">    if (target == null) {</span>
+<span class="nc" id="L30">      target = new ReadableUser();</span>
+    }
+
+<span class="fc" id="L33">    target.setFirstName(source.getFirstName());</span>
+<span class="fc" id="L34">    target.setLastName(source.getLastName());</span>
+<span class="fc" id="L35">    target.setEmailAddress(source.getAdminEmail());</span>
+<span class="fc" id="L36">    target.setUserName(source.getAdminName());</span>
+<span class="fc" id="L37">    target.setActive(source.isActive());</span>
+
+<span class="pc bpc" id="L39" title="1 of 2 branches missed.">    if (source.getLastAccess() != null) {</span>
+<span class="nc" id="L40">      target.setLastAccess(DateUtil.formatLongDate(source.getLastAccess()));</span>
+    }
+
+    // set default language
+<span class="fc" id="L44">    target.setDefaultLanguage(Constants.DEFAULT_LANGUAGE);</span>
+
+<span class="fc bfc" id="L46" title="All 2 branches covered.">    if (source.getDefaultLanguage() != null)</span>
+<span class="fc" id="L47">      target.setDefaultLanguage(source.getDefaultLanguage().getCode());</span>
+<span class="fc" id="L48">    target.setMerchant(store.getCode());</span>
+<span class="fc" id="L49">    target.setId(source.getId());</span>
+
+
+<span class="fc bfc" id="L52" title="All 2 branches covered.">    for (Group group : source.getGroups()) {</span>
+
+<span class="fc" id="L54">      ReadableGroup g = new ReadableGroup();</span>
+<span class="fc" id="L55">      g.setName(group.getGroupName());</span>
+<span class="fc" id="L56">      g.setId(group.getId().longValue());</span>
+<span class="fc" id="L57">      target.getGroups().add(g);</span>
+<span class="fc" id="L58">    }</span>
+
+    /**
+     * dates DateFormat df = new SimpleDateFormat(&quot;yyyy-MM-dd HH:mm a z&quot;);
+     * myObjectMapper.setDateFormat(df);
+     */
+
+
+<span class="fc" id="L66">    return target;</span>
+  }
+
+  @Override
+  protected ReadableUser createTarget() {
+    // TODO Auto-generated method stub
+<span class="nc" id="L72">    return null;</span>
+  }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

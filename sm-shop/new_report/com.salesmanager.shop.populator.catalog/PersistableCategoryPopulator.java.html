@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PersistableCategoryPopulator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.populator.catalog</a> &gt; <span class="el_source">PersistableCategoryPopulator.java</span></div><h1>PersistableCategoryPopulator.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.populator.catalog;
+
+import java.util.HashSet;
+import java.util.Set;
+import javax.inject.Inject;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Validate;
+import org.springframework.stereotype.Component;
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.services.catalog.category.CategoryService;
+import com.salesmanager.core.business.services.reference.language.LanguageService;
+import com.salesmanager.core.business.utils.AbstractDataPopulator;
+import com.salesmanager.core.model.catalog.category.Category;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.model.catalog.category.CategoryDescription;
+import com.salesmanager.shop.model.catalog.category.PersistableCategory;
+
+@Component
+<span class="fc" id="L21">public class PersistableCategoryPopulator extends</span>
+		AbstractDataPopulator&lt;PersistableCategory, Category&gt; {
+
+	@Inject
+	private CategoryService categoryService;
+	@Inject
+	private LanguageService languageService;
+
+
+	public void setCategoryService(CategoryService categoryService) {
+<span class="nc" id="L31">		this.categoryService = categoryService;</span>
+<span class="nc" id="L32">	}</span>
+
+	public CategoryService getCategoryService() {
+<span class="nc" id="L35">		return categoryService;</span>
+	}
+
+	public void setLanguageService(LanguageService languageService) {
+<span class="nc" id="L39">		this.languageService = languageService;</span>
+<span class="nc" id="L40">	}</span>
+
+	public LanguageService getLanguageService() {
+<span class="nc" id="L43">		return languageService;</span>
+	}
+
+
+	@Override
+	public Category populate(PersistableCategory source, Category target,
+			MerchantStore store, Language language)
+			throws ConversionException {
+
+		try {
+
+<span class="fc" id="L54">		Validate.notNull(target, &quot;Category target cannot be null&quot;);</span>
+
+
+/*		Validate.notNull(categoryService, &quot;Requires to set CategoryService&quot;);
+		Validate.notNull(languageService, &quot;Requires to set LanguageService&quot;);*/
+
+<span class="fc" id="L60">		target.setMerchantStore(store);</span>
+<span class="fc" id="L61">		target.setCode(source.getCode());</span>
+<span class="fc" id="L62">		target.setSortOrder(source.getSortOrder());</span>
+<span class="fc" id="L63">		target.setVisible(source.isVisible());</span>
+<span class="fc" id="L64">		target.setFeatured(source.isFeatured());</span>
+
+		//children
+<span class="fc bfc" id="L67" title="All 2 branches covered.">		if(!CollectionUtils.isEmpty(source.getChildren())) {</span>
+		  //no modifications to children category
+		} else {
+<span class="fc" id="L70">		  target.getCategories().clear();</span>
+		}
+
+		//get parent
+
+<span class="pc bpc" id="L75" title="1 of 6 branches missed.">		if(source.getParent()==null || (StringUtils.isBlank(source.getParent().getCode())) || source.getParent().getId()==null) {</span>
+<span class="fc" id="L76">			target.setParent(null);</span>
+<span class="fc" id="L77">			target.setDepth(0);</span>
+<span class="fc" id="L78">			target.setLineage(new StringBuilder().append(&quot;/&quot;).append(source.getId()).append(&quot;/&quot;).toString());</span>
+		} else {
+<span class="fc" id="L80">			Category parent = null;</span>
+<span class="pc bpc" id="L81" title="1 of 2 branches missed.">			if(!StringUtils.isBlank(source.getParent().getCode())) {</span>
+<span class="fc" id="L82">				 parent = categoryService.getByCode(store.getCode(), source.getParent().getCode());</span>
+<span class="nc bnc" id="L83" title="All 2 branches missed.">			} else if(source.getParent().getId()!=null) {</span>
+<span class="nc" id="L84">				 parent = categoryService.getById(source.getParent().getId(), store.getId());</span>
+			} else {
+<span class="nc" id="L86">				throw new ConversionException(&quot;Category parent needs at least an id or a code for reference&quot;);</span>
+			}
+<span class="pc bpc" id="L88" title="3 of 4 branches missed.">			if(parent !=null &amp;&amp; parent.getMerchantStore().getId().intValue()!=store.getId().intValue()) {</span>
+<span class="nc" id="L89">				throw new ConversionException(&quot;Store id does not belong to specified parent id&quot;);</span>
+			}
+
+<span class="pc bpc" id="L92" title="1 of 2 branches missed.">			if(parent!=null) {</span>
+<span class="nc" id="L93">				target.setParent(parent);</span>
+
+<span class="nc" id="L95">				String lineage = parent.getLineage();</span>
+<span class="nc" id="L96">				int depth = parent.getDepth();</span>
+
+<span class="nc" id="L98">				target.setDepth(depth+1);</span>
+<span class="nc" id="L99">				target.setLineage(new StringBuilder().append(lineage).append(target.getId()).append(&quot;/&quot;).toString());</span>
+			}
+
+		}
+
+
+<span class="fc bfc" id="L105" title="All 2 branches covered.">		if(!CollectionUtils.isEmpty(source.getChildren())) {</span>
+
+<span class="fc bfc" id="L107" title="All 2 branches covered.">			for(PersistableCategory cat : source.getChildren()) {</span>
+
+<span class="fc" id="L109">				Category persistCategory = this.populate(cat, new Category(), store, language);</span>
+<span class="fc" id="L110">				target.getCategories().add(persistCategory);</span>
+
+<span class="fc" id="L112">			}</span>
+
+		}
+
+
+<span class="pc bpc" id="L117" title="1 of 2 branches missed.">		if(!CollectionUtils.isEmpty(source.getDescriptions())) {</span>
+<span class="fc" id="L118">			Set&lt;com.salesmanager.core.model.catalog.category.CategoryDescription&gt; descriptions = new HashSet&lt;com.salesmanager.core.model.catalog.category.CategoryDescription&gt;();</span>
+<span class="fc bfc" id="L119" title="All 2 branches covered.">			if(CollectionUtils.isNotEmpty(target.getDescriptions())) {</span>
+<span class="fc bfc" id="L120" title="All 2 branches covered.">    			for(com.salesmanager.core.model.catalog.category.CategoryDescription description : target.getDescriptions()) {</span>
+<span class="fc bfc" id="L121" title="All 2 branches covered.">    			    for(CategoryDescription d : source.getDescriptions()) {</span>
+<span class="pc bpc" id="L122" title="1 of 2 branches missed.">    			        if(StringUtils.isBlank(d.getLanguage())) {</span>
+<span class="nc" id="L123">    			          throw new ConversionException(&quot;Source category description has no language&quot;);</span>
+    			        }
+<span class="pc bpc" id="L125" title="1 of 2 branches missed.">    			        if(d.getLanguage().equals(description.getLanguage().getCode())) {</span>
+<span class="fc" id="L126">            				description.setCategory(target);</span>
+<span class="fc" id="L127">            				description = buildDescription(d, description);</span>
+<span class="fc" id="L128">            				descriptions.add(description);</span>
+    			        }
+<span class="fc" id="L130">    			    }</span>
+<span class="fc" id="L131">    			}</span>
+
+			} else {
+<span class="fc bfc" id="L134" title="All 2 branches covered.">			  for(CategoryDescription d : source.getDescriptions()) {</span>
+<span class="fc" id="L135">                com.salesmanager.core.model.catalog.category.CategoryDescription t = new com.salesmanager.core.model.catalog.category.CategoryDescription();</span>
+
+<span class="fc" id="L137">			    this.buildDescription(d, t);</span>
+<span class="fc" id="L138">			    t.setCategory(target);</span>
+<span class="fc" id="L139">			    descriptions.add(t);</span>
+
+<span class="fc" id="L141">			  }</span>
+
+			}
+<span class="fc" id="L144">			target.setDescriptions(descriptions);</span>
+		}
+
+
+<span class="fc" id="L148">		return target;</span>
+
+
+<span class="nc" id="L151">		} catch(Exception e) {</span>
+<span class="nc" id="L152">			throw new ConversionException(e);</span>
+		}
+
+	}
+
+	private com.salesmanager.core.model.catalog.category.CategoryDescription buildDescription(com.salesmanager.shop.model.catalog.category.CategoryDescription source, com.salesmanager.core.model.catalog.category.CategoryDescription target) throws Exception {
+      //com.salesmanager.core.model.catalog.category.CategoryDescription desc = new com.salesmanager.core.model.catalog.category.CategoryDescription();
+<span class="fc" id="L159">	  target.setCategoryHighlight(source.getHighlights());</span>
+<span class="fc" id="L160">      target.setDescription(source.getDescription());</span>
+<span class="fc" id="L161">      target.setName(source.getName());</span>
+<span class="fc" id="L162">      target.setMetatagDescription(source.getMetaDescription());</span>
+<span class="fc" id="L163">      target.setMetatagTitle(source.getTitle());</span>
+<span class="fc" id="L164">      target.setSeUrl(source.getFriendlyUrl());</span>
+<span class="fc" id="L165">      Language lang = languageService.getByCode(source.getLanguage());</span>
+<span class="pc bpc" id="L166" title="1 of 2 branches missed.">      if(lang==null) {</span>
+<span class="nc" id="L167">          throw new ConversionException(&quot;Language is null for code &quot; + source.getLanguage() + &quot; use language ISO code [en, fr ...]&quot;);</span>
+      }
+      //description.setId(description.getId());
+<span class="fc" id="L170">      target.setLanguage(lang);</span>
+<span class="fc" id="L171">      return target;</span>
+	}
+
+
+	@Override
+	protected Category createTarget() {
+		// TODO Auto-generated method stub
+<span class="nc" id="L178">		return null;</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

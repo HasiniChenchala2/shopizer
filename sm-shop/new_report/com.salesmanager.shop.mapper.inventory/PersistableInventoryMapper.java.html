@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PersistableInventoryMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.mapper.inventory</a> &gt; <span class="el_source">PersistableInventoryMapper.java</span></div><h1>PersistableInventoryMapper.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.mapper.inventory;
+
+import static com.salesmanager.core.business.utils.NumberUtils.isPositive;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.jsoup.helper.Validate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import com.salesmanager.core.business.constants.Constants;
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.catalog.product.ProductService;
+import com.salesmanager.core.business.services.catalog.product.variant.ProductVariantService;
+import com.salesmanager.core.business.services.reference.language.LanguageService;
+import com.salesmanager.core.model.catalog.product.Product;
+import com.salesmanager.core.model.catalog.product.availability.ProductAvailability;
+import com.salesmanager.core.model.catalog.product.price.ProductPrice;
+import com.salesmanager.core.model.catalog.product.price.ProductPriceDescription;
+import com.salesmanager.core.model.catalog.product.variant.ProductVariant;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.mapper.Mapper;
+import com.salesmanager.shop.model.catalog.product.PersistableProductPrice;
+import com.salesmanager.shop.model.catalog.product.inventory.PersistableInventory;
+import com.salesmanager.shop.store.api.exception.ConversionRuntimeException;
+import com.salesmanager.shop.store.api.exception.ResourceNotFoundException;
+import com.salesmanager.shop.utils.DateUtil;
+
+@Component
+<span class="fc" id="L41">public class PersistableInventoryMapper implements Mapper&lt;PersistableInventory, ProductAvailability&gt; {</span>
+
+	@Autowired
+	private LanguageService languageService;
+
+	@Autowired
+	private ProductVariantService productVariantService;
+
+	@Autowired
+	private ProductService productService;
+
+	@Override
+	public ProductAvailability convert(PersistableInventory source, MerchantStore store, Language language) {
+<span class="nc" id="L54">		ProductAvailability availability = new ProductAvailability();</span>
+<span class="nc" id="L55">		availability.setMerchantStore(store);</span>
+<span class="nc" id="L56">		return merge(source, availability, store, language);</span>
+
+	}
+
+	@Override
+	public ProductAvailability merge(PersistableInventory source, ProductAvailability destination, MerchantStore store,
+			Language language) {
+<span class="nc" id="L63">		Validate.notNull(destination, &quot;Product availability cannot be null&quot;);</span>
+
+		try {
+<span class="nc" id="L66">			Product product = null;</span>
+<span class="nc bnc" id="L67" title="All 4 branches missed.">			if(source.getProductId()!= null &amp;&amp; source.getProductId().longValue() &gt; 0) {</span>
+<span class="nc" id="L68">				product = productService.findOne(source.getProductId().longValue(), store);</span>
+<span class="nc bnc" id="L69" title="All 2 branches missed.">				if(product == null) {</span>
+<span class="nc" id="L70">					throw new ResourceNotFoundException(&quot;Product with id [&quot; + source.getProductId() + &quot;] not found for store [&quot; + store.getCode() + &quot;]&quot;);</span>
+				}
+<span class="nc" id="L72">				destination.setProduct(product);</span>
+			}
+			
+			/**
+			 * Merging rules
+			 * 
+			 * Create vs update
+			 * - existing product availability 
+			 *   match product id, instance id, merchant id and region then set exiting id
+			 * 
+			 */
+<span class="nc" id="L83">			Set&lt;ProductAvailability&gt; existingAvailability = product.getAvailabilities();</span>
+<span class="nc" id="L84">			ProductAvailability existing = null;</span>
+			//determine product availability to be used
+<span class="nc bnc" id="L86" title="All 4 branches missed.">			if(source.getId() != null &amp;&amp; source.getId() &gt;0) {</span>
+<span class="nc" id="L87">				existing = destination;</span>
+			} else {
+<span class="nc" id="L89">				existing = existingAvailability.stream()</span>
+<span class="nc" id="L90">						.filter(a -&gt; </span>
+<span class="nc" id="L91">						(</span>
+<span class="nc bnc" id="L92" title="All 4 branches missed.">								source.getProductId() != null &amp;&amp; (a.getProduct().getId().longValue() == source.getProductId().longValue())</span>
+								&amp;&amp;
+<span class="nc bnc" id="L94" title="All 2 branches missed.">								a.getMerchantStore().getId() == store.getId()</span>
+								&amp;&amp;
+<span class="nc bnc" id="L96" title="All 10 branches missed.">								(source.getVariant() == null &amp;&amp; a.getProductVariant() == null) || (a.getProductVariant() != null &amp;&amp; source.getVariant()!= null &amp;&amp; a.getProductVariant().getId().longValue() == source.getVariant().longValue())</span>
+								&amp;&amp;
+<span class="nc bnc" id="L98" title="All 10 branches missed.">								(source.getRegionVariant() == null &amp;&amp; a.getRegionVariant() == null) || (a.getRegionVariant() != null &amp;&amp; source.getRegionVariant() != null &amp;&amp;  a.getRegionVariant().equals(source.getRegionVariant()))</span>
+<span class="nc" id="L99">						)).findAny().orElse(null);</span>
+			}
+<span class="nc bnc" id="L101" title="All 2 branches missed.">			if(existing != null) {</span>
+<span class="nc bnc" id="L102" title="All 2 branches missed.">				if(existing.getMerchantStore().getId() != store.getId()) {</span>
+<span class="nc" id="L103">					throw new ResourceNotFoundException(&quot;Product Inventory with id [&quot; + source.getId() + &quot;] not found for store [&quot; + store.getCode() + &quot;]&quot;);</span>
+				}
+<span class="nc" id="L105">				destination = existing;</span>
+			}
+
+<span class="nc" id="L108">			destination.setProductQuantity(source.getQuantity());</span>
+<span class="nc" id="L109">			destination.setProductQuantityOrderMin(source.getProductQuantityOrderMax());</span>
+<span class="nc" id="L110">			destination.setProductQuantityOrderMax(source.getProductQuantityOrderMin());</span>
+<span class="nc" id="L111">			destination.setAvailable(source.isAvailable());</span>
+<span class="nc" id="L112">			destination.setOwner(source.getOwner());</span>
+
+<span class="nc" id="L114">			String region = getRegion(source);</span>
+<span class="nc" id="L115">			destination.setRegion(region);</span>
+
+<span class="nc" id="L117">			destination.setRegionVariant(source.getRegionVariant());</span>
+<span class="nc bnc" id="L118" title="All 2 branches missed.">			if (StringUtils.isNotBlank(source.getDateAvailable())) {</span>
+<span class="nc" id="L119">				destination.setProductDateAvailable(DateUtil.getDate(source.getDateAvailable()));</span>
+			}
+
+<span class="nc bnc" id="L122" title="All 4 branches missed.">			if (source.getVariant() != null &amp;&amp; source.getVariant() .longValue()&gt; 0) {</span>
+<span class="nc" id="L123">				Optional&lt;ProductVariant&gt; instance = productVariantService.getById(source.getVariant(), store);</span>
+<span class="nc bnc" id="L124" title="All 2 branches missed.">				if(instance.get() == null) {</span>
+<span class="nc" id="L125">					throw new ResourceNotFoundException(&quot;productVariant with id [&quot; + source.getVariant() + &quot;] not found for store [&quot; + store.getCode() + &quot;]&quot;);</span>
+				}
+<span class="nc" id="L127">				destination.setSku(instance.get().getSku());</span>
+<span class="nc" id="L128">				destination.setProductVariant(instance.get());</span>
+			}
+			
+			//merge with existing or replace
+<span class="nc" id="L132">			List&lt;ProductPrice&gt; prices = new ArrayList&lt;ProductPrice&gt;();</span>
+<span class="nc bnc" id="L133" title="All 2 branches missed.">			for (PersistableProductPrice priceEntity : source.getPrices()) {</span>
+
+<span class="nc" id="L135">				ProductPrice price = null;</span>
+
+				/**
+				if (isPositive(priceEntity.getId())) {
+					price = new ProductPrice();
+					price.setId(priceEntity.getId());
+				}
+				**/
+				
+				
+
+<span class="nc bnc" id="L146" title="All 2 branches missed.">				if (destination.getPrices() != null) {</span>
+<span class="nc bnc" id="L147" title="All 2 branches missed.">					for (ProductPrice pp : destination.getPrices()) {</span>
+<span class="nc bnc" id="L148" title="All 4 branches missed.">						if (isPositive(priceEntity.getId()) &amp;&amp; priceEntity.getId().longValue() == pp.getId().longValue()) {</span>
+<span class="nc" id="L149">							price = pp;</span>
+<span class="nc" id="L150">							prices.add(pp);</span>
+<span class="nc bnc" id="L151" title="All 4 branches missed.">						} else if (pp.isDefaultPrice() &amp;&amp; priceEntity.isDefaultPrice()) {</span>
+<span class="nc bnc" id="L152" title="All 2 branches missed.">							if(price == null) {</span>
+<span class="nc" id="L153">								price = pp;</span>
+							}
+							else {
+<span class="nc" id="L156">								prices.add(pp);</span>
+							}
+						} else {
+<span class="nc" id="L159">							prices.add(pp);</span>
+						}
+						
+<span class="nc" id="L162">					}</span>
+				}
+				
+<span class="nc bnc" id="L165" title="All 2 branches missed.">				if(price == null) {</span>
+<span class="nc" id="L166">					price = new ProductPrice();</span>
+				}
+				
+<span class="nc" id="L169">				prices.add(price);</span>
+
+<span class="nc" id="L171">				price.setProductAvailability(destination);</span>
+<span class="nc" id="L172">				price.setDefaultPrice(priceEntity.isDefaultPrice());</span>
+<span class="nc" id="L173">				price.setProductPriceAmount(priceEntity.getPrice());</span>
+<span class="nc" id="L174">				price.setDefaultPrice(priceEntity.isDefaultPrice());</span>
+<span class="nc" id="L175">				price.setCode(priceEntity.getCode());</span>
+<span class="nc" id="L176">				price.setProductPriceSpecialAmount(priceEntity.getDiscountedPrice());</span>
+
+<span class="nc bnc" id="L178" title="All 2 branches missed.">				if (Objects.nonNull(priceEntity.getDiscountStartDate())) {</span>
+<span class="nc" id="L179">					Date startDate = DateUtil.getDate(priceEntity.getDiscountStartDate());</span>
+<span class="nc" id="L180">					price.setProductPriceSpecialStartDate(startDate);</span>
+				}
+<span class="nc bnc" id="L182" title="All 2 branches missed.">				if (Objects.nonNull(priceEntity.getDiscountEndDate())) {</span>
+<span class="nc" id="L183">					Date endDate = DateUtil.getDate(priceEntity.getDiscountEndDate());</span>
+<span class="nc" id="L184">					price.setProductPriceSpecialEndDate(endDate);</span>
+				}
+
+<span class="nc" id="L187">				Set&lt;ProductPriceDescription&gt; descs = getProductPriceDescriptions(price, priceEntity.getDescriptions());</span>
+<span class="nc" id="L188">				price.setDescriptions(descs);</span>
+
+<span class="nc" id="L190">				destination.setPrices(new HashSet&lt;ProductPrice&gt;(prices));</span>
+<span class="nc" id="L191">			}</span>
+
+<span class="nc" id="L193">			return destination;</span>
+			
+<span class="nc" id="L195">		} catch (ResourceNotFoundException rne) {</span>
+<span class="nc" id="L196">			throw new ConversionRuntimeException(rne.getErrorCode(), rne.getErrorMessage(), rne);</span>
+<span class="nc" id="L197">		} catch (Exception e) {</span>
+<span class="nc" id="L198">			throw new ConversionRuntimeException(e);</span>
+		}
+
+	}
+
+	private Set&lt;ProductPriceDescription&gt; getProductPriceDescriptions(ProductPrice price,
+			List&lt;com.salesmanager.shop.model.catalog.product.ProductPriceDescription&gt; descriptions)
+			throws ConversionException {
+<span class="nc bnc" id="L206" title="All 2 branches missed.">		if (CollectionUtils.isEmpty(descriptions)) {</span>
+<span class="nc" id="L207">			return Collections.emptySet();</span>
+		}
+<span class="nc" id="L209">		Set&lt;ProductPriceDescription&gt; descs = new HashSet&lt;ProductPriceDescription&gt;();</span>
+<span class="nc bnc" id="L210" title="All 2 branches missed.">		for (com.salesmanager.shop.model.catalog.product.ProductPriceDescription desc : descriptions) {</span>
+<span class="nc" id="L211">			ProductPriceDescription description = null;</span>
+<span class="nc bnc" id="L212" title="All 2 branches missed.">			if (CollectionUtils.isNotEmpty(price.getDescriptions())) {</span>
+<span class="nc bnc" id="L213" title="All 2 branches missed.">				for (ProductPriceDescription d : price.getDescriptions()) {</span>
+<span class="nc bnc" id="L214" title="All 4 branches missed.">					if (isPositive(desc.getId()) &amp;&amp; desc.getId().equals(d.getId())) {</span>
+<span class="nc" id="L215">						desc.setId(d.getId());</span>
+					}
+<span class="nc" id="L217">				}</span>
+			}
+<span class="nc" id="L219">			description = getDescription(desc);</span>
+<span class="nc" id="L220">			description.setProductPrice(price);</span>
+<span class="nc" id="L221">			descs.add(description);</span>
+<span class="nc" id="L222">		}</span>
+<span class="nc" id="L223">		return descs;</span>
+	}
+
+	private String getRegion(PersistableInventory source) {
+<span class="nc" id="L227">		return Optional.ofNullable(source.getRegion()).filter(StringUtils::isNotBlank).orElse(Constants.ALL_REGIONS);</span>
+	}
+
+	private ProductPriceDescription getDescription(
+			com.salesmanager.shop.model.catalog.product.ProductPriceDescription desc) throws ConversionException {
+<span class="nc" id="L232">		ProductPriceDescription target = new ProductPriceDescription();</span>
+<span class="nc" id="L233">		target.setDescription(desc.getDescription());</span>
+<span class="nc" id="L234">		target.setName(desc.getName());</span>
+<span class="nc" id="L235">		target.setTitle(desc.getTitle());</span>
+<span class="nc" id="L236">		target.setId(null);</span>
+<span class="nc bnc" id="L237" title="All 2 branches missed.">		if (isPositive(desc.getId())) {</span>
+<span class="nc" id="L238">			target.setId(desc.getId());</span>
+		}
+<span class="nc" id="L240">		Language lang = getLanguage(desc);</span>
+<span class="nc" id="L241">		target.setLanguage(lang);</span>
+<span class="nc" id="L242">		return target;</span>
+
+	}
+
+	private Language getLanguage(com.salesmanager.shop.model.catalog.product.ProductPriceDescription desc) {
+		try {
+<span class="nc" id="L248">			return Optional.ofNullable(languageService.getByCode(desc.getLanguage()))</span>
+<span class="nc" id="L249">					.orElseThrow(() -&gt; new ConversionRuntimeException(</span>
+<span class="nc" id="L250">							&quot;Language is null for code &quot; + desc.getLanguage() + &quot; use language ISO code [en, fr ...]&quot;));</span>
+<span class="nc" id="L251">		} catch (ServiceException e) {</span>
+<span class="nc" id="L252">			throw new ConversionRuntimeException(e);</span>
+		}
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

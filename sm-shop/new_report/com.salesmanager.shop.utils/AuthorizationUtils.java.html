@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuthorizationUtils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.utils</a> &gt; <span class="el_source">AuthorizationUtils.java</span></div><h1>AuthorizationUtils.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.utils;
+
+import java.util.Arrays;
+import java.util.List;
+
+import javax.inject.Inject;
+
+import org.springframework.stereotype.Component;
+
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.shop.constants.Constants;
+import com.salesmanager.shop.store.api.exception.UnauthorizedException;
+import com.salesmanager.shop.store.controller.user.facade.UserFacade;
+
+/**
+ * Performs authorization check for REST Api
+ * - check if user is in role
+ * - check if user can perform actions on marchant
+ * @author carlsamson
+ *
+ */
+@Component
+<span class="fc" id="L23">public class AuthorizationUtils {</span>
+	
+	@Inject
+	private UserFacade userFacade;
+	
+	public String authenticatedUser() {
+<span class="nc" id="L29">		String authenticatedUser = userFacade.authenticatedUser();</span>
+<span class="nc bnc" id="L30" title="All 2 branches missed.">		if (authenticatedUser == null) {</span>
+<span class="nc" id="L31">			throw new UnauthorizedException();</span>
+		}
+<span class="nc" id="L33">		return authenticatedUser;</span>
+	}
+	
+	public void authorizeUser(String authenticatedUser, List&lt;String&gt; roles, MerchantStore store) {
+<span class="nc" id="L37">		userFacade.authorizedGroup(authenticatedUser, roles);</span>
+<span class="nc bnc" id="L38" title="All 2 branches missed.">		if (!userFacade.userInRoles(authenticatedUser, Arrays.asList(Constants.GROUP_SUPERADMIN))) {</span>
+<span class="nc bnc" id="L39" title="All 2 branches missed.">			if (!userFacade.authorizedStore(authenticatedUser, store.getCode())) {</span>
+<span class="nc" id="L40">				throw new UnauthorizedException(&quot;Operation unauthorized for user [&quot; + authenticatedUser</span>
+<span class="nc" id="L41">						+ &quot;] and store [&quot; + store.getCode() + &quot;]&quot;);</span>
+			}
+		}
+<span class="nc" id="L44">	}</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

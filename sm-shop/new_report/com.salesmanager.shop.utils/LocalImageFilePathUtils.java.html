@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LocalImageFilePathUtils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.utils</a> &gt; <span class="el_source">LocalImageFilePathUtils.java</span></div><h1>LocalImageFilePathUtils.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.utils;
+
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import com.salesmanager.core.model.catalog.product.Product;
+import com.salesmanager.core.model.content.FileContentType;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.shop.constants.Constants;
+import com.salesmanager.shop.model.catalog.manufacturer.Manufacturer;
+
+
+
+
+@Component
+<span class="fc" id="L17">public class LocalImageFilePathUtils extends AbstractimageFilePath{</span>
+	
+<span class="fc" id="L19">	private String basePath = Constants.STATIC_URI;</span>
+	
+	private static final String SCHEME = &quot;http://&quot;;
+<span class="fc" id="L22">	private String contentUrl = null;</span>
+
+	
+	@Autowired
+	private ServerConfig serverConfig;
+
+	@Override
+	public String getBasePath(MerchantStore store) {
+<span class="nc bnc" id="L30" title="All 2 branches missed.">		if(StringUtils.isBlank(contentUrl)) {</span>
+<span class="nc" id="L31">			String host = new StringBuilder().append(SCHEME).append(serverConfig.getApplicationHost()).toString();</span>
+<span class="nc" id="L32">			return new StringBuilder().append(this.getScheme(store, host)).append(basePath).toString();</span>
+		} else {
+<span class="nc" id="L34">			return new StringBuilder().append(contentUrl).append(basePath).toString();</span>
+		}
+	}
+
+	@Override
+	public void setBasePath(String context) {
+<span class="fc" id="L40">		this.basePath = context;</span>
+<span class="fc" id="L41">	}</span>
+	
+	/**
+	 * Builds a static content image file path that can be used by image servlet
+	 * utility for getting the physical image
+	 * @param store
+	 * @param imageName
+	 * @return
+	 */
+	public String buildStaticimageUtils(MerchantStore store, String imageName) {
+<span class="nc" id="L51">		StringBuilder imgName = new StringBuilder().append(getBasePath(store)).append(Constants.FILES_URI).append(Constants.SLASH).append(store.getCode()).append(&quot;/&quot;).append(FileContentType.IMAGE.name()).append(&quot;/&quot;);</span>
+<span class="nc bnc" id="L52" title="All 2 branches missed.">				if(!StringUtils.isBlank(imageName)) {</span>
+<span class="nc" id="L53">					imgName.append(imageName);</span>
+				}
+<span class="nc" id="L55">		return imgName.toString();</span>
+				
+	}
+	
+	/**
+	 * Builds a static content image file path that can be used by image servlet
+	 * utility for getting the physical image by specifying the image type
+	 * @param store
+	 * @param imageName
+	 * @return
+	 */
+	public String buildStaticimageUtils(MerchantStore store, String type, String imageName) {
+<span class="nc" id="L67">		StringBuilder imgName = new StringBuilder().append(getBasePath(store)).append(Constants.FILES_URI).append(Constants.SLASH).append(store.getCode()).append(&quot;/&quot;).append(type).append(&quot;/&quot;);</span>
+<span class="nc bnc" id="L68" title="All 2 branches missed.">		if(!StringUtils.isBlank(imageName)) {</span>
+<span class="nc" id="L69">				imgName.append(imageName);</span>
+		}
+<span class="nc" id="L71">		return imgName.toString();</span>
+
+	}
+	
+	/**
+	 * Builds a manufacturer image file path that can be used by image servlet
+	 * utility for getting the physical image
+	 * @param store
+	 * @param manufacturer
+	 * @param imageName
+	 * @return
+	 */
+	public String buildManufacturerimageUtils(MerchantStore store, Manufacturer manufacturer, String imageName) {
+<span class="nc" id="L84">		return new StringBuilder().append(getBasePath(store)).append(&quot;/&quot;).append(store.getCode()).append(&quot;/&quot;).</span>
+<span class="nc" id="L85">				append(FileContentType.MANUFACTURER.name()).append(&quot;/&quot;)</span>
+<span class="nc" id="L86">				.append(manufacturer.getId()).append(&quot;/&quot;)</span>
+<span class="nc" id="L87">				.append(imageName).toString();</span>
+	}
+	
+	/**
+	 * Builds a product image file path that can be used by image servlet
+	 * utility for getting the physical image
+	 * @param store
+	 * @param product
+	 * @param imageName
+	 * @return
+	 */
+	public String buildProductimageUtils(MerchantStore store, Product product, String imageName) {
+<span class="nc" id="L99">		return new StringBuilder().append(getBasePath(store)).append(&quot;/products/&quot;).append(store.getCode()).append(&quot;/&quot;)</span>
+<span class="nc" id="L100">				.append(product.getSku()).append(&quot;/&quot;).append(&quot;LARGE&quot;).append(&quot;/&quot;).append(imageName).toString();</span>
+	}
+	
+	/**
+	 * Builds a default product image file path that can be used by image servlet
+	 * utility for getting the physical image
+	 * @param store
+	 * @param sku
+	 * @param imageName
+	 * @return
+	 */
+	public String buildProductimageUtils(MerchantStore store, String sku, String imageName) {
+<span class="nc" id="L112">		return new StringBuilder().append(getBasePath(store)).append(&quot;/products/&quot;).append(store.getCode()).append(&quot;/&quot;)</span>
+<span class="nc" id="L113">				.append(sku).append(&quot;/&quot;).append(&quot;LARGE&quot;).append(&quot;/&quot;).append(imageName).toString();</span>
+	}
+	
+	/**
+	 * Builds a large product image file path that can be used by the image servlet
+	 * @param store
+	 * @param sku
+	 * @param imageName
+	 * @return
+	 */
+	public String buildLargeProductimageUtils(MerchantStore store, String sku, String imageName) {
+<span class="nc" id="L124">		return new StringBuilder().append(getBasePath(store)).append(&quot;/products/&quot;).append(store.getCode()).append(&quot;/&quot;)</span>
+<span class="nc" id="L125">				.append(sku).append(&quot;/&quot;).append(&quot;LARGE&quot;).append(&quot;/&quot;).append(imageName).toString();</span>
+	}
+
+
+	
+	/**
+	 * Builds a merchant store logo path
+	 * @param store
+	 * @return
+	 */
+	public String buildStoreLogoFilePath(MerchantStore store) {
+<span class="nc" id="L136">		return new StringBuilder().append(getBasePath(store)).append(Constants.FILES_URI).append(Constants.SLASH).append(store.getCode()).append(&quot;/&quot;).append(FileContentType.LOGO).append(&quot;/&quot;)</span>
+<span class="nc" id="L137">				.append(store.getStoreLogo()).toString();</span>
+	}
+	
+	/**
+	 * Builds product property image url path
+	 * @param store
+	 * @param imageName
+	 * @return
+	 */
+	public String buildProductPropertyimageUtils(MerchantStore store, String imageName) {
+<span class="nc" id="L147">		return new StringBuilder().append(getBasePath(store)).append(Constants.FILES_URI).append(Constants.SLASH).append(store.getCode()).append(&quot;/&quot;).append(FileContentType.PROPERTY).append(&quot;/&quot;)</span>
+<span class="nc" id="L148">				.append(imageName).toString();</span>
+	}
+
+	
+	@Override
+	public String getContextPath() {
+<span class="nc" id="L154">		return super.getProperties().getProperty(CONTEXT_PATH);</span>
+	}
+	
+	private String getScheme(MerchantStore store, String derivedHost) {
+<span class="nc bnc" id="L158" title="All 2 branches missed.">		return store.getDomainName() != null ? store.getDomainName():derivedHost;</span>
+	}
+
+	@Override
+	public void setContentUrlPath(String contentUrl) {
+<span class="fc" id="L163">		this.contentUrl = contentUrl;</span>
+<span class="fc" id="L164">	}</span>
+
+	
+
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

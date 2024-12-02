@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReadableOptinMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.mapper.optin</a> &gt; <span class="el_source">ReadableOptinMapper.java</span></div><h1>ReadableOptinMapper.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.mapper.optin;
+
+import org.springframework.stereotype.Component;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.core.model.system.optin.Optin;
+import com.salesmanager.shop.mapper.Mapper;
+import com.salesmanager.shop.model.system.ReadableOptin;
+
+@Component
+<span class="fc" id="L11">public class ReadableOptinMapper implements Mapper&lt;Optin, ReadableOptin&gt; {</span>
+
+
+  @Override
+  public ReadableOptin convert(Optin source, MerchantStore store, Language language) {
+<span class="fc" id="L16">    ReadableOptin optinEntity = new ReadableOptin();</span>
+<span class="fc" id="L17">    optinEntity.setCode(source.getCode());</span>
+<span class="fc" id="L18">    optinEntity.setDescription(source.getDescription());</span>
+<span class="fc" id="L19">    optinEntity.setOptinType(source.getOptinType().name());</span>
+<span class="fc" id="L20">    return optinEntity;</span>
+  }
+
+  @Override
+  public ReadableOptin merge(Optin source, ReadableOptin destination, MerchantStore store,
+                             Language language) {
+<span class="nc" id="L26">    return destination;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

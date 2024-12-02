@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReadableProductAttributeMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.mapper.catalog</a> &gt; <span class="el_source">ReadableProductAttributeMapper.java</span></div><h1>ReadableProductAttributeMapper.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.mapper.catalog;
+
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import com.salesmanager.core.business.services.catalog.pricing.PricingService;
+import com.salesmanager.core.model.catalog.product.attribute.ProductAttribute;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.mapper.Mapper;
+import com.salesmanager.shop.model.catalog.product.attribute.api.ReadableProductAttributeEntity;
+import com.salesmanager.shop.model.catalog.product.attribute.api.ReadableProductOptionEntity;
+import com.salesmanager.shop.model.catalog.product.attribute.api.ReadableProductOptionValue;
+import com.salesmanager.shop.store.api.exception.ConversionRuntimeException;
+
+@Component
+<span class="fc" id="L18">public class ReadableProductAttributeMapper implements Mapper&lt;ProductAttribute, ReadableProductAttributeEntity&gt; {</span>
+
+	@Autowired
+	private ReadableProductOptionMapper readableProductOptionMapper;
+	
+	@Autowired
+	private ReadableProductOptionValueMapper readableProductOptionValueMapper;
+
+	@Autowired
+	private PricingService pricingService;
+	
+
+	@Override
+	public ReadableProductAttributeEntity convert(ProductAttribute source, MerchantStore store, Language language) {
+<span class="nc" id="L32">		ReadableProductAttributeEntity productAttribute = new ReadableProductAttributeEntity();</span>
+<span class="nc" id="L33">		return merge(source, productAttribute, store, language);</span>
+	}
+
+	@Override
+	public ReadableProductAttributeEntity merge(ProductAttribute source, ReadableProductAttributeEntity destination,
+												MerchantStore store, Language language) {
+
+<span class="nc" id="L40">		ReadableProductAttributeEntity attr = new ReadableProductAttributeEntity();</span>
+<span class="nc bnc" id="L41" title="All 2 branches missed.">		if(destination !=null) {</span>
+<span class="nc" id="L42">			attr = destination;</span>
+		}
+		try {
+<span class="nc" id="L45">			attr.setId(source.getId());//attribute of the option</span>
+	
+<span class="nc bnc" id="L47" title="All 4 branches missed.">			if(source.getProductAttributePrice()!=null &amp;&amp; source.getProductAttributePrice().doubleValue()&gt;0) {</span>
+				String formatedPrice;
+<span class="nc" id="L49">				formatedPrice = pricingService.getDisplayAmount(source.getProductAttributePrice(), store);</span>
+<span class="nc" id="L50">				attr.setProductAttributePrice(formatedPrice);</span>
+<span class="nc" id="L51">				attr.setProductAttributeUnformattedPrice(pricingService.getStringAmount(source.getProductAttributePrice(), store));</span>
+			}
+			
+<span class="nc" id="L54">			attr.setProductAttributeWeight(source.getAttributeAdditionalWeight());</span>
+<span class="nc" id="L55">			attr.setAttributeDisplayOnly(source.getAttributeDisplayOnly());</span>
+<span class="nc" id="L56">			attr.setAttributeDefault(source.getAttributeDefault());</span>
+<span class="nc bnc" id="L57" title="All 2 branches missed.">			if(!StringUtils.isBlank(source.getAttributeSortOrder())) {</span>
+<span class="nc" id="L58">				attr.setSortOrder(Integer.parseInt(source.getAttributeSortOrder()));</span>
+			}
+			
+<span class="nc bnc" id="L61" title="All 2 branches missed.">			if(source.getProductOption()!=null) {</span>
+<span class="nc" id="L62">				ReadableProductOptionEntity option = readableProductOptionMapper.convert(source.getProductOption(), store, language);</span>
+<span class="nc" id="L63">				attr.setOption(option);</span>
+			}
+			
+<span class="nc bnc" id="L66" title="All 2 branches missed.">			if(source.getProductOptionValue()!=null) {</span>
+<span class="nc" id="L67">				ReadableProductOptionValue optionValue = readableProductOptionValueMapper.convert(source.getProductOptionValue(), store, language);</span>
+<span class="nc" id="L68">				attr.setOptionValue(optionValue);</span>
+			}
+		
+<span class="nc" id="L71">		} catch (Exception e) {</span>
+<span class="nc" id="L72">			throw new ConversionRuntimeException(&quot;Exception while product attribute conversion&quot;,e);</span>
+<span class="nc" id="L73">		}</span>
+		
+		
+<span class="nc" id="L76">		return attr;</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReadableCatalogMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.mapper.catalog</a> &gt; <span class="el_source">ReadableCatalogMapper.java</span></div><h1>ReadableCatalogMapper.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.mapper.catalog;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import com.salesmanager.core.model.catalog.catalog.Catalog;
+import com.salesmanager.core.model.catalog.category.Category;
+import com.salesmanager.core.model.common.audit.AuditSection;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.mapper.Mapper;
+import com.salesmanager.shop.model.catalog.catalog.ReadableCatalog;
+import com.salesmanager.shop.model.catalog.category.ReadableCategory;
+import com.salesmanager.shop.model.store.ReadableMerchantStore;
+import com.salesmanager.shop.store.controller.store.facade.StoreFacade;
+import com.salesmanager.shop.utils.DateUtil;
+
+@Component
+<span class="fc" id="L26">public class ReadableCatalogMapper implements Mapper&lt;Catalog, ReadableCatalog&gt; {</span>
+	
+	@Autowired
+	private StoreFacade storeFacade;
+	
+
+	@Autowired
+	private ReadableCategoryMapper readableCategoryMapper;
+
+	@Override
+	public ReadableCatalog convert(Catalog source, MerchantStore store, Language language) {
+<span class="nc" id="L37">		ReadableCatalog destination = new ReadableCatalog();</span>
+<span class="nc" id="L38">		return merge(source, destination, store, language);</span>
+	}
+
+	@Override
+	public ReadableCatalog merge(Catalog source, ReadableCatalog destination, MerchantStore store,
+								 Language language) {
+<span class="nc bnc" id="L44" title="All 2 branches missed.">		if(destination == null) {</span>
+<span class="nc" id="L45">			destination = new ReadableCatalog();</span>
+		}
+		
+<span class="nc bnc" id="L48" title="All 2 branches missed.">		if(isPositive(source.getId())) {</span>
+<span class="nc" id="L49">			destination.setId(source.getId());</span>
+		}
+		
+<span class="nc" id="L52">		destination.setCode(source.getCode());</span>
+<span class="nc" id="L53">		destination.setDefaultCatalog(source.isDefaultCatalog());</span>
+<span class="nc" id="L54">		destination.setVisible(source.isVisible());</span>
+
+<span class="nc" id="L56">		Optional&lt;ReadableMerchantStore&gt; readableStore = Optional.ofNullable(source.getMerchantStore())</span>
+<span class="nc" id="L57">				.map(MerchantStore::getCode)</span>
+<span class="nc" id="L58">				.map(code -&gt; storeFacade.getByCode(code, language));</span>
+<span class="nc" id="L59">		readableStore.ifPresent(destination::setStore);</span>
+		
+<span class="nc" id="L61">		destination.setDefaultCatalog(source.isDefaultCatalog());</span>
+
+<span class="nc" id="L63">		Optional&lt;String&gt; formattedCreationDate = Optional.ofNullable(source.getAuditSection())</span>
+<span class="nc" id="L64">				.map(AuditSection::getDateCreated)</span>
+<span class="nc" id="L65">				.map(DateUtil::formatDate);</span>
+<span class="nc" id="L66">		formattedCreationDate.ifPresent(destination::setCreationDate);</span>
+		
+<span class="nc bnc" id="L68" title="All 2 branches missed.">		if(CollectionUtils.isNotEmpty(source.getEntry())) {</span>
+			
+			//hierarchy temp object
+<span class="nc" id="L71">			Map&lt;Long, ReadableCategory&gt; hierarchy = new HashMap&lt;Long, ReadableCategory&gt;();</span>
+
+<span class="nc" id="L73">			source.getEntry().forEach(entry -&gt; {</span>
+<span class="nc" id="L74">				processCategory(entry.getCategory(), store, language, hierarchy, new HashMap&lt;&gt;());</span>
+<span class="nc" id="L75">			});</span>
+			
+<span class="nc" id="L77">			destination.setCategory(new ArrayList&lt;&gt;(hierarchy.values()));</span>
+		}
+		
+<span class="nc" id="L80">		return destination;</span>
+		
+	}
+
+	private boolean isPositive(Long id) {
+<span class="nc bnc" id="L85" title="All 4 branches missed.">		return Objects.nonNull(id) &amp;&amp; id &gt; 0;</span>
+	}
+
+	/**
+	 * B
+	 * 	1
+	 * 	  D
+	 * 	2
+	 * C
+	 * 	1
+	 * 	4
+	 * A
+	 * @param parent
+	 * @param c
+	 * @param store
+	 * @param language
+	 * @param hierarchy
+	 */
+
+	//TODO it needs to cover by unit tests
+	private void processCategory(Category c, MerchantStore store, Language language, Map&lt;Long, ReadableCategory&gt; hierarchy, Map&lt;Long, ReadableCategory&gt; processed ) {
+		
+		//build category hierarchy
+		
+<span class="nc" id="L109">		ReadableCategory rc = null;</span>
+<span class="nc" id="L110">		ReadableCategory rp = null;</span>
+		
+<span class="nc bnc" id="L112" title="All 2 branches missed.">		if(CollectionUtils.isNotEmpty(c.getCategories())) {</span>
+<span class="nc" id="L113">			c.getCategories().stream().forEach(element -&gt; {</span>
+<span class="nc" id="L114">				processCategory(element, store, language, hierarchy, processed);</span>
+<span class="nc" id="L115">			});</span>
+		}
+
+<span class="nc" id="L118">		Category parent = c.getParent();</span>
+<span class="nc bnc" id="L119" title="All 2 branches missed.">		if(Objects.nonNull(parent)) {</span>
+<span class="nc" id="L120">			rp = hierarchy.computeIfAbsent(parent.getId(), i -&gt; toReadableCategory(c.getParent(), store, language, processed));</span>
+		}
+
+<span class="nc" id="L123">		rc = toReadableCategory(c, store, language, processed);</span>
+<span class="nc bnc" id="L124" title="All 2 branches missed.">		if(Objects.nonNull(rp)) {</span>
+<span class="nc" id="L125">			rp.getChildren().add(rc);</span>
+		} else {
+<span class="nc" id="L127">			hierarchy.put(c.getId(), rc);</span>
+		}
+
+<span class="nc" id="L130">	}</span>
+
+	private ReadableCategory toReadableCategory(Category c, MerchantStore store, Language lang, Map&lt;Long, ReadableCategory&gt; processed) {
+<span class="nc" id="L133">		Long id = c.getId();</span>
+<span class="nc" id="L134">		return processed.computeIfAbsent(id, it -&gt; readableCategoryMapper.convert(c, store, lang));</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ModulesApi.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.api.v1.system</a> &gt; <span class="el_source">ModulesApi.java</span></div><h1>ModulesApi.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.api.v1.system;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping(&quot;/api/v1/system&quot;)
+<span class="fc" id="L10">public class ModulesApi {</span>
+  
+<span class="fc" id="L12">  private static final Logger LOGGER = LoggerFactory.getLogger(ModulesApi.class);</span>
+  
+
+  /**
+   * Creates or updates a configuration module. A JSON has to be created on the client side which represents
+   * an object that will create a new module (payment, shipping ...) which can be used and configured from
+   * the administration tool. Here is an example of configuration accepted
+   * 
+   *  {
+      &quot;module&quot;: &quot;PAYMENT&quot;,
+      &quot;code&quot;: &quot;paypal-express-checkout&quot;,
+      &quot;type&quot;:&quot;paypal&quot;,
+      &quot;version&quot;:&quot;104.0&quot;,
+      &quot;regions&quot;: [&quot;*&quot;],
+      &quot;image&quot;:&quot;icon-paypal.png&quot;,
+      &quot;configuration&quot;:[{&quot;env&quot;:&quot;TEST&quot;,&quot;scheme&quot;:&quot;&quot;,&quot;host&quot;:&quot;&quot;,&quot;port&quot;:&quot;&quot;,&quot;uri&quot;:&quot;&quot;,&quot;config1&quot;:&quot;https://www.sandbox.paypal.com/cgi-bin/webscr?cmd=_express-checkout&amp;token=&quot;},{&quot;env&quot;:&quot;PROD&quot;,&quot;scheme&quot;:&quot;&quot;,&quot;host&quot;:&quot;&quot;,&quot;port&quot;:&quot;&quot;,&quot;uri&quot;:&quot;&quot;,&quot;config1&quot;:&quot;https://www.paypal.com/cgi-bin/webscr?cmd=_express-checkout&amp;token=&quot;}]
+      }
+   *
+   * see : shopizer/sm-core/src/main/resources/reference/integrationmodules.json for more samples
+   * @param json
+   * @param request
+   * @param response
+   * @throws Exception
+   */
+/*  @PostMapping(value = &quot;/module&quot;, consumes = MediaType.TEXT_PLAIN)
+  @ApiOperation(
+      httpMethod = &quot;POST&quot;,
+      value = &quot;Creates a new module&quot;,
+      notes = &quot;&quot;,
+      produces = &quot;application/json&quot;)
+  public ReadableEntity createModule(@RequestBody String json, HttpServletRequest request) {
+
+      LOGGER.debug(&quot;Creating an integration module : &quot; + json);
+          
+      try {
+        moduleConfigurationService.createOrUpdateModule(json);
+      } catch (ServiceException e) {
+        // TODO Auto-generated catch block
+        throw new RestApiException(e);
+      }
+
+      return new ReadableEntity();
+
+  }*/
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

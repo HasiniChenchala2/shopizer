@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OrderFacadeImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.facade.order</a> &gt; <span class="el_source">OrderFacadeImpl.java</span></div><h1>OrderFacadeImpl.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.facade.order;
+
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Validate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.salesmanager.core.business.services.reference.language.LanguageService;
+import com.salesmanager.core.model.customer.Customer;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.order.Order;
+import com.salesmanager.core.model.order.OrderTotal;
+import com.salesmanager.core.model.order.orderproduct.OrderProduct;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.mapper.customer.ReadableCustomerMapper;
+import com.salesmanager.shop.mapper.order.ReadableOrderProductMapper;
+import com.salesmanager.shop.mapper.order.ReadableOrderTotalMapper;
+import com.salesmanager.shop.model.customer.ReadableCustomer;
+import com.salesmanager.shop.model.order.ReadableOrderProduct;
+import com.salesmanager.shop.model.order.total.ReadableOrderTotal;
+import com.salesmanager.shop.model.order.total.ReadableTotal;
+import com.salesmanager.shop.model.order.v1.ReadableOrderConfirmation;
+import com.salesmanager.shop.store.controller.order.facade.v1.OrderFacade;
+import com.salesmanager.shop.utils.LabelUtils;
+
+@Service(&quot;orderFacadev1&quot;)
+<span class="fc" id="L35">public class OrderFacadeImpl implements OrderFacade {</span>
+	
+<span class="fc" id="L37">	private static final Logger LOGGER = LoggerFactory.getLogger(OrderFacadeImpl.class);</span>
+	
+	
+	@Autowired
+	private ReadableCustomerMapper readableCustomerMapper;
+	
+	@Autowired
+	private ReadableOrderTotalMapper readableOrderTotalMapper;
+	
+	@Autowired
+	private ReadableOrderProductMapper readableOrderProductMapper;
+	
+	@Autowired 
+	private LabelUtils messages;
+	
+	@Autowired
+	private LanguageService languageService;
+
+	@Override
+	public ReadableOrderConfirmation orderConfirmation(Order order, Customer customer, MerchantStore store,
+			Language language) {
+<span class="nc" id="L58">		Validate.notNull(order, &quot;Order cannot be null&quot;);</span>
+<span class="nc" id="L59">		Validate.notNull(customer, &quot;Customer cannot be null&quot;);</span>
+<span class="nc" id="L60">		Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);</span>
+		
+<span class="nc" id="L62">		ReadableOrderConfirmation orderConfirmation = new ReadableOrderConfirmation();</span>
+		
+<span class="nc" id="L64">		ReadableCustomer readableCustomer = readableCustomerMapper.convert(customer, store, language);</span>
+<span class="nc" id="L65">		orderConfirmation.setBilling(readableCustomer.getBilling());</span>
+<span class="nc" id="L66">		orderConfirmation.setDelivery(readableCustomer.getDelivery());</span>
+		
+<span class="nc" id="L68">		ReadableTotal readableTotal = new ReadableTotal();</span>
+		
+<span class="nc" id="L70">		Set&lt;OrderTotal&gt; totals = order.getOrderTotal();</span>
+<span class="nc" id="L71">		List&lt;ReadableOrderTotal&gt; readableTotals = totals.stream()</span>
+<span class="nc" id="L72">				.sorted(Comparator.comparingInt(OrderTotal::getSortOrder))</span>
+<span class="nc" id="L73">				.map(tot -&gt; convertOrderTotal(tot, store, language))</span>
+<span class="nc" id="L74">				.collect(Collectors.toList());</span>
+		
+<span class="nc" id="L76">		readableTotal.setTotals(readableTotals);</span>
+		
+		
+<span class="nc" id="L79">		Optional&lt;ReadableOrderTotal&gt; grandTotal = readableTotals.stream().filter(tot -&gt; tot.getCode().equals(&quot;order.total.total&quot;)).findFirst();</span>
+		
+		
+<span class="nc bnc" id="L82" title="All 2 branches missed.">		if(grandTotal.isPresent()) {</span>
+<span class="nc" id="L83">			readableTotal.setGrandTotal(grandTotal.get().getText());</span>
+		}
+<span class="nc" id="L85">		orderConfirmation.setTotal(readableTotal);</span>
+		
+		
+<span class="nc" id="L88">		List&lt;ReadableOrderProduct&gt; products = order.getOrderProducts().stream().map(pr -&gt; convertOrderProduct(pr, store, language)).collect(Collectors.toList());</span>
+<span class="nc" id="L89">		orderConfirmation.setProducts(products);</span>
+		
+<span class="nc bnc" id="L91" title="All 2 branches missed.">		if(!StringUtils.isBlank(order.getShippingModuleCode())) {</span>
+<span class="nc" id="L92">	        StringBuilder optionCodeBuilder = new StringBuilder();</span>
+	        try {
+	
+<span class="nc" id="L95">	          optionCodeBuilder</span>
+<span class="nc" id="L96">	              .append(&quot;module.shipping.&quot;)</span>
+<span class="nc" id="L97">	              .append(order.getShippingModuleCode());</span>
+<span class="nc" id="L98">	          String shippingName = messages.getMessage(optionCodeBuilder.toString(), new String[]{store.getStorename()},languageService.toLocale(language, store));</span>
+<span class="nc" id="L99">	          orderConfirmation.setShipping(shippingName);</span>
+<span class="nc" id="L100">	        } catch (Exception e) { // label not found</span>
+<span class="nc" id="L101">	          LOGGER.warn(&quot;No shipping code found for &quot; + optionCodeBuilder.toString());</span>
+<span class="nc" id="L102">	        }</span>
+		}
+		
+<span class="nc bnc" id="L105" title="All 2 branches missed.">		if(order.getPaymentType() != null) {</span>
+<span class="nc" id="L106">			orderConfirmation.setPayment(order.getPaymentType().name());</span>
+		}
+		
+		
+		/**
+		 * Confirmation may be formatted
+		 */
+<span class="nc" id="L113">		orderConfirmation.setId(order.getId());</span>
+
+		
+<span class="nc" id="L116">		return orderConfirmation;</span>
+	}
+	
+	private ReadableOrderTotal convertOrderTotal(OrderTotal total, MerchantStore store, Language language) {
+
+<span class="nc" id="L121">		return readableOrderTotalMapper.convert(total, store, language);</span>
+	}
+	
+	private ReadableOrderProduct convertOrderProduct(OrderProduct product, MerchantStore store, Language language) {
+		
+<span class="nc" id="L126">		return readableOrderProductMapper.convert(product, store, language);</span>
+		
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

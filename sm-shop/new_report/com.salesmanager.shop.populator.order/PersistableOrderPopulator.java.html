@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PersistableOrderPopulator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.populator.order</a> &gt; <span class="el_source">PersistableOrderPopulator.java</span></div><h1>PersistableOrderPopulator.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.populator.order;
+
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Validate;
+
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.services.catalog.product.ProductService;
+import com.salesmanager.core.business.services.catalog.product.attribute.ProductAttributeService;
+import com.salesmanager.core.business.services.catalog.product.file.DigitalProductService;
+import com.salesmanager.core.business.services.customer.CustomerService;
+import com.salesmanager.core.business.services.reference.country.CountryService;
+import com.salesmanager.core.business.services.reference.currency.CurrencyService;
+import com.salesmanager.core.business.services.reference.zone.ZoneService;
+import com.salesmanager.core.business.utils.AbstractDataPopulator;
+import com.salesmanager.core.business.utils.CreditCardUtils;
+import com.salesmanager.core.model.customer.Customer;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.order.Order;
+import com.salesmanager.core.model.order.orderproduct.OrderProduct;
+import com.salesmanager.core.model.order.orderstatus.OrderStatus;
+import com.salesmanager.core.model.order.orderstatus.OrderStatusHistory;
+import com.salesmanager.core.model.order.payment.CreditCard;
+import com.salesmanager.core.model.reference.country.Country;
+import com.salesmanager.core.model.reference.currency.Currency;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.core.model.reference.zone.Zone;
+import com.salesmanager.shop.model.customer.PersistableCustomer;
+import com.salesmanager.shop.model.order.PersistableOrderProduct;
+import com.salesmanager.shop.model.order.total.OrderTotal;
+import com.salesmanager.shop.model.order.v0.PersistableOrder;
+import com.salesmanager.shop.utils.LocaleUtils;
+
+<span class="nc" id="L38">public class PersistableOrderPopulator extends</span>
+		AbstractDataPopulator&lt;PersistableOrder, Order&gt; {
+	
+	private CustomerService customerService;
+	private CountryService countryService;
+	private CurrencyService currencyService;
+
+
+	private ZoneService zoneService;
+	private ProductService productService;
+	private DigitalProductService digitalProductService;
+	private ProductAttributeService productAttributeService;
+
+	@Override
+	public Order populate(PersistableOrder source, Order target,
+			MerchantStore store, Language language) throws ConversionException {
+		
+		
+<span class="nc" id="L56">		Validate.notNull(productService,&quot;productService must be set&quot;);</span>
+<span class="nc" id="L57">		Validate.notNull(digitalProductService,&quot;digitalProductService must be set&quot;);</span>
+<span class="nc" id="L58">		Validate.notNull(productAttributeService,&quot;productAttributeService must be set&quot;);</span>
+<span class="nc" id="L59">		Validate.notNull(customerService,&quot;customerService must be set&quot;);</span>
+<span class="nc" id="L60">		Validate.notNull(countryService,&quot;countryService must be set&quot;);</span>
+<span class="nc" id="L61">		Validate.notNull(zoneService,&quot;zoneService must be set&quot;);</span>
+<span class="nc" id="L62">		Validate.notNull(currencyService,&quot;currencyService must be set&quot;);</span>
+
+		try {
+			
+
+<span class="nc" id="L67">			Map&lt;String,Country&gt; countriesMap = countryService.getCountriesMap(language);</span>
+<span class="nc" id="L68">			Map&lt;String,Zone&gt; zonesMap = zoneService.getZones(language);</span>
+			/** customer **/
+<span class="nc" id="L70">			PersistableCustomer customer = source.getCustomer();</span>
+<span class="nc bnc" id="L71" title="All 2 branches missed.">			if(customer!=null) {</span>
+<span class="nc bnc" id="L72" title="All 4 branches missed.">				if(customer.getId()!=null &amp;&amp; customer.getId()&gt;0) {</span>
+<span class="nc" id="L73">					Customer modelCustomer = customerService.getById(customer.getId());</span>
+<span class="nc bnc" id="L74" title="All 2 branches missed.">					if(modelCustomer==null) {</span>
+<span class="nc" id="L75">						throw new ConversionException(&quot;Customer id &quot; + customer.getId() + &quot; does not exists&quot;);</span>
+					}
+<span class="nc bnc" id="L77" title="All 2 branches missed.">					if(modelCustomer.getMerchantStore().getId().intValue()!=store.getId().intValue()) {</span>
+<span class="nc" id="L78">						throw new ConversionException(&quot;Customer id &quot; + customer.getId() + &quot; does not exists for store &quot; + store.getCode());</span>
+					}
+<span class="nc" id="L80">					target.setCustomerId(modelCustomer.getId());</span>
+<span class="nc" id="L81">					target.setBilling(modelCustomer.getBilling());</span>
+<span class="nc" id="L82">					target.setDelivery(modelCustomer.getDelivery());</span>
+<span class="nc" id="L83">					target.setCustomerEmailAddress(source.getCustomer().getEmailAddress());</span>
+
+
+					
+				} 
+			}
+			
+<span class="nc" id="L90">			target.setLocale(LocaleUtils.getLocale(store));</span>
+			
+<span class="nc" id="L92">			CreditCard creditCard = source.getCreditCard();</span>
+<span class="nc bnc" id="L93" title="All 2 branches missed.">			if(creditCard!=null) {</span>
+<span class="nc" id="L94">				String maskedNumber = CreditCardUtils.maskCardNumber(creditCard.getCcNumber());</span>
+<span class="nc" id="L95">				creditCard.setCcNumber(maskedNumber);</span>
+<span class="nc" id="L96">				target.setCreditCard(creditCard);</span>
+			}
+			
+<span class="nc" id="L99">			Currency currency = null;</span>
+			try {
+<span class="nc" id="L101">				currency = currencyService.getByCode(source.getCurrency());</span>
+<span class="nc" id="L102">			} catch(Exception e) {</span>
+<span class="nc" id="L103">				throw new ConversionException(&quot;Currency not found for code &quot; + source.getCurrency());</span>
+<span class="nc" id="L104">			}</span>
+			
+<span class="nc bnc" id="L106" title="All 2 branches missed.">			if(currency==null) {</span>
+<span class="nc" id="L107">				throw new ConversionException(&quot;Currency not found for code &quot; + source.getCurrency());</span>
+			}
+			
+<span class="nc" id="L110">			target.setCurrency(currency);</span>
+<span class="nc" id="L111">			target.setDatePurchased(source.getDatePurchased());</span>
+			//target.setCurrency(store.getCurrency());
+<span class="nc" id="L113">			target.setCurrencyValue(new BigDecimal(0));</span>
+<span class="nc" id="L114">			target.setMerchant(store);</span>
+<span class="nc" id="L115">			target.setStatus(source.getOrderStatus());</span>
+<span class="nc" id="L116">			target.setPaymentModuleCode(source.getPaymentModule());</span>
+<span class="nc" id="L117">			target.setPaymentType(source.getPaymentType());</span>
+<span class="nc" id="L118">			target.setShippingModuleCode(source.getShippingModule());</span>
+<span class="nc" id="L119">			target.setCustomerAgreement(source.isCustomerAgreed());</span>
+<span class="nc" id="L120">			target.setConfirmedAddress(source.isConfirmedAddress());</span>
+<span class="nc bnc" id="L121" title="All 2 branches missed.">			if(source.getPreviousOrderStatus()!=null) {</span>
+<span class="nc" id="L122">				List&lt;OrderStatus&gt; orderStatusList = source.getPreviousOrderStatus();</span>
+<span class="nc bnc" id="L123" title="All 2 branches missed.">				for(OrderStatus status : orderStatusList) {</span>
+<span class="nc" id="L124">					OrderStatusHistory statusHistory = new OrderStatusHistory();</span>
+<span class="nc" id="L125">					statusHistory.setStatus(status);</span>
+<span class="nc" id="L126">					statusHistory.setOrder(target);</span>
+<span class="nc" id="L127">					target.getOrderHistory().add(statusHistory);</span>
+<span class="nc" id="L128">				}</span>
+			}
+			
+<span class="nc bnc" id="L131" title="All 2 branches missed.">			if(!StringUtils.isBlank(source.getComments())) {</span>
+<span class="nc" id="L132">				OrderStatusHistory statusHistory = new OrderStatusHistory();</span>
+<span class="nc" id="L133">				statusHistory.setStatus(null);</span>
+<span class="nc" id="L134">				statusHistory.setOrder(target);</span>
+<span class="nc" id="L135">				statusHistory.setComments(source.getComments());</span>
+<span class="nc" id="L136">				target.getOrderHistory().add(statusHistory);</span>
+			}
+			
+<span class="nc" id="L139">			List&lt;PersistableOrderProduct&gt; products = source.getOrderProductItems();</span>
+<span class="nc bnc" id="L140" title="All 2 branches missed.">			if(CollectionUtils.isEmpty(products)) {</span>
+<span class="nc" id="L141">				throw new ConversionException(&quot;Requires at least 1 PersistableOrderProduct&quot;);</span>
+			}
+<span class="nc" id="L143">			com.salesmanager.shop.populator.order.PersistableOrderProductPopulator orderProductPopulator = new PersistableOrderProductPopulator();</span>
+<span class="nc" id="L144">			orderProductPopulator.setProductAttributeService(productAttributeService);</span>
+<span class="nc" id="L145">			orderProductPopulator.setProductService(productService);</span>
+<span class="nc" id="L146">			orderProductPopulator.setDigitalProductService(digitalProductService);</span>
+			
+<span class="nc bnc" id="L148" title="All 2 branches missed.">			for(PersistableOrderProduct orderProduct : products) {</span>
+<span class="nc" id="L149">				OrderProduct modelOrderProduct = new OrderProduct();</span>
+<span class="nc" id="L150">				orderProductPopulator.populate(orderProduct, modelOrderProduct, store, language);</span>
+<span class="nc" id="L151">				target.getOrderProducts().add(modelOrderProduct);</span>
+<span class="nc" id="L152">			}</span>
+			
+<span class="nc" id="L154">			List&lt;OrderTotal&gt; orderTotals = source.getTotals();</span>
+<span class="nc bnc" id="L155" title="All 2 branches missed.">			if(CollectionUtils.isNotEmpty(orderTotals)) {</span>
+<span class="nc bnc" id="L156" title="All 2 branches missed.">				for(OrderTotal total : orderTotals) {</span>
+<span class="nc" id="L157">					com.salesmanager.core.model.order.OrderTotal totalModel = new com.salesmanager.core.model.order.OrderTotal();</span>
+<span class="nc" id="L158">					totalModel.setModule(total.getModule());</span>
+<span class="nc" id="L159">					totalModel.setOrder(target);</span>
+<span class="nc" id="L160">					totalModel.setOrderTotalCode(total.getCode());</span>
+<span class="nc" id="L161">					totalModel.setTitle(total.getTitle());</span>
+<span class="nc" id="L162">					totalModel.setValue(total.getValue());</span>
+<span class="nc" id="L163">					target.getOrderTotal().add(totalModel);</span>
+<span class="nc" id="L164">				}</span>
+			}
+			
+<span class="nc" id="L167">		} catch (Exception e) {</span>
+<span class="nc" id="L168">			throw new ConversionException(e);</span>
+<span class="nc" id="L169">		}</span>
+		
+		
+<span class="nc" id="L172">		return target;</span>
+	}
+
+	@Override
+	protected Order createTarget() {
+<span class="nc" id="L177">		return null;</span>
+	}
+
+	public void setProductService(ProductService productService) {
+<span class="nc" id="L181">		this.productService = productService;</span>
+<span class="nc" id="L182">	}</span>
+
+	public ProductService getProductService() {
+<span class="nc" id="L185">		return productService;</span>
+	}
+
+	public void setDigitalProductService(DigitalProductService digitalProductService) {
+<span class="nc" id="L189">		this.digitalProductService = digitalProductService;</span>
+<span class="nc" id="L190">	}</span>
+
+	public DigitalProductService getDigitalProductService() {
+<span class="nc" id="L193">		return digitalProductService;</span>
+	}
+
+	public void setProductAttributeService(ProductAttributeService productAttributeService) {
+<span class="nc" id="L197">		this.productAttributeService = productAttributeService;</span>
+<span class="nc" id="L198">	}</span>
+
+	public ProductAttributeService getProductAttributeService() {
+<span class="nc" id="L201">		return productAttributeService;</span>
+	}
+	
+	public CustomerService getCustomerService() {
+<span class="nc" id="L205">		return customerService;</span>
+	}
+
+	public void setCustomerService(CustomerService customerService) {
+<span class="nc" id="L209">		this.customerService = customerService;</span>
+<span class="nc" id="L210">	}</span>
+
+	public CountryService getCountryService() {
+<span class="nc" id="L213">		return countryService;</span>
+	}
+
+	public void setCountryService(CountryService countryService) {
+<span class="nc" id="L217">		this.countryService = countryService;</span>
+<span class="nc" id="L218">	}</span>
+
+	public CurrencyService getCurrencyService() {
+<span class="nc" id="L221">		return currencyService;</span>
+	}
+
+	public void setCurrencyService(CurrencyService currencyService) {
+<span class="nc" id="L225">		this.currencyService = currencyService;</span>
+<span class="nc" id="L226">	}</span>
+
+	public ZoneService getZoneService() {
+<span class="nc" id="L229">		return zoneService;</span>
+	}
+
+	public void setZoneService(ZoneService zoneService) {
+<span class="nc" id="L233">		this.zoneService = zoneService;</span>
+<span class="nc" id="L234">	}</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

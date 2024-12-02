@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FilePathUtils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.utils</a> &gt; <span class="el_source">FilePathUtils.java</span></div><h1>FilePathUtils.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.utils;
+
+import static com.salesmanager.shop.constants.Constants.ADMIN_URI;
+import static com.salesmanager.shop.constants.Constants.BLANK;
+import static com.salesmanager.shop.constants.Constants.CATEGORY_URI;
+import static com.salesmanager.shop.constants.Constants.DEFAULT_DOMAIN_NAME;
+import static com.salesmanager.shop.constants.Constants.FILES_URI;
+import static com.salesmanager.shop.constants.Constants.HTTP_SCHEME;
+import static com.salesmanager.shop.constants.Constants.ORDER_DOWNLOAD_URI;
+import static com.salesmanager.shop.constants.Constants.SHOP_URI;
+import static com.salesmanager.shop.constants.Constants.SLASH;
+import static com.salesmanager.shop.constants.Constants.STATIC_URI;
+import static com.salesmanager.shop.constants.Constants.URL_EXTENSION;
+
+import java.net.URL;
+import java.util.Properties;
+
+import javax.annotation.Resource;
+import javax.inject.Inject;
+import javax.servlet.http.HttpServletRequest;
+
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Component;
+
+import com.salesmanager.core.business.utils.CoreConfiguration;
+import com.salesmanager.core.model.catalog.product.file.DigitalProduct;
+import com.salesmanager.core.model.content.FileContentType;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.shop.constants.Constants;
+import com.salesmanager.shop.model.order.ReadableOrderProductDownload;
+
+@Component
+<span class="fc" id="L34">public class FilePathUtils {</span>
+
+	private static final String DOWNLOADS = &quot;/downloads/&quot;;
+	private static final String DOUBLE_SLASH = &quot;://&quot;;
+	private static final String CONTEXT_PATH = &quot;CONTEXT_PATH&quot;;
+	public static final String X_FORWARDED_HOST = &quot;X-Forwarded-Host&quot;;
+	public static final String HTTP = &quot;http://&quot;;
+	public static final String HTTPS = &quot;https://&quot;;
+
+	@Inject
+	private CoreConfiguration coreConfiguration;
+
+	@Inject
+	@Qualifier(&quot;img&quot;)
+	private ImageFilePath imageUtils;
+
+<span class="fc" id="L50">	@Resource(name = &quot;shopizer-properties&quot;)</span>
+	public Properties properties = new Properties();
+
+	/**
+	 * Builds a static content content file path that can be used by image
+	 * servlet utility for getting the physical image Example:
+	 * /files/&lt;storeCode&gt;/
+	 */
+	public String buildStaticFilePath(String storeCode, String fileName) {
+<span class="nc" id="L59">		String path = FILES_URI + SLASH + storeCode + SLASH;</span>
+<span class="nc bnc" id="L60" title="All 2 branches missed.">		if (StringUtils.isNotBlank(fileName)) {</span>
+<span class="nc" id="L61">			return path + fileName;</span>
+		}
+<span class="nc" id="L63">		return path;</span>
+	}
+
+	public String buildStaticFilePath(MerchantStore store) {
+<span class="nc" id="L67">		return STATIC_URI + FILES_URI + SLASH + store.getCode() + SLASH;</span>
+	}
+
+	/**
+	 * Example: /admin/files/downloads/&lt;storeCode&gt;/&lt;product&gt;
+	 */
+	public String buildAdminDownloadProductFilePath(MerchantStore store, DigitalProduct digitalProduct) {
+<span class="nc" id="L74">		return ADMIN_URI + FILES_URI + DOWNLOADS + store.getCode() + SLASH + digitalProduct.getProductFileName();</span>
+	}
+
+	/**
+	 * Example: /shop/order/download/&lt;orderId&gt;.html
+	 */
+	public String buildOrderDownloadProductFilePath(MerchantStore store, ReadableOrderProductDownload digitalProduct,
+			Long orderId) {
+<span class="nc" id="L82">		return SHOP_URI + ORDER_DOWNLOAD_URI + SLASH + orderId + SLASH + digitalProduct.getId() + URL_EXTENSION;</span>
+	}
+
+	/**
+	 * Example: /&lt;baseImagePath&gt;/files/&lt;storeCode&gt;/STATIC_FILE/&lt;fileName&gt; Or
+	 * example: /&lt;shopScheme&gt;://&lt;domainName&gt;/&lt;contextPath&gt;/files/&lt;storeCode&gt;/
+	 */
+	public String buildStaticFileAbsolutePath(MerchantStore store, String fileName) {
+<span class="nc bnc" id="L90" title="All 2 branches missed.">		if (StringUtils.isNotBlank(imageUtils.getBasePath(store))</span>
+<span class="nc bnc" id="L91" title="All 2 branches missed.">				&amp;&amp; imageUtils.getBasePath(store).startsWith(HTTP_SCHEME)) {</span>
+<span class="nc" id="L92">			return imageUtils.getBasePath(store) + FILES_URI + SLASH + store.getCode() + SLASH</span>
+					+ FileContentType.STATIC_FILE + SLASH + fileName;
+		} else {
+<span class="nc" id="L95">			String scheme = this.getScheme(store);</span>
+<span class="nc" id="L96">			return scheme + SLASH + coreConfiguration.getProperty(&quot;CONTEXT_PATH&quot;)</span>
+<span class="nc" id="L97">					+ buildStaticFilePath(store.getCode(), fileName);</span>
+		}
+	}
+
+	/**
+	 * Example: http[s]://&lt;scheme&gt;/&lt;domainName&gt;/&lt;contextPath&gt;
+	 */
+	public String buildStoreUri(MerchantStore store, HttpServletRequest request) {
+<span class="nc" id="L105">		return buildBaseUrl(request, store);</span>
+	}
+
+	/**
+	 * \/&lt;contextPath&gt;
+	 */
+	public String buildStoreUri(MerchantStore store, String contextPath) {
+<span class="nc" id="L112">		return normalizePath(contextPath);</span>
+	}
+
+	public String buildRelativeStoreUri(HttpServletRequest request, MerchantStore store) {
+<span class="nc" id="L116">		return &quot;&quot; + normalizePath(request.getContextPath());</span>
+	}
+
+	/**
+	 * Access to the customer section
+	 */
+	public String buildCustomerUri(MerchantStore store, String contextPath) {
+<span class="nc" id="L123">		return buildStoreUri(store, contextPath);</span>
+	}
+
+	public String buildAdminUri(MerchantStore store, HttpServletRequest request) {
+<span class="nc" id="L127">		String baseUrl = buildBaseUrl(request, store);</span>
+<span class="nc" id="L128">		return baseUrl + ADMIN_URI;</span>
+	}
+
+	public String buildCategoryUrl(MerchantStore store, String contextPath, String url) {
+<span class="nc" id="L132">		return buildStoreUri(store, contextPath) + SHOP_URI + CATEGORY_URI + SLASH + url + URL_EXTENSION;</span>
+	}
+
+	public String buildProductUrl(MerchantStore store, String contextPath, String url) {
+<span class="nc" id="L136">		return buildStoreUri(store, contextPath) + SHOP_URI + Constants.PRODUCT_URI + SLASH + url + URL_EXTENSION;</span>
+	}
+
+	public String getContextPath() {
+<span class="nc" id="L140">		return properties.getProperty(CONTEXT_PATH);</span>
+	}
+
+	private String normalizePath(String path) {
+<span class="nc bnc" id="L144" title="All 2 branches missed.">		if (SLASH.equals(path)) {</span>
+<span class="nc" id="L145">			return BLANK;</span>
+		} else {
+<span class="nc" id="L147">			return path;</span>
+		}
+	}
+
+	private String getDomainName(String domainName) {
+<span class="nc bnc" id="L152" title="All 2 branches missed.">		if (StringUtils.isBlank(domainName)) {</span>
+<span class="nc" id="L153">			return DEFAULT_DOMAIN_NAME;</span>
+		} else {
+<span class="nc" id="L155">			return domainName;</span>
+		}
+	}
+
+	private String getScheme(MerchantStore store) {
+<span class="nc" id="L160">		String baseScheme = store.getDomainName();</span>
+<span class="nc bnc" id="L161" title="All 4 branches missed.">		if (baseScheme != null &amp;&amp; baseScheme.length() &gt; 0</span>
+<span class="nc bnc" id="L162" title="All 2 branches missed.">				&amp;&amp; baseScheme.charAt(baseScheme.length() - 1) == Constants.SLASH.charAt(0)) {</span>
+<span class="nc" id="L163">			baseScheme = baseScheme.substring(0, baseScheme.length() - 1);</span>
+		}
+		// end no more
+<span class="nc" id="L166">		return validUrl(baseScheme);</span>
+	}
+
+	public String validUrl(final String url) {
+<span class="nc bnc" id="L170" title="All 6 branches missed.">		if (!StringUtils.isBlank(url) &amp;&amp; !url.startsWith(HTTP) &amp;&amp; !url.startsWith(HTTP)) {</span>
+<span class="nc" id="L171">			return HTTPS + url;</span>
+		}
+<span class="nc" id="L173">		return url;</span>
+	}
+
+	private String buildBaseUrl(HttpServletRequest request, MerchantStore store) {
+<span class="nc" id="L177">		String contextPath = normalizePath(request.getContextPath());</span>
+<span class="nc" id="L178">		String scheme = getScheme(store);</span>
+<span class="nc" id="L179">		return scheme + DOUBLE_SLASH + contextPath;</span>
+	}
+
+	public String buildBaseUrl(String contextPath, MerchantStore store) {
+<span class="nc" id="L183">		String normalizePath = normalizePath(contextPath);</span>
+<span class="nc" id="L184">		String scheme = getScheme(store);</span>
+<span class="nc" id="L185">		return scheme + SLASH + normalizePath;</span>
+	}
+
+	/**
+	 * Requires web server headers to build image URL for social media
+	 * sharing.&lt;br/&gt;
+	 *
+	 * Nginx configuration example:
+	 * 
+	 * &lt;pre&gt;
+	 *     proxy_set_header X-Forwarded-Proto $scheme;
+	 *     proxy_set_header X-Forwarded-Host $scheme://$host;
+	 *     proxy_set_header X-Forwarded-Server $host;
+	 * &lt;/pre&gt;
+	 * 
+	 * @param merchantStore
+	 * @param request
+	 * @return
+	 */
+	public String buildStoreForwardedUri(MerchantStore merchantStore, HttpServletRequest request) {
+		String uri;
+<span class="nc bnc" id="L206" title="All 2 branches missed.">		if (StringUtils.isNotEmpty(request.getHeader(X_FORWARDED_HOST))) {</span>
+<span class="nc" id="L207">			uri = request.getHeader(X_FORWARDED_HOST);</span>
+		} else {
+<span class="nc" id="L209">			uri = buildStoreUri(merchantStore, request);</span>
+		}
+<span class="nc" id="L211">		return uri;</span>
+	}
+	
+	public boolean isValidURL(String urlString)
+	{
+	    try
+	    {
+<span class="nc" id="L218">	        URL url = new URL(urlString);</span>
+<span class="nc" id="L219">	        url.toURI();</span>
+<span class="nc" id="L220">	        return true;</span>
+<span class="nc" id="L221">	    } catch (Exception exception)</span>
+	    {
+<span class="nc" id="L223">	        return false;</span>
+	    }
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

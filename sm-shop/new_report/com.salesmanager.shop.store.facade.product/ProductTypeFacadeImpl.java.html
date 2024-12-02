@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ProductTypeFacadeImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.facade.product</a> &gt; <span class="el_source">ProductTypeFacadeImpl.java</span></div><h1>ProductTypeFacadeImpl.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.facade.product;
+
+import java.util.stream.Collectors;
+
+import org.jsoup.helper.Validate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.stereotype.Service;
+
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.catalog.product.type.ProductTypeService;
+import com.salesmanager.core.model.catalog.product.type.ProductType;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.mapper.catalog.PersistableProductTypeMapper;
+import com.salesmanager.shop.mapper.catalog.ReadableProductTypeMapper;
+import com.salesmanager.shop.model.catalog.product.type.PersistableProductType;
+import com.salesmanager.shop.model.catalog.product.type.ReadableProductType;
+import com.salesmanager.shop.model.catalog.product.type.ReadableProductTypeList;
+import com.salesmanager.shop.store.api.exception.OperationNotAllowedException;
+import com.salesmanager.shop.store.api.exception.ResourceNotFoundException;
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+import com.salesmanager.shop.store.controller.product.facade.ProductTypeFacade;
+
+@Service(&quot;productTypeFacade&quot;)
+<span class="fc" id="L26">public class ProductTypeFacadeImpl implements ProductTypeFacade {</span>
+
+	@Autowired
+	private ProductTypeService productTypeService;
+
+	@Autowired
+	private ReadableProductTypeMapper readableProductTypeMapper;
+
+	@Autowired
+	private PersistableProductTypeMapper persistableProductTypeMapper;
+
+	@Override
+	public ReadableProductTypeList getByMerchant(MerchantStore store, Language language,  int count, int page) {
+
+<span class="nc" id="L40">		Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);</span>
+<span class="nc" id="L41">		ReadableProductTypeList returnList = new ReadableProductTypeList();</span>
+
+		try {
+
+<span class="nc" id="L45">			Page&lt;ProductType&gt; types = productTypeService.getByMerchant(store, language, page, count);</span>
+
+<span class="nc bnc" id="L47" title="All 2 branches missed.">			if(types != null) {</span>
+<span class="nc" id="L48">				returnList.setList(types.getContent().stream().map(t -&gt; readableProductTypeMapper.convert(t, store, language)).collect(Collectors.toList()));</span>
+<span class="nc" id="L49">				returnList.setTotalPages(types.getTotalPages());</span>
+<span class="nc" id="L50">				returnList.setRecordsTotal(types.getTotalElements());</span>
+<span class="nc" id="L51">				returnList.setRecordsFiltered(types.getSize());</span>
+			}
+
+<span class="nc" id="L54">			return returnList;</span>
+<span class="nc" id="L55">		} catch (Exception e) {</span>
+<span class="nc" id="L56">			throw new ServiceRuntimeException(</span>
+<span class="nc" id="L57">					&quot;An exception occured while getting product types for merchant[ &quot; + store.getCode() + &quot;]&quot;, e);</span>
+		}
+
+	}
+
+	@Override
+	public ReadableProductType get(MerchantStore store, Long id, Language language) {
+
+<span class="nc" id="L65">		Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);</span>
+<span class="nc" id="L66">		Validate.notNull(id, &quot;ProductType code cannot be empty&quot;);</span>
+		try {
+
+<span class="nc" id="L69">			ProductType type = null;</span>
+<span class="nc bnc" id="L70" title="All 2 branches missed.">			if(language == null) {</span>
+<span class="nc" id="L71">				type = productTypeService.getById(id, store);</span>
+			} else {
+<span class="nc" id="L73">				type = productTypeService.getById(id, store, language);</span>
+			}
+			
+<span class="nc bnc" id="L76" title="All 2 branches missed.">			if(type == null) {</span>
+<span class="nc" id="L77">				throw new ResourceNotFoundException(&quot;Product type [&quot; + id + &quot;] not found for store [&quot; + store.getCode() + &quot;]&quot;);</span>
+			}
+					
+<span class="nc" id="L80">			ReadableProductType readableType = readableProductTypeMapper.convert(type, store, language);</span>
+
+
+<span class="nc" id="L83">			return readableType;</span>
+
+<span class="nc" id="L85">		} catch(Exception e) {</span>
+<span class="nc" id="L86">			throw new ServiceRuntimeException(</span>
+<span class="nc" id="L87">					&quot;An exception occured while getting product type [&quot; + id + &quot;] not found for store [&quot; + store.getCode() + &quot;]&quot;, e);</span>
+		}
+
+	}
+
+	@Override
+	public Long save(PersistableProductType type, MerchantStore store, Language language) {
+
+<span class="nc" id="L95">		Validate.notNull(type,&quot;ProductType cannot be null&quot;);</span>
+<span class="nc" id="L96">		Validate.notNull(store,&quot;MerchantStore cannot be null&quot;);</span>
+<span class="nc" id="L97">		Validate.notNull(type.getCode(),&quot;ProductType code cannot be empty&quot;);</span>
+
+		try {
+
+<span class="nc bnc" id="L101" title="All 2 branches missed.">			if(this.exists(type.getCode(), store, language)) {</span>
+<span class="nc" id="L102">				throw new OperationNotAllowedException(</span>
+<span class="nc" id="L103">						&quot;Product type [&quot; + type.getCode() + &quot;] already exist for store [&quot; + store.getCode() + &quot;]&quot;);</span>
+			}
+
+<span class="nc" id="L106">			ProductType model = persistableProductTypeMapper.convert(type, store, language);</span>
+<span class="nc" id="L107">			model.setMerchantStore(store);</span>
+<span class="nc" id="L108">			ProductType saved = productTypeService.saveOrUpdate(model);</span>
+<span class="nc" id="L109">			return saved.getId();</span>
+
+<span class="nc" id="L111">		} catch(Exception e) {</span>
+<span class="nc" id="L112">			throw new ServiceRuntimeException(</span>
+					&quot;An exception occured while saving product type&quot;,e);
+		}
+
+	}
+
+	@Override
+	public void update(PersistableProductType type, Long id, MerchantStore store, Language language) {
+<span class="nc" id="L120">		Validate.notNull(type,&quot;ProductType cannot be null&quot;);</span>
+<span class="nc" id="L121">		Validate.notNull(store,&quot;MerchantStore cannot be null&quot;);</span>
+<span class="nc" id="L122">		Validate.notNull(id,&quot;id cannot be empty&quot;);</span>
+
+		try {
+
+<span class="nc" id="L126">			ProductType t = productTypeService.getById(id, store, language);</span>
+<span class="nc bnc" id="L127" title="All 2 branches missed.">			if(t == null) {</span>
+<span class="nc" id="L128">				throw new ResourceNotFoundException(</span>
+<span class="nc" id="L129">						&quot;Product type [&quot; + type.getCode() + &quot;] does not exist for store [&quot; + store.getCode() + &quot;]&quot;);</span>
+			}
+
+<span class="nc" id="L132">			type.setId(t.getId());</span>
+<span class="nc" id="L133">			type.setCode(t.getCode());</span>
+
+<span class="nc" id="L135">			ProductType model = persistableProductTypeMapper.merge(type, t, store, language);</span>
+<span class="nc" id="L136">			model.setMerchantStore(store);</span>
+<span class="nc" id="L137">			productTypeService.saveOrUpdate(model);</span>
+
+<span class="nc" id="L139">		} catch(Exception e) {</span>
+<span class="nc" id="L140">			throw new ServiceRuntimeException(</span>
+					&quot;An exception occured while saving product type&quot;,e);
+<span class="nc" id="L142">		}</span>
+
+<span class="nc" id="L144">	}</span>
+
+	@Override
+	public void delete(Long id, MerchantStore store, Language language) {
+<span class="nc" id="L148">		Validate.notNull(store,&quot;MerchantStore cannot be null&quot;);</span>
+<span class="nc" id="L149">		Validate.notNull(id,&quot;id cannot be empty&quot;);</span>
+
+		try {
+
+<span class="nc" id="L153">			ProductType t = productTypeService.getById(id, store, language);</span>
+<span class="nc bnc" id="L154" title="All 2 branches missed.">			if(t == null) {</span>
+<span class="nc" id="L155">				throw new ResourceNotFoundException(</span>
+<span class="nc" id="L156">						&quot;Product type [&quot; + id + &quot;] does not exist for store [&quot; + store.getCode() + &quot;]&quot;);</span>
+			}
+
+<span class="nc" id="L159">			productTypeService.delete(t);</span>
+
+
+<span class="nc" id="L162">		} catch(Exception e) {</span>
+<span class="nc" id="L163">			throw new ServiceRuntimeException(</span>
+					&quot;An exception occured while saving product type&quot;,e);
+<span class="nc" id="L165">		}</span>
+
+<span class="nc" id="L167">	}</span>
+
+	@Override
+	public boolean exists(String code, MerchantStore store, Language language) {
+		ProductType t;
+		try {
+<span class="nc" id="L173">			t = productTypeService.getByCode(code, store, language);</span>
+<span class="nc" id="L174">	    } catch (ServiceException e) {</span>
+<span class="nc" id="L175">			throw new RuntimeException(&quot;An exception occured while getting product type [&quot; + code + &quot;] for merchant store [&quot; + store.getCode() +&quot;]&quot;,e);</span>
+<span class="nc" id="L176">		}</span>
+<span class="nc bnc" id="L177" title="All 2 branches missed.">		if(t != null) {</span>
+<span class="nc" id="L178">			return true;</span>
+		}
+<span class="nc" id="L180">		return false;</span>
+	}
+
+	@Override
+	public ReadableProductType get(MerchantStore store, String code, Language language) {
+		ProductType t;
+		try {
+<span class="nc" id="L187">			t = productTypeService.getByCode(code, store, language);</span>
+<span class="nc" id="L188">	    } catch (ServiceException e) {</span>
+<span class="nc" id="L189">			throw new RuntimeException(&quot;An exception occured while getting product type [&quot; + code + &quot;] for merchant store [&quot; + store.getCode() +&quot;]&quot;,e);</span>
+<span class="nc" id="L190">		}</span>
+
+<span class="nc bnc" id="L192" title="All 2 branches missed.">		if(t == null) {</span>
+<span class="nc" id="L193">			throw new ResourceNotFoundException(&quot;Product type [&quot; + code + &quot;] not found for merchant [&quot; + store.getCode() + &quot;]&quot;);</span>
+		}
+		
+<span class="nc" id="L196">		ReadableProductType readableType = readableProductTypeMapper.convert(t, store, language);</span>
+<span class="nc" id="L197">		return readableType;</span>
+
+	}
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

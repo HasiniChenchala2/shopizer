@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReadableProductReviewPopulator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.populator.catalog</a> &gt; <span class="el_source">ReadableProductReviewPopulator.java</span></div><h1>ReadableProductReviewPopulator.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.populator.catalog;
+
+import java.util.Set;
+
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.utils.AbstractDataPopulator;
+import com.salesmanager.core.model.catalog.product.review.ProductReview;
+import com.salesmanager.core.model.catalog.product.review.ProductReviewDescription;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.model.catalog.product.ReadableProductReview;
+import com.salesmanager.shop.model.customer.ReadableCustomer;
+import com.salesmanager.shop.populator.customer.ReadableCustomerPopulator;
+import com.salesmanager.shop.utils.DateUtil;
+
+<span class="nc" id="L16">public class ReadableProductReviewPopulator extends</span>
+		AbstractDataPopulator&lt;ProductReview, ReadableProductReview&gt; {
+
+	@Override
+	public ReadableProductReview populate(ProductReview source,
+			ReadableProductReview target, MerchantStore store, Language language)
+			throws ConversionException {
+
+		
+		try {
+<span class="nc" id="L26">			ReadableCustomerPopulator populator = new ReadableCustomerPopulator();</span>
+<span class="nc" id="L27">			ReadableCustomer customer = new ReadableCustomer();</span>
+<span class="nc" id="L28">			populator.populate(source.getCustomer(), customer, store, language);</span>
+
+<span class="nc" id="L30">			target.setId(source.getId());</span>
+<span class="nc" id="L31">			target.setDate(DateUtil.formatDate(source.getReviewDate()));</span>
+<span class="nc" id="L32">			target.setCustomer(customer);</span>
+<span class="nc" id="L33">			target.setRating(source.getReviewRating());</span>
+<span class="nc" id="L34">			target.setProductId(source.getProduct().getId());</span>
+			
+<span class="nc" id="L36">			Set&lt;ProductReviewDescription&gt; descriptions = source.getDescriptions();</span>
+<span class="nc bnc" id="L37" title="All 2 branches missed.">			if(descriptions!=null) {</span>
+<span class="nc bnc" id="L38" title="All 2 branches missed.">				for(ProductReviewDescription description : descriptions) {</span>
+<span class="nc" id="L39">					target.setDescription(description.getDescription());</span>
+<span class="nc" id="L40">					target.setLanguage(description.getLanguage().getCode());</span>
+<span class="nc" id="L41">					break;</span>
+				}
+			}
+
+<span class="nc" id="L45">			return target;</span>
+			
+<span class="nc" id="L47">		} catch (Exception e) {</span>
+<span class="nc" id="L48">			throw new ConversionException(&quot;Cannot populate ProductReview&quot;, e);</span>
+		}
+		
+		
+		
+	}
+
+	@Override
+	protected ReadableProductReview createTarget() {
+<span class="nc" id="L57">		return null;</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

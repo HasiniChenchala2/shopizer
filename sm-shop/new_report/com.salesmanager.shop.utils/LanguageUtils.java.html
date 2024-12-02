@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LanguageUtils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.utils</a> &gt; <span class="el_source">LanguageUtils.java</span></div><h1>LanguageUtils.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.utils;
+
+import static com.salesmanager.core.business.constants.Constants.DEFAULT_STORE;
+
+import java.util.Locale;
+import java.util.Optional;
+
+import javax.inject.Inject;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Validate;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.NativeWebRequest;
+import org.springframework.web.servlet.LocaleResolver;
+import org.springframework.web.servlet.support.RequestContextUtils;
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.reference.language.LanguageService;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.constants.Constants;
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+import com.salesmanager.shop.store.controller.store.facade.StoreFacade;
+
+@Component
+<span class="fc" id="L30">public class LanguageUtils {</span>
+
+<span class="fc" id="L32">  protected final Log logger = LogFactory.getLog(getClass());</span>
+  public static final String REQUEST_PARAMATER_STORE = &quot;store&quot;;
+
+  private static final String ALL_LANGUALES = &quot;_all&quot;;
+
+  @Inject
+  LanguageService languageService;
+  
+  @Autowired
+  private StoreFacade storeFacade;
+
+  public Language getServiceLanguage(String lang) {
+<span class="fc" id="L44">    Language l = null;</span>
+<span class="pc bpc" id="L45" title="1 of 2 branches missed.">    if (!StringUtils.isBlank(lang)) {</span>
+      try {
+<span class="nc" id="L47">        l = languageService.getByCode(lang);</span>
+<span class="nc" id="L48">      } catch (ServiceException e) {</span>
+<span class="nc" id="L49">        logger.error(&quot;Cannot retrieve language &quot; + lang, e);</span>
+<span class="nc" id="L50">      }</span>
+    }
+
+<span class="pc bpc" id="L53" title="1 of 2 branches missed.">    if (l == null) {</span>
+<span class="fc" id="L54">      l = languageService.defaultLanguage();</span>
+    }
+
+<span class="fc" id="L57">    return l;</span>
+  }
+
+  /**
+   * Determines request language based on store rules
+   * 
+   * @param request
+   * @return
+   */
+  public Language getRequestLanguage(HttpServletRequest request, HttpServletResponse response) {
+
+<span class="nc" id="L68">    Locale locale = null;</span>
+
+<span class="nc" id="L70">    Language language = (Language) request.getSession().getAttribute(Constants.LANGUAGE);</span>
+<span class="nc" id="L71">    MerchantStore store =</span>
+<span class="nc" id="L72">        (MerchantStore) request.getSession().getAttribute(Constants.MERCHANT_STORE);</span>
+    
+
+
+<span class="nc bnc" id="L76" title="All 2 branches missed.">    if (language == null) {</span>
+      try {
+
+<span class="nc" id="L79">        locale = LocaleContextHolder.getLocale();// should be browser locale</span>
+
+
+
+<span class="nc bnc" id="L83" title="All 2 branches missed.">        if (store != null) {</span>
+<span class="nc" id="L84">          language = store.getDefaultLanguage();</span>
+<span class="nc bnc" id="L85" title="All 2 branches missed.">          if (language != null) {</span>
+<span class="nc" id="L86">            locale = languageService.toLocale(language, store);</span>
+<span class="nc bnc" id="L87" title="All 2 branches missed.">            if (locale != null) {</span>
+<span class="nc" id="L88">              LocaleContextHolder.setLocale(locale);</span>
+            }
+<span class="nc" id="L90">            request.getSession().setAttribute(Constants.LANGUAGE, language);</span>
+          }
+
+<span class="nc bnc" id="L93" title="All 2 branches missed.">          if (language == null) {</span>
+<span class="nc" id="L94">            language = languageService.toLanguage(locale);</span>
+<span class="nc" id="L95">            request.getSession().setAttribute(Constants.LANGUAGE, language);</span>
+          }
+
+        }
+
+<span class="nc" id="L100">      } catch (Exception e) {</span>
+<span class="nc bnc" id="L101" title="All 2 branches missed.">        if (language == null) {</span>
+          try {
+<span class="nc" id="L103">            language = languageService.getByCode(Constants.DEFAULT_LANGUAGE);</span>
+<span class="nc" id="L104">          } catch (Exception ignore) {</span>
+<span class="nc" id="L105">          }</span>
+        }
+<span class="nc" id="L107">      }</span>
+    } else {
+
+
+<span class="nc" id="L111">      Locale localeFromContext = LocaleContextHolder.getLocale();// should be browser locale</span>
+<span class="nc bnc" id="L112" title="All 2 branches missed.">      if (!language.getCode().equals(localeFromContext.getLanguage())) {</span>
+        // get locale context
+<span class="nc" id="L114">        language = languageService.toLanguage(localeFromContext);</span>
+      }
+
+    }
+
+<span class="nc bnc" id="L119" title="All 2 branches missed.">    if (language != null) {</span>
+<span class="nc" id="L120">      locale = languageService.toLocale(language, store);</span>
+    } else {
+<span class="nc" id="L122">      language = languageService.toLanguage(locale);</span>
+    }
+
+<span class="nc" id="L125">    LocaleResolver localeResolver = RequestContextUtils.getLocaleResolver(request);</span>
+<span class="nc bnc" id="L126" title="All 2 branches missed.">    if (localeResolver != null) {</span>
+<span class="nc" id="L127">      localeResolver.setLocale(request, response, locale);</span>
+    }
+<span class="nc" id="L129">    response.setLocale(locale);</span>
+<span class="nc" id="L130">    request.getSession().setAttribute(Constants.LANGUAGE, language);</span>
+
+<span class="nc" id="L132">    return language;</span>
+  }
+
+  /**
+   * Should be used by rest web services
+   * 
+   * @param request
+   * @param store
+   * @return
+   * @throws Exception
+   */
+  public Language getRESTLanguage(HttpServletRequest request, NativeWebRequest webRequest) {
+
+<span class="fc" id="L145">    Validate.notNull(request, &quot;HttpServletRequest must not be null&quot;);</span>
+
+    try {
+<span class="fc" id="L148">      Language language = null;</span>
+
+<span class="fc" id="L150">      String lang = request.getParameter(Constants.LANG);</span>
+
+<span class="pc bpc" id="L152" title="1 of 2 branches missed.">      if (StringUtils.isBlank(lang)) {</span>
+<span class="pc bpc" id="L153" title="1 of 2 branches missed.">        if (language == null) {</span>
+<span class="fc" id="L154">    	    String storeValue = Optional.ofNullable(webRequest.getParameter(REQUEST_PARAMATER_STORE))</span>
+<span class="fc" id="L155">    				.filter(StringUtils::isNotBlank).orElse(DEFAULT_STORE);</span>
+<span class="pc bpc" id="L156" title="1 of 2 branches missed.">    	    if(!StringUtils.isBlank(storeValue)) {</span>
+    	      try {
+<span class="fc" id="L158">    	    	  MerchantStore storeModel = storeFacade.get(storeValue);</span>
+<span class="fc" id="L159">    	    	  language = storeModel.getDefaultLanguage();</span>
+<span class="nc" id="L160">    	      } catch (Exception e) {</span>
+<span class="nc" id="L161">    	    	  logger.warn(&quot;Cannot get store with code [&quot; + storeValue + &quot;]&quot;);</span>
+<span class="pc" id="L162">    	      }</span>
+    	    	
+    	    } else {
+<span class="nc" id="L165">    	    	language = languageService.defaultLanguage();</span>
+    	    }
+
+<span class="fc" id="L168">        }</span>
+      } else {
+<span class="nc bnc" id="L170" title="All 2 branches missed.">        if(!ALL_LANGUALES.equals(lang)) {</span>
+<span class="nc" id="L171">          language = languageService.getByCode(lang);</span>
+<span class="nc bnc" id="L172" title="All 2 branches missed.">          if (language == null) {</span>
+<span class="nc" id="L173">            language = languageService.defaultLanguage();</span>
+          }
+        }
+      }
+      
+      //if language is null then underlying facade must load all languages
+<span class="fc" id="L179">      return language;</span>
+
+<span class="nc" id="L181">    } catch (ServiceException e) {</span>
+<span class="nc" id="L182">      throw new ServiceRuntimeException(e);</span>
+    }
+  }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

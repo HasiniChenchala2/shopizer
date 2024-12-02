@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PaymentConfigurationFacadeImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.facade.payment</a> &gt; <span class="el_source">PaymentConfigurationFacadeImpl.java</span></div><h1>PaymentConfigurationFacadeImpl.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.facade.payment;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.payments.PaymentService;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.payments.PaymentMethod;
+import com.salesmanager.core.model.system.IntegrationConfiguration;
+import com.salesmanager.shop.model.configuration.PersistableConfiguration;
+import com.salesmanager.shop.model.configuration.ReadableConfiguration;
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+import com.salesmanager.shop.store.controller.configurations.ConfigurationsFacade;
+
+
+@Service(&quot;paymentConfigurationFacade&quot;)
+<span class="fc" id="L22">public class PaymentConfigurationFacadeImpl implements ConfigurationsFacade {</span>
+	
+	
+	@Autowired
+	private PaymentService paymentService;
+
+	@Override
+	public List&lt;ReadableConfiguration&gt; configurations(MerchantStore store) {
+		
+		try {
+			
+<span class="nc" id="L33">			List&lt;PaymentMethod&gt; methods = paymentService.getAcceptedPaymentMethods(store);</span>
+<span class="nc" id="L34">			List&lt;ReadableConfiguration&gt; configurations = </span>
+<span class="nc" id="L35">					methods.stream()</span>
+<span class="nc" id="L36">					.map(m -&gt; configuration(m.getInformations(), store)).collect(Collectors.toList());</span>
+<span class="nc" id="L37">			return configurations;</span>
+			
+<span class="nc" id="L39">		} catch (ServiceException e) {</span>
+<span class="nc" id="L40">			throw new ServiceRuntimeException(&quot;Error while getting payment configurations&quot;,e);</span>
+		}
+
+	}
+
+	@Override
+	public ReadableConfiguration configuration(String module, MerchantStore store) {
+		
+		try {
+			
+<span class="nc" id="L50">			ReadableConfiguration config = null;</span>
+<span class="nc" id="L51">			List&lt;PaymentMethod&gt; methods = paymentService.getAcceptedPaymentMethods(store);</span>
+<span class="nc" id="L52">			Optional&lt;ReadableConfiguration&gt; configuration = </span>
+<span class="nc" id="L53">					methods.stream()</span>
+<span class="nc" id="L54">					.filter(m -&gt; module.equals(m.getModule().getCode()))</span>
+<span class="nc" id="L55">					.map(m -&gt; this.configuration(m.getInformations(), store))</span>
+<span class="nc" id="L56">					.findFirst();</span>
+			
+<span class="nc bnc" id="L58" title="All 2 branches missed.">			if(configuration.isPresent()) {</span>
+<span class="nc" id="L59">				config = configuration.get();</span>
+			}
+			
+<span class="nc" id="L62">			return config;</span>
+		
+<span class="nc" id="L64">		} catch (ServiceException e) {</span>
+<span class="nc" id="L65">			throw new ServiceRuntimeException(&quot;Error while getting payment configuration [&quot; + module + &quot;]&quot;,e);</span>
+		}
+
+	}
+
+	@Override
+	public void saveConfiguration(PersistableConfiguration configuration, MerchantStore store) {
+		// TODO Auto-generated method stub
+
+<span class="nc" id="L74">	}</span>
+
+	@Override
+	public void deleteConfiguration(String module, MerchantStore store) {
+		// TODO Auto-generated method stub
+
+<span class="nc" id="L80">	}</span>
+
+	
+	private ReadableConfiguration configuration(IntegrationConfiguration source, MerchantStore store) {
+		
+<span class="nc" id="L85">		ReadableConfiguration config = new ReadableConfiguration();</span>
+<span class="nc" id="L86">		config.setActive(source.isActive());</span>
+<span class="nc" id="L87">		config.setCode(source.getModuleCode());</span>
+<span class="nc" id="L88">		config.setKeys(source.getIntegrationKeys());</span>
+<span class="nc" id="L89">		config.setIntegrationOptions(source.getIntegrationOptions());</span>
+		
+<span class="nc" id="L91">		return config;</span>
+	}
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

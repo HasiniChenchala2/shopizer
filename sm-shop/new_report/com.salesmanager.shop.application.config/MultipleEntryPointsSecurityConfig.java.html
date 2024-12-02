@@ -1,0 +1,429 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MultipleEntryPointsSecurityConfig.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.application.config</a> &gt; <span class="el_source">MultipleEntryPointsSecurityConfig.java</span></div><h1>MultipleEntryPointsSecurityConfig.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.application.config;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.builders.WebSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.security.web.authentication.www.BasicAuthenticationEntryPoint;
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+
+import com.salesmanager.shop.admin.security.UserAuthenticationSuccessHandler;
+import com.salesmanager.shop.admin.security.WebUserServices;
+import com.salesmanager.shop.store.controller.customer.facade.CustomerFacade;
+import com.salesmanager.shop.store.security.AuthenticationTokenFilter;
+import com.salesmanager.shop.store.security.ServicesAuthenticationSuccessHandler;
+import com.salesmanager.shop.store.security.admin.JWTAdminAuthenticationProvider;
+import com.salesmanager.shop.store.security.admin.JWTAdminServicesImpl;
+import com.salesmanager.shop.store.security.customer.JWTCustomerAuthenticationProvider;
+import com.salesmanager.shop.store.security.services.CredentialsService;
+import com.salesmanager.shop.store.security.services.CredentialsServiceImpl;
+
+/**
+ * Main entry point for security - admin - customer - auth - private - services
+ * 
+ * @author dur9213
+ *
+ */
+@Configuration
+@EnableWebSecurity
+<span class="fc" id="L41">public class MultipleEntryPointsSecurityConfig {</span>
+
+	private static final String API_VERSION = &quot;/api/v*&quot;;
+
+	@Bean
+	public AuthenticationTokenFilter authenticationTokenFilter() {
+<span class="fc" id="L47">		return new AuthenticationTokenFilter();</span>
+	}
+	
+	@Bean
+	public CredentialsService credentialsService() {
+<span class="fc" id="L52">		return new CredentialsServiceImpl();</span>
+	}
+
+	@Bean
+	public PasswordEncoder passwordEncoder() {
+<span class="fc" id="L57">		return new BCryptPasswordEncoder();</span>
+	}
+
+	@Bean
+	public UserAuthenticationSuccessHandler userAuthenticationSuccessHandler() {
+<span class="fc" id="L62">		return new UserAuthenticationSuccessHandler();</span>
+	}
+
+	@Bean
+	public ServicesAuthenticationSuccessHandler servicesAuthenticationSuccessHandler() {
+<span class="fc" id="L67">		return new ServicesAuthenticationSuccessHandler();</span>
+	}
+
+	@Bean
+	public CustomerFacade customerFacade() {
+<span class="fc" id="L72">		return new com.salesmanager.shop.store.controller.customer.facade.CustomerFacadeImpl();</span>
+	}
+
+	
+	
+	/**
+	 * shop / customer
+	 * 
+	 * @author dur9213
+	 *
+	 */
+	@Configuration
+	@Order(1)
+	public static class CustomerConfigurationAdapter extends WebSecurityConfigurerAdapter {
+
+		@Bean(&quot;customerAuthenticationManager&quot;)
+		@Override
+		public AuthenticationManager authenticationManagerBean() throws Exception {
+<span class="fc" id="L90">			return super.authenticationManagerBean();</span>
+		}
+
+		@Autowired
+		private UserDetailsService customerDetailsService;
+
+		public CustomerConfigurationAdapter() {
+<span class="fc" id="L97">			super();</span>
+<span class="fc" id="L98">		}</span>
+		
+		@Override
+		public void configure(WebSecurity web) {
+<span class="fc" id="L102">			web.ignoring().antMatchers(&quot;/&quot;);</span>
+<span class="fc" id="L103">			web.ignoring().antMatchers(&quot;/error&quot;);</span>
+<span class="fc" id="L104">			web.ignoring().antMatchers(&quot;/resources/**&quot;);</span>
+<span class="fc" id="L105">			web.ignoring().antMatchers(&quot;/static/**&quot;);</span>
+<span class="fc" id="L106">			web.ignoring().antMatchers(&quot;/services/public/**&quot;);</span>
+<span class="fc" id="L107">		}</span>
+
+
+		@Override
+		public void configure(AuthenticationManagerBuilder auth) throws Exception {
+<span class="fc" id="L112">			auth.userDetailsService(customerDetailsService);</span>
+<span class="fc" id="L113">		}</span>
+
+		@Override
+		protected void configure(HttpSecurity http) throws Exception {
+<span class="fc" id="L117">			http</span>
+<span class="fc" id="L118">			.antMatcher(&quot;/shop/**&quot;)</span>
+<span class="fc" id="L119">			.csrf().disable()			</span>
+<span class="fc" id="L120">			.authorizeRequests()</span>
+<span class="fc" id="L121">					.antMatchers(&quot;/shop/&quot;).permitAll()</span>
+<span class="fc" id="L122">					.antMatchers(&quot;/shop/**&quot;).permitAll()</span>
+<span class="fc" id="L123">					.antMatchers(&quot;/shop/customer/logon*&quot;).permitAll()</span>
+<span class="fc" id="L124">					.antMatchers(&quot;/shop/customer/registration*&quot;).permitAll()</span>
+<span class="fc" id="L125">					.antMatchers(&quot;/shop/customer/logout*&quot;).permitAll()</span>
+<span class="fc" id="L126">					.antMatchers(&quot;/shop/customer/customLogon*&quot;).permitAll()</span>
+<span class="fc" id="L127">					.antMatchers(&quot;/shop/customer/denied*&quot;).permitAll()</span>
+<span class="fc" id="L128">					.antMatchers(&quot;/shop/customer/**&quot;).hasRole(&quot;AUTH_CUSTOMER&quot;)</span>
+<span class="fc" id="L129">					.anyRequest().authenticated()</span>
+<span class="fc" id="L130">					.and()</span>
+<span class="fc" id="L131">					.httpBasic()</span>
+<span class="fc" id="L132">					.authenticationEntryPoint(shopAuthenticationEntryPoint())</span>
+<span class="fc" id="L133">					.and()</span>
+<span class="fc" id="L134">					.logout()</span>
+<span class="fc" id="L135">					.logoutUrl(&quot;/shop/customer/logout&quot;)</span>
+<span class="fc" id="L136">					.logoutSuccessUrl(&quot;/shop/&quot;)</span>
+<span class="fc" id="L137">					.invalidateHttpSession(true)</span>
+<span class="fc" id="L138">					.deleteCookies(&quot;JSESSIONID&quot;)</span>
+
+<span class="fc" id="L140">					.invalidateHttpSession(false)</span>
+<span class="fc" id="L141">					.and()</span>
+<span class="fc" id="L142">					.exceptionHandling().accessDeniedPage(&quot;/shop/&quot;);</span>
+
+<span class="fc" id="L144">		}</span>
+
+		@Bean
+		public AuthenticationEntryPoint shopAuthenticationEntryPoint() {
+<span class="fc" id="L148">			BasicAuthenticationEntryPoint entryPoint = new BasicAuthenticationEntryPoint();</span>
+<span class="fc" id="L149">			entryPoint.setRealmName(&quot;shop-realm&quot;);</span>
+<span class="fc" id="L150">			return entryPoint;</span>
+		}
+
+	}
+	
+	/**
+	 * services api v0
+	 * 
+	 * @author dur9213
+	 * @deprecated
+	 *
+	 */
+	@Configuration
+	@Order(2)
+	public static class ServicesApiConfigurationAdapter extends WebSecurityConfigurerAdapter {
+
+		@Autowired
+		private WebUserServices userDetailsService;
+
+		@Autowired
+		private ServicesAuthenticationSuccessHandler servicesAuthenticationSuccessHandler;
+
+		public ServicesApiConfigurationAdapter() {
+<span class="fc" id="L173">			super();</span>
+<span class="fc" id="L174">		}</span>
+
+		@Override
+		public void configure(AuthenticationManagerBuilder auth) throws Exception {
+<span class="fc" id="L178">			auth.userDetailsService(userDetailsService);</span>
+<span class="fc" id="L179">		}</span>
+
+		@Override
+		protected void configure(HttpSecurity http) throws Exception {
+<span class="fc" id="L183">			http</span>
+<span class="fc" id="L184">			.antMatcher(&quot;/services/**&quot;)</span>
+<span class="fc" id="L185">			.csrf().disable()</span>
+<span class="fc" id="L186">					.authorizeRequests()</span>
+<span class="fc" id="L187">					.antMatchers(&quot;/services/public/**&quot;).permitAll()</span>
+<span class="fc" id="L188">					.antMatchers(&quot;/services/private/**&quot;).hasRole(&quot;AUTH&quot;)</span>
+<span class="fc" id="L189">					.anyRequest().authenticated()</span>
+<span class="fc" id="L190">					.and().httpBasic().authenticationEntryPoint(servicesAuthenticationEntryPoint())</span>
+<span class="fc" id="L191">					.and().formLogin()</span>
+<span class="fc" id="L192">					.successHandler(servicesAuthenticationSuccessHandler);</span>
+
+<span class="fc" id="L194">		}</span>
+
+		@Bean
+		public AuthenticationEntryPoint servicesAuthenticationEntryPoint() {
+<span class="fc" id="L198">			BasicAuthenticationEntryPoint entryPoint = new BasicAuthenticationEntryPoint();</span>
+<span class="fc" id="L199">			entryPoint.setRealmName(&quot;rest-customer-realm&quot;);</span>
+<span class="fc" id="L200">			return entryPoint;</span>
+		}
+
+	}
+
+	/**
+	 * admin
+	 * 
+	 * @author dur9213
+	 *
+	 */
+	/**
+	@Configuration
+	@Order(3)
+	public static class AdminConfigurationAdapter extends WebSecurityConfigurerAdapter {
+
+		@Autowired
+		private WebUserServices userDetailsService;
+
+		@Autowired
+		private UserAuthenticationSuccessHandler userAuthenticationSuccessHandler;
+
+		public AdminConfigurationAdapter() {
+			super();
+		}
+
+		@Override
+		public void configure(AuthenticationManagerBuilder auth) throws Exception {
+			auth.userDetailsService(userDetailsService);
+		}
+		
+		@Override
+		public void configure(WebSecurity web) {
+		}
+
+		@Override
+		protected void configure(HttpSecurity http) throws Exception {
+			http
+			.antMatcher(&quot;/admin/**&quot;)
+					.authorizeRequests()
+					.antMatchers(&quot;/admin/logon*&quot;).permitAll()
+					.antMatchers(&quot;/admin/resources/**&quot;).permitAll()
+					.antMatchers(&quot;/admin/layout/**&quot;).permitAll()
+					.antMatchers(&quot;/admin/denied*&quot;).permitAll()
+					.antMatchers(&quot;/admin/unauthorized*&quot;).permitAll()
+					.antMatchers(&quot;/admin/users/resetPassword*&quot;).permitAll()
+					.antMatchers(&quot;/admin/&quot;).hasRole(&quot;AUTH&quot;)
+					.antMatchers(&quot;/admin/**&quot;).hasRole(&quot;AUTH&quot;)
+					.antMatchers(&quot;/admin/**&quot;).hasRole(&quot;AUTH&quot;)
+					.antMatchers(&quot;/admin/users/resetPasswordSecurityQtn*&quot;).permitAll()
+					.anyRequest()
+					.authenticated()
+					.and()
+					.httpBasic()
+					.authenticationEntryPoint(adminAuthenticationEntryPoint())
+					.and()
+					.formLogin().usernameParameter(&quot;username&quot;).passwordParameter(&quot;password&quot;)
+					.loginPage(&quot;/admin/logon.html&quot;)
+					.loginProcessingUrl(&quot;/admin/performUserLogin&quot;)
+					.successHandler(userAuthenticationSuccessHandler)
+					.failureUrl(&quot;/admin/logon.html?login_error=true&quot;)
+					.and()
+					.csrf().disable()
+					.logout().logoutUrl(&quot;/admin/logout&quot;).logoutSuccessUrl(&quot;/admin/home.html&quot;)
+					.invalidateHttpSession(true).and().exceptionHandling().accessDeniedPage(&quot;/admin/denied.html&quot;);
+			
+
+		}
+
+		@Bean
+		public AuthenticationEntryPoint adminAuthenticationEntryPoint() {
+			BasicAuthenticationEntryPoint entryPoint = new BasicAuthenticationEntryPoint();
+			entryPoint.setRealmName(&quot;admin-realm&quot;);
+			return entryPoint;
+		}
+
+	}
+	**/
+
+	/**
+	 * api - private
+	 * 
+	 * @author dur9213
+	 *
+	 */
+	@Configuration
+	@Order(5)
+	public static class UserApiConfigurationAdapter extends WebSecurityConfigurerAdapter {
+
+		@Autowired
+		private AuthenticationTokenFilter authenticationTokenFilter;
+
+		@Autowired
+		JWTAdminServicesImpl jwtUserDetailsService;
+
+		@Bean(&quot;jwtAdminAuthenticationManager&quot;)
+		@Override
+		public AuthenticationManager authenticationManagerBean() throws Exception {
+<span class="fc" id="L298">			AuthenticationManager mgr = super.authenticationManagerBean();</span>
+<span class="fc" id="L299">			return mgr;</span>
+		}
+		
+		
+
+		public UserApiConfigurationAdapter() {
+<span class="fc" id="L305">			super();</span>
+<span class="fc" id="L306">		}</span>
+
+		@Override
+		public void configure(AuthenticationManagerBuilder auth) throws Exception {
+<span class="fc" id="L310">		       auth.userDetailsService(jwtUserDetailsService)</span>
+<span class="fc" id="L311">	            .and()</span>
+<span class="fc" id="L312">	            .authenticationProvider(authenticationProvider());</span>
+<span class="fc" id="L313">		}</span>
+		
+		@Override
+		public void configure(WebSecurity web) {
+<span class="fc" id="L317">			web.ignoring().antMatchers(&quot;/swagger-ui.html&quot;);</span>
+<span class="fc" id="L318">		}</span>
+
+		
+		/**
+		 * Admin user api
+		 */
+		@Override
+		protected void configure(HttpSecurity http) throws Exception {
+<span class="fc" id="L326">			http</span>
+<span class="fc" id="L327">					.antMatcher(API_VERSION + &quot;/private/**&quot;)</span>
+<span class="fc" id="L328">					.authorizeRequests()</span>
+<span class="fc" id="L329">					.antMatchers(API_VERSION + &quot;/private/login*&quot;).permitAll()</span>
+<span class="fc" id="L330">					.antMatchers(API_VERSION + &quot;/private/refresh&quot;).permitAll()</span>
+<span class="fc" id="L331">					.antMatchers(HttpMethod.OPTIONS, API_VERSION + &quot;/private/**&quot;).permitAll()</span>
+<span class="fc" id="L332">					.antMatchers(API_VERSION + &quot;/private/**&quot;).hasRole(&quot;AUTH&quot;)</span>
+<span class="fc" id="L333">					.anyRequest().authenticated()</span>
+<span class="fc" id="L334">					.and()</span>
+<span class="fc" id="L335">					.httpBasic().authenticationEntryPoint(apiAdminAuthenticationEntryPoint())</span>
+<span class="fc" id="L336">					.and()</span>
+<span class="fc" id="L337">					.addFilterAfter(authenticationTokenFilter, BasicAuthenticationFilter.class)</span>
+<span class="fc" id="L338">					.csrf().disable();</span>
+
+<span class="fc" id="L340">		}</span>
+		
+	    @Bean
+	    public AuthenticationProvider authenticationProvider() {
+<span class="fc" id="L344">	    	JWTAdminAuthenticationProvider provider = new JWTAdminAuthenticationProvider();</span>
+<span class="fc" id="L345">	        provider.setUserDetailsService(jwtUserDetailsService);</span>
+<span class="fc" id="L346">	        return provider;</span>
+	    }
+
+		@Bean
+		public AuthenticationEntryPoint apiAdminAuthenticationEntryPoint() {
+<span class="fc" id="L351">			BasicAuthenticationEntryPoint entryPoint = new BasicAuthenticationEntryPoint();</span>
+<span class="fc" id="L352">			entryPoint.setRealmName(&quot;api-admin-realm&quot;);</span>
+<span class="fc" id="L353">			return entryPoint;</span>
+		}
+
+	}
+
+
+
+	/**
+	 * customer api
+	 * 
+	 * @author dur9213
+	 *
+	 */
+	@Configuration
+	@Order(6)
+	public static class CustomeApiConfigurationAdapter extends WebSecurityConfigurerAdapter {
+
+		@Autowired
+		private AuthenticationTokenFilter authenticationTokenFilter;
+
+		@Autowired
+		private UserDetailsService jwtCustomerDetailsService;
+
+		public CustomeApiConfigurationAdapter() {
+<span class="fc" id="L377">			super();</span>
+<span class="fc" id="L378">		}</span>
+		
+		@Bean(&quot;jwtCustomerAuthenticationManager&quot;)
+		@Override
+		public AuthenticationManager authenticationManagerBean() throws Exception {
+<span class="fc" id="L383">			return super.authenticationManagerBean();</span>
+		}
+
+		@Override
+		public void configure(AuthenticationManagerBuilder auth) throws Exception {
+<span class="fc" id="L388">			auth.userDetailsService(jwtCustomerDetailsService);</span>
+<span class="fc" id="L389">		}</span>
+
+		@Override
+		protected void configure(HttpSecurity http) throws Exception {
+<span class="fc" id="L393">			http</span>
+			
+<span class="fc" id="L395">				.antMatcher(API_VERSION + &quot;/auth/**&quot;)</span>
+<span class="fc" id="L396">				.authorizeRequests()</span>
+<span class="fc" id="L397">					.antMatchers(API_VERSION + &quot;/auth/refresh&quot;).permitAll()</span>
+<span class="fc" id="L398">					.antMatchers(API_VERSION + &quot;/auth/login&quot;).permitAll()</span>
+<span class="fc" id="L399">					.antMatchers(API_VERSION + &quot;/auth/register&quot;).permitAll()</span>
+<span class="fc" id="L400">					.antMatchers(HttpMethod.OPTIONS, API_VERSION + &quot;/auth/**&quot;).permitAll()</span>
+<span class="fc" id="L401">					.antMatchers(API_VERSION + &quot;/auth/**&quot;)</span>
+<span class="fc" id="L402">					.hasRole(&quot;AUTH_CUSTOMER&quot;).anyRequest().authenticated()</span>
+<span class="fc" id="L403">					.and()</span>
+<span class="fc" id="L404">					.httpBasic()</span>
+<span class="fc" id="L405">					.authenticationEntryPoint(apiCustomerAuthenticationEntryPoint()).and().csrf().disable()</span>
+<span class="fc" id="L406">					.addFilterAfter(authenticationTokenFilter, BasicAuthenticationFilter.class);</span>
+
+<span class="fc" id="L408">		}</span>
+		
+	    @Bean
+	    public AuthenticationProvider authenticationProvider() {
+<span class="nc" id="L412">	    	JWTCustomerAuthenticationProvider provider = new JWTCustomerAuthenticationProvider();</span>
+<span class="nc" id="L413">	        provider.setUserDetailsService(jwtCustomerDetailsService);</span>
+<span class="nc" id="L414">	        return provider;</span>
+	    }
+
+		@Bean
+		public AuthenticationEntryPoint apiCustomerAuthenticationEntryPoint() {
+<span class="fc" id="L419">			BasicAuthenticationEntryPoint entryPoint = new BasicAuthenticationEntryPoint();</span>
+<span class="fc" id="L420">			entryPoint.setRealmName(&quot;api-customer-realm&quot;);</span>
+<span class="fc" id="L421">			return entryPoint;</span>
+		}
+
+	}
+
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

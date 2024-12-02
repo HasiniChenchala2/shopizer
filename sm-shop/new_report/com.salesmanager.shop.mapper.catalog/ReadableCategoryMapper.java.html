@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReadableCategoryMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.mapper.catalog</a> &gt; <span class="el_source">ReadableCategoryMapper.java</span></div><h1>ReadableCategoryMapper.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.mapper.catalog;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+import com.salesmanager.core.model.catalog.category.Category;
+import com.salesmanager.core.model.catalog.category.CategoryDescription;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.mapper.Mapper;
+import com.salesmanager.shop.model.catalog.category.ReadableCategory;
+import com.salesmanager.shop.model.catalog.category.ReadableCategoryFull;
+
+@Component
+<span class="fc" id="L18">public class ReadableCategoryMapper implements Mapper&lt;Category, ReadableCategory&gt; {</span>
+
+<span class="fc" id="L20">	private static final Logger LOGGER = LoggerFactory.getLogger(ReadableCategoryMapper.class);</span>
+
+	@Override
+	public ReadableCategory convert(Category source, MerchantStore store, Language language) {
+
+<span class="pc bpc" id="L25" title="1 of 2 branches missed.">		if (Objects.isNull(language)) {</span>
+<span class="nc" id="L26">			ReadableCategoryFull target = new ReadableCategoryFull();</span>
+<span class="nc" id="L27">			List&lt;com.salesmanager.shop.model.catalog.category.CategoryDescription&gt; descriptions = source</span>
+<span class="nc" id="L28">					.getDescriptions().stream().map(this::convertDescription).collect(Collectors.toList());</span>
+<span class="nc" id="L29">			target.setDescriptions(descriptions);</span>
+<span class="nc" id="L30">			fillReadableCategory(target, source, language);</span>
+<span class="nc" id="L31">			return target;</span>
+		} else {
+			/**
+			ReadableCategory target = new ReadableCategory();
+			Optional&lt;com.salesmanager.shop.model.catalog.category.CategoryDescription&gt; description = source
+					.getDescriptions().stream().filter(d -&gt; language.getId().equals(d.getLanguage().getId()))
+					.map(this::convertDescription).findAny();
+			description.ifPresent(target::setDescript;ion);
+			**/
+<span class="fc" id="L40">			ReadableCategory target =createReadable(source, language);</span>
+			//fillReadableCategory(target, source, language);
+<span class="fc" id="L42">			return target;</span>
+		}
+	}
+
+	private void fillReadableCategory(ReadableCategory target, Category source, Language language) {
+<span class="fc" id="L47">		Optional&lt;com.salesmanager.shop.model.catalog.category.Category&gt; parentCategory = createParentCategory(source,</span>
+				language);
+<span class="fc" id="L49">		parentCategory.ifPresent(target::setParent);</span>
+
+<span class="fc" id="L51">		Optional.ofNullable(source.getDepth()).ifPresent(target::setDepth);</span>
+
+<span class="fc" id="L53">		target.setLineage(source.getLineage());</span>
+<span class="fc" id="L54">		target.setStore(source.getMerchantStore().getCode());</span>
+<span class="fc" id="L55">		target.setCode(source.getCode());</span>
+<span class="fc" id="L56">		target.setId(source.getId());</span>
+<span class="fc" id="L57">		target.setSortOrder(source.getSortOrder());</span>
+<span class="fc" id="L58">		target.setVisible(source.isVisible());</span>
+<span class="fc" id="L59">		target.setFeatured(source.isFeatured());</span>
+<span class="fc" id="L60">	}</span>
+
+	private com.salesmanager.shop.model.catalog.category.CategoryDescription convertDescription(
+			CategoryDescription description) {
+<span class="fc" id="L64">		final com.salesmanager.shop.model.catalog.category.CategoryDescription desc = new com.salesmanager.shop.model.catalog.category.CategoryDescription();</span>
+
+<span class="fc" id="L66">		desc.setFriendlyUrl(description.getSeUrl());</span>
+<span class="fc" id="L67">		desc.setName(description.getName());</span>
+<span class="fc" id="L68">		desc.setId(description.getId());</span>
+<span class="fc" id="L69">		desc.setDescription(description.getDescription());</span>
+<span class="fc" id="L70">		desc.setKeyWords(description.getMetatagKeywords());</span>
+<span class="fc" id="L71">		desc.setHighlights(description.getCategoryHighlight());</span>
+<span class="fc" id="L72">		desc.setLanguage(description.getLanguage().getCode());</span>
+<span class="fc" id="L73">		desc.setTitle(description.getMetatagTitle());</span>
+<span class="fc" id="L74">		desc.setMetaDescription(description.getMetatagDescription());</span>
+<span class="fc" id="L75">		return desc;</span>
+	}
+
+	private Optional&lt;com.salesmanager.shop.model.catalog.category.Category&gt; createParentCategory(Category source,
+			Language language) {
+
+<span class="fc" id="L81">		return Optional.ofNullable(source.getParent()).map(parentValue -&gt; {</span>
+<span class="fc" id="L82">			final com.salesmanager.shop.model.catalog.category.Category parent = new com.salesmanager.shop.model.catalog.category.Category();</span>
+
+<span class="pc bpc" id="L84" title="1 of 2 branches missed.">			if (source.getParent() != null) {</span>
+
+			}
+<span class="fc" id="L87">			Optional&lt;com.salesmanager.shop.model.catalog.category.CategoryDescription&gt; description = source</span>
+<span class="fc" id="L88">					.getDescriptions().stream().filter(d -&gt; language.getId().equals(d.getLanguage().getId()))</span>
+<span class="fc" id="L89">					.map(this::convertDescription).findAny();</span>
+
+<span class="fc" id="L91">			parent.setCode(source.getParent().getCode());</span>
+<span class="fc" id="L92">			parent.setId(source.getParent().getId());</span>
+<span class="pc bpc" id="L93" title="1 of 2 branches missed.">			if (description.isPresent()) {</span>
+<span class="fc" id="L94">				parent.setDescription(description.get());</span>
+			}
+<span class="fc" id="L96">			return parent;</span>
+		});
+	}
+
+	@Override
+	public ReadableCategory merge(Category source, ReadableCategory destination, MerchantStore store,
+			Language language) {
+<span class="nc" id="L103">		return destination;</span>
+	}
+
+	private ReadableCategory createReadable(Category category, Language language) {
+
+<span class="fc" id="L108">		ReadableCategory current = new ReadableCategory();</span>
+<span class="fc" id="L109">		this.fillReadableCategory(current, category, language);</span>
+<span class="fc" id="L110">		Optional&lt;com.salesmanager.shop.model.catalog.category.CategoryDescription&gt; description = category</span>
+<span class="fc" id="L111">				.getDescriptions().stream().filter(d -&gt; language.getId().equals(d.getLanguage().getId()))</span>
+<span class="fc" id="L112">				.map(this::convertDescription).findAny();</span>
+
+<span class="pc bpc" id="L114" title="1 of 2 branches missed.">		if (description.isPresent()) {</span>
+<span class="fc" id="L115">			current.setDescription(description.get());</span>
+		}
+
+<span class="fc bfc" id="L118" title="All 2 branches covered.">		if (category.getParent() != null) {</span>
+<span class="fc" id="L119">			current.setParent(this.createReadable(category.getParent(), language));</span>
+		}
+
+<span class="fc" id="L122">		return current;</span>
+
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

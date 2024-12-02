@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PersistableCatalogCategoryEntryMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.mapper.catalog</a> &gt; <span class="el_source">PersistableCatalogCategoryEntryMapper.java</span></div><h1>PersistableCatalogCategoryEntryMapper.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.mapper.catalog;
+
+import org.apache.commons.lang3.Validate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import com.salesmanager.core.model.catalog.catalog.Catalog;
+import com.salesmanager.core.model.catalog.catalog.CatalogCategoryEntry;
+import com.salesmanager.core.model.catalog.category.Category;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.mapper.Mapper;
+import com.salesmanager.shop.model.catalog.catalog.PersistableCatalogCategoryEntry;
+import com.salesmanager.shop.store.api.exception.ConversionRuntimeException;
+import com.salesmanager.shop.store.controller.catalog.facade.CatalogFacade;
+import com.salesmanager.shop.store.controller.category.facade.CategoryFacade;
+
+@Component
+<span class="fc" id="L19">public class PersistableCatalogCategoryEntryMapper implements Mapper&lt;PersistableCatalogCategoryEntry, CatalogCategoryEntry&gt; {</span>
+
+	
+	@Autowired
+	private CategoryFacade categoryFacade;
+	
+	@Autowired
+	private CatalogFacade catalogFacade;
+	
+	
+	@Override
+	public CatalogCategoryEntry convert(PersistableCatalogCategoryEntry source, MerchantStore store, Language language) {
+<span class="nc" id="L31">		CatalogCategoryEntry destination = new CatalogCategoryEntry();</span>
+<span class="nc" id="L32">		return this.merge(source, destination, store, language);</span>
+	}
+
+	@Override
+	public CatalogCategoryEntry merge(PersistableCatalogCategoryEntry source, CatalogCategoryEntry destination, MerchantStore store,
+									  Language language) {
+<span class="nc" id="L38">		Validate.notNull(source, &quot;CatalogEntry must not be null&quot;);</span>
+<span class="nc" id="L39">		Validate.notNull(store, &quot;MerchantStore must not be null&quot;);</span>
+<span class="nc" id="L40">		Validate.notNull(source.getProductCode(), &quot;ProductCode must not be null&quot;);</span>
+<span class="nc" id="L41">		Validate.notNull(source.getCategoryCode(), &quot;CategoryCode must not be null&quot;);</span>
+<span class="nc" id="L42">		Validate.notNull(source.getCatalog(), &quot;Catalog must not be null&quot;);</span>
+		
+		
+		
+<span class="nc bnc" id="L46" title="All 2 branches missed.">		if(destination == null) {</span>
+<span class="nc" id="L47">			destination = new CatalogCategoryEntry();</span>
+			
+		}
+<span class="nc" id="L50">		destination.setId(source.getId());</span>
+<span class="nc" id="L51">		destination.setVisible(source.isVisible());</span>
+
+		
+		try {
+			
+<span class="nc" id="L56">			String catalog = source.getCatalog();</span>
+			
+<span class="nc" id="L58">			Catalog catalogModel = catalogFacade.getCatalog(catalog, store);</span>
+<span class="nc bnc" id="L59" title="All 2 branches missed.">			if(catalogModel == null) {</span>
+<span class="nc" id="L60">				throw new ConversionRuntimeException(&quot;Error while converting CatalogEntry product [&quot; + source.getCatalog() + &quot;] not found&quot;);</span>
+			}
+			
+<span class="nc" id="L63">			destination.setCatalog(catalogModel);</span>
+
+/*			Product productModel = productFacade.getProduct(source.getProductCode(), store);
+			if(productModel == null) {
+				throw new ConversionRuntimeException(&quot;Error while converting CatalogEntry product [&quot; + source.getProductCode() + &quot;] not found&quot;);
+			}*/
+
+			//destination.setProduct(productModel);
+			
+<span class="nc" id="L72">			Category categoryModel = categoryFacade.getByCode(source.getCategoryCode(), store);</span>
+<span class="nc bnc" id="L73" title="All 2 branches missed.">			if(categoryModel == null) {</span>
+<span class="nc" id="L74">				throw new ConversionRuntimeException(&quot;Error while converting CatalogEntry category [&quot; + source.getCategoryCode() + &quot;] not found&quot;);</span>
+			}
+			
+<span class="nc" id="L77">			destination.setCategory(categoryModel);</span>
+			
+<span class="nc" id="L79">		} catch (Exception e) {</span>
+<span class="nc" id="L80">			throw new ConversionRuntimeException(&quot;Error while converting CatalogEntry&quot;, e);</span>
+<span class="nc" id="L81">		}</span>
+		
+<span class="nc" id="L83">		return destination;</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CaptchaRequestUtils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.utils</a> &gt; <span class="el_source">CaptchaRequestUtils.java</span></div><h1>CaptchaRequestUtils.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.utils;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.salesmanager.core.business.utils.CoreConfiguration;
+import com.salesmanager.shop.constants.ApplicationConstants;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.util.EntityUtils;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import javax.inject.Inject;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Creates a request to reCaptcha 2
+ * https://www.google.com/recaptcha/api/siteverify
+ * Throws an exception if it can't connect to reCaptcha
+ * returns true or false if validation has passed
+ * @author carlsamson
+ *
+ */
+@Component
+<span class="fc" id="L37">public class CaptchaRequestUtils {</span>
+	
+	@Inject
+	private CoreConfiguration configuration; //for reading public and secret key
+	
+	private static final String SUCCESS_INDICATOR = &quot;success&quot;;
+	
+	  @Value(&quot;${config.recaptcha.secretKey}&quot;)
+	  private String secretKey;
+	
+	public boolean checkCaptcha(String gRecaptchaResponse) throws Exception {
+
+<span class="nc" id="L49">		HttpClient client = HttpClientBuilder.create().build();</span>
+	    
+<span class="nc" id="L51">	    String url = configuration.getProperty(ApplicationConstants.RECAPTCHA_URL);;</span>
+
+<span class="nc" id="L53">        List&lt;NameValuePair&gt; data = new ArrayList&lt;NameValuePair&gt;();</span>
+<span class="nc" id="L54">        data.add(new BasicNameValuePair(&quot;secret&quot;,  secretKey));</span>
+<span class="nc" id="L55">        data.add(new BasicNameValuePair(&quot;response&quot;,  gRecaptchaResponse));</span>
+
+	    
+	    // Create a method instance.
+<span class="nc" id="L59">        HttpPost post = new HttpPost(url);</span>
+<span class="nc" id="L60">	    post.setEntity(new UrlEncodedFormEntity(data,StandardCharsets.UTF_8));</span>
+	    
+<span class="nc" id="L62">	    boolean checkCaptcha = false;</span>
+	    
+
+	    try {
+	      // Execute the method.
+<span class="nc" id="L67">            HttpResponse httpResponse = client.execute(post);</span>
+<span class="nc" id="L68">            int statusCode = httpResponse.getStatusLine().getStatusCode();</span>
+
+<span class="nc bnc" id="L70" title="All 2 branches missed.">	      if (statusCode != HttpStatus.SC_OK) {</span>
+<span class="nc" id="L71">	    	throw new Exception(&quot;Got an invalid response from reCaptcha &quot; + url + &quot; [&quot; + httpResponse.getStatusLine() + &quot;]&quot;);</span>
+	      }
+
+	      // Read the response body.
+<span class="nc" id="L75">            HttpEntity entity = httpResponse.getEntity();</span>
+<span class="nc" id="L76">            byte[] responseBody =EntityUtils.toByteArray(entity);</span>
+
+
+	      // Deal with the response.
+	      // Use caution: ensure correct character encoding and is not binary data
+	      //System.out.println(new String(responseBody));
+	      
+<span class="nc" id="L83">	      String json = new String(responseBody);</span>
+	      
+<span class="nc" id="L85">	      Map&lt;String,String&gt; map = new HashMap&lt;String,String&gt;();</span>
+<span class="nc" id="L86">	  	  ObjectMapper mapper = new ObjectMapper();</span>
+	  	  
+<span class="nc" id="L88">	  	  map = mapper.readValue(json, </span>
+<span class="nc" id="L89">			    new TypeReference&lt;HashMap&lt;String,String&gt;&gt;(){});</span>
+	  	  
+<span class="nc" id="L91">	  	  String successInd = map.get(SUCCESS_INDICATOR);</span>
+	  	  
+<span class="nc bnc" id="L93" title="All 2 branches missed.">	  	  if(StringUtils.isBlank(successInd)) {</span>
+<span class="nc" id="L94">	  		  throw new Exception(&quot;Unreadable response from reCaptcha &quot; + json);</span>
+	  	  }
+	  	  
+<span class="nc" id="L97">	  	  Boolean responseBoolean = Boolean.valueOf(successInd);</span>
+	  	  
+<span class="nc bnc" id="L99" title="All 2 branches missed.">	  	  if(responseBoolean) {</span>
+<span class="nc" id="L100">	  		checkCaptcha = true;</span>
+	  	  }
+	  	  
+<span class="nc" id="L103">	  	  return checkCaptcha;</span>
+
+	    } finally {
+	      // Release the connection.
+<span class="nc" id="L107">	      post.releaseConnection();</span>
+	    }  
+	  }
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

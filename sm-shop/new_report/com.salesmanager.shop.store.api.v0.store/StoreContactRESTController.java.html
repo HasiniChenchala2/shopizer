@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>StoreContactRESTController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.api.v0.store</a> &gt; <span class="el_source">StoreContactRESTController.java</span></div><h1>StoreContactRESTController.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.api.v0.store;
+
+
+import java.util.Locale;
+import java.util.Map;
+
+import javax.inject.Inject;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.validation.Valid;
+
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
+
+import com.salesmanager.core.business.services.catalog.category.CategoryService;
+import com.salesmanager.core.business.services.catalog.product.ProductService;
+import com.salesmanager.core.business.services.merchant.MerchantStoreService;
+import com.salesmanager.core.business.services.reference.language.LanguageService;
+import com.salesmanager.core.business.utils.ajax.AjaxResponse;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.constants.Constants;
+import com.salesmanager.shop.model.shop.ContactForm;
+import com.salesmanager.shop.utils.EmailTemplatesUtils;
+import com.salesmanager.shop.utils.LocaleUtils;
+
+
+/**
+ * Rest services for sending contact
+ * @author Carl Samson
+ *
+ */
+@Controller
+@RequestMapping(&quot;/services&quot;)
+<span class="fc" id="L44">public class StoreContactRESTController {</span>
+	
+	@Inject
+	private LanguageService languageService;
+	
+	@Inject
+	private MerchantStoreService merchantStoreService;
+	
+	@Inject
+	private EmailTemplatesUtils emailTemplatesUtils;
+	
+
+	
+<span class="fc" id="L57">	private static final Logger LOGGER = LoggerFactory.getLogger(StoreContactRESTController.class);</span>
+	
+
+	
+	@RequestMapping( value=&quot;/public/{store}&quot;, method=RequestMethod.GET)
+	@ResponseStatus(HttpStatus.ACCEPTED)
+	@ResponseBody
+	public AjaxResponse store(@PathVariable final String store, HttpServletRequest request, HttpServletResponse response) {
+		
+<span class="nc" id="L66">		AjaxResponse ajaxResponse = new AjaxResponse();</span>
+		try {
+			
+			/** default routine **/
+			
+<span class="nc" id="L71">			MerchantStore merchantStore = (MerchantStore)request.getAttribute(Constants.MERCHANT_STORE);</span>
+<span class="nc bnc" id="L72" title="All 2 branches missed.">			if(merchantStore!=null) {</span>
+<span class="nc bnc" id="L73" title="All 2 branches missed.">				if(!merchantStore.getCode().equals(store)) {</span>
+<span class="nc" id="L74">					merchantStore = null;</span>
+				}
+			}
+			
+<span class="nc bnc" id="L78" title="All 2 branches missed.">			if(merchantStore== null) {</span>
+<span class="nc" id="L79">				merchantStore = merchantStoreService.getByCode(store);</span>
+			}
+			
+<span class="nc bnc" id="L82" title="All 2 branches missed.">			if(merchantStore==null) {</span>
+<span class="nc" id="L83">				LOGGER.error(&quot;Merchant store is null for code &quot; + store);</span>
+<span class="nc" id="L84">				response.sendError(503, &quot;Merchant store is null for code &quot; + store);</span>
+<span class="nc" id="L85">				return null;</span>
+			}
+			
+<span class="nc" id="L88">			Language language = merchantStore.getDefaultLanguage();</span>
+			
+<span class="nc" id="L90">			Map&lt;String,Language&gt; langs = languageService.getLanguagesMap();</span>
+
+			
+<span class="nc" id="L93">			return null;</span>
+
+		
+<span class="nc" id="L96">		} catch (Exception e) {</span>
+<span class="nc" id="L97">			LOGGER.error(&quot;Error while saving category&quot;,e);</span>
+			try {
+<span class="nc" id="L99">				response.sendError(503, &quot;Error while saving category &quot; + e.getMessage());</span>
+<span class="nc" id="L100">			} catch (Exception ignore) {</span>
+<span class="nc" id="L101">			}</span>
+<span class="nc" id="L102">			return null;</span>
+		}
+	}
+	
+	
+	@RequestMapping( value=&quot;/public/{store}/contact&quot;, method=RequestMethod.POST)
+	@ResponseStatus(HttpStatus.ACCEPTED)
+	@ResponseBody
+	public AjaxResponse contact(@PathVariable final String store, @Valid @RequestBody ContactForm contact, HttpServletRequest request, HttpServletResponse response) {
+		
+<span class="nc" id="L112">		AjaxResponse ajaxResponse = new AjaxResponse();</span>
+		try {
+			
+			/** default routine **/
+			
+<span class="nc" id="L117">			MerchantStore merchantStore = (MerchantStore)request.getAttribute(Constants.MERCHANT_STORE);</span>
+<span class="nc bnc" id="L118" title="All 2 branches missed.">			if(merchantStore!=null) {</span>
+<span class="nc bnc" id="L119" title="All 2 branches missed.">				if(!merchantStore.getCode().equals(store)) {</span>
+<span class="nc" id="L120">					merchantStore = null;</span>
+				}
+			}
+			
+<span class="nc bnc" id="L124" title="All 2 branches missed.">			if(merchantStore== null) {</span>
+<span class="nc" id="L125">				merchantStore = merchantStoreService.getByCode(store);</span>
+			}
+			
+<span class="nc bnc" id="L128" title="All 2 branches missed.">			if(merchantStore==null) {</span>
+<span class="nc" id="L129">				LOGGER.error(&quot;Merchant store is null for code &quot; + store);</span>
+<span class="nc" id="L130">				response.sendError(503, &quot;Merchant store is null for code &quot; + store);</span>
+<span class="nc" id="L131">				return null;</span>
+			}
+			
+<span class="nc" id="L134">			Language language = merchantStore.getDefaultLanguage();</span>
+			
+<span class="nc" id="L136">			Map&lt;String,Language&gt; langs = languageService.getLanguagesMap();</span>
+
+			
+<span class="nc bnc" id="L139" title="All 2 branches missed.">			if(!StringUtils.isBlank(request.getParameter(Constants.LANG))) {</span>
+<span class="nc" id="L140">				String lang = request.getParameter(Constants.LANG);</span>
+<span class="nc bnc" id="L141" title="All 2 branches missed.">				if(lang!=null) {</span>
+<span class="nc" id="L142">					language = langs.get(language);</span>
+				}
+			}
+			
+<span class="nc bnc" id="L146" title="All 2 branches missed.">			if(language==null) {</span>
+<span class="nc" id="L147">				language = merchantStore.getDefaultLanguage();</span>
+			}
+			
+<span class="nc" id="L150">			Locale l = LocaleUtils.getLocale(language);</span>
+			
+			
+			/** end default routine **/
+
+			
+<span class="nc" id="L156">	        emailTemplatesUtils.sendContactEmail(contact, merchantStore, l, request.getContextPath());</span>
+			
+<span class="nc" id="L158">			ajaxResponse.setStatus(AjaxResponse.RESPONSE_STATUS_SUCCESS);</span>
+			
+<span class="nc" id="L160">			return ajaxResponse;</span>
+
+		
+<span class="nc" id="L163">		} catch (Exception e) {</span>
+<span class="nc" id="L164">			LOGGER.error(&quot;Error while saving category&quot;,e);</span>
+			try {
+<span class="nc" id="L166">				response.sendError(503, &quot;Error while saving category &quot; + e.getMessage());</span>
+<span class="nc" id="L167">			} catch (Exception ignore) {</span>
+<span class="nc" id="L168">			}</span>
+<span class="nc" id="L169">			return null;</span>
+		}
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

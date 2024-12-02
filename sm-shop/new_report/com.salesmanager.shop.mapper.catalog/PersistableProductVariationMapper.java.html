@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PersistableProductVariationMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.mapper.catalog</a> &gt; <span class="el_source">PersistableProductVariationMapper.java</span></div><h1>PersistableProductVariationMapper.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.mapper.catalog;
+
+import org.jsoup.helper.Validate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import com.salesmanager.core.business.services.catalog.product.attribute.ProductOptionService;
+import com.salesmanager.core.business.services.catalog.product.attribute.ProductOptionValueService;
+import com.salesmanager.core.model.catalog.product.attribute.ProductOption;
+import com.salesmanager.core.model.catalog.product.attribute.ProductOptionValue;
+import com.salesmanager.core.model.catalog.product.variation.ProductVariation;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.mapper.Mapper;
+import com.salesmanager.shop.model.catalog.product.variation.PersistableProductVariation;
+import com.salesmanager.shop.store.api.exception.ConversionRuntimeException;
+
+@Component
+<span class="fc" id="L19">public class PersistableProductVariationMapper implements Mapper&lt;PersistableProductVariation, ProductVariation&gt; {</span>
+
+	@Autowired
+	private ProductOptionService productOptionService;
+	
+	@Autowired
+	private ProductOptionValueService productOptionValueService;
+	
+	@Override
+	public ProductVariation convert(PersistableProductVariation source, MerchantStore store, Language language) {
+		
+<span class="nc" id="L30">		ProductVariation variation = new ProductVariation();</span>
+<span class="nc" id="L31">		return this.merge(source, variation, store, language);</span>
+
+	}
+
+	@Override
+	public ProductVariation merge(PersistableProductVariation source, ProductVariation destination, MerchantStore store,
+			Language language) {
+<span class="nc" id="L38">		Validate.notNull(destination, &quot;ProductVariation cannot be null&quot;);</span>
+		
+<span class="nc" id="L40">		destination.setId(source.getId());</span>
+<span class="nc" id="L41">		destination.setCode(source.getCode());</span>
+<span class="nc" id="L42">		destination.setMerchantStore(store);</span>
+		
+<span class="nc" id="L44">		ProductOption option = productOptionService.getById(store, source.getOption());</span>
+<span class="nc bnc" id="L45" title="All 2 branches missed.">		if(option == null) {</span>
+<span class="nc" id="L46">			throw new ConversionRuntimeException(&quot;ProductOption [&quot; + source.getOption() + &quot;] does not exists&quot;);</span>
+		}
+<span class="nc" id="L48">		destination.setProductOption(option);</span>
+		
+<span class="nc" id="L50">		ProductOptionValue optionValue = productOptionValueService.getById(store, source.getOptionValue());</span>
+<span class="nc bnc" id="L51" title="All 2 branches missed.">		if(optionValue == null) {</span>
+<span class="nc" id="L52">			throw new ConversionRuntimeException(&quot;ProductOptionValue [&quot; + source.getOptionValue() + &quot;] does not exists&quot;);</span>
+		}
+<span class="nc" id="L54">		destination.setProductOptionValue(optionValue);</span>
+				
+		
+<span class="nc" id="L57">		return destination;</span>
+		
+		
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

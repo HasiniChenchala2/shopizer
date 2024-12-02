@@ -1,0 +1,1649 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OrderFacadeImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.controller.order.facade</a> &gt; <span class="el_source">OrderFacadeImpl.java</span></div><h1>OrderFacadeImpl.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.controller.order.facade;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import javax.inject.Inject;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Validate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.validation.ObjectError;
+
+import com.salesmanager.core.business.constants.Constants;
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.catalog.pricing.PricingService;
+import com.salesmanager.core.business.services.catalog.product.ProductService;
+import com.salesmanager.core.business.services.catalog.product.attribute.ProductAttributeService;
+import com.salesmanager.core.business.services.catalog.product.file.DigitalProductService;
+import com.salesmanager.core.business.services.order.OrderService;
+import com.salesmanager.core.business.services.payments.PaymentService;
+import com.salesmanager.core.business.services.payments.TransactionService;
+import com.salesmanager.core.business.services.reference.country.CountryService;
+import com.salesmanager.core.business.services.reference.zone.ZoneService;
+import com.salesmanager.core.business.services.shipping.ShippingQuoteService;
+import com.salesmanager.core.business.services.shipping.ShippingService;
+import com.salesmanager.core.business.services.shoppingcart.ShoppingCartService;
+import com.salesmanager.core.business.utils.CoreConfiguration;
+import com.salesmanager.core.business.utils.CreditCardUtils;
+import com.salesmanager.core.business.utils.ProductPriceUtils;
+import com.salesmanager.core.model.catalog.product.Product;
+import com.salesmanager.core.model.catalog.product.availability.ProductAvailability;
+import com.salesmanager.core.model.common.Billing;
+import com.salesmanager.core.model.common.Delivery;
+import com.salesmanager.core.model.customer.Customer;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.order.Order;
+import com.salesmanager.core.model.order.OrderCriteria;
+import com.salesmanager.core.model.order.OrderList;
+import com.salesmanager.core.model.order.OrderSummary;
+import com.salesmanager.core.model.order.OrderTotalSummary;
+import com.salesmanager.core.model.order.attributes.OrderAttribute;
+import com.salesmanager.core.model.order.orderproduct.OrderProduct;
+import com.salesmanager.core.model.order.orderstatus.OrderStatus;
+import com.salesmanager.core.model.order.orderstatus.OrderStatusHistory;
+import com.salesmanager.core.model.order.payment.CreditCard;
+import com.salesmanager.core.model.payments.CreditCardPayment;
+import com.salesmanager.core.model.payments.CreditCardType;
+import com.salesmanager.core.model.payments.Payment;
+import com.salesmanager.core.model.payments.PaymentType;
+import com.salesmanager.core.model.payments.Transaction;
+import com.salesmanager.core.model.payments.TransactionType;
+import com.salesmanager.core.model.reference.country.Country;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.core.model.shipping.ShippingProduct;
+import com.salesmanager.core.model.shipping.ShippingQuote;
+import com.salesmanager.core.model.shipping.ShippingSummary;
+import com.salesmanager.core.model.shoppingcart.ShoppingCart;
+import com.salesmanager.core.model.shoppingcart.ShoppingCartItem;
+import com.salesmanager.shop.model.customer.PersistableCustomer;
+import com.salesmanager.shop.model.customer.ReadableCustomer;
+import com.salesmanager.shop.model.customer.address.Address;
+import com.salesmanager.shop.model.order.OrderEntity;
+import com.salesmanager.shop.model.order.PersistableOrderProduct;
+import com.salesmanager.shop.model.order.ReadableOrderProduct;
+import com.salesmanager.shop.model.order.ShopOrder;
+import com.salesmanager.shop.model.order.history.PersistableOrderStatusHistory;
+import com.salesmanager.shop.model.order.history.ReadableOrderStatusHistory;
+import com.salesmanager.shop.model.order.total.OrderTotal;
+import com.salesmanager.shop.model.order.transaction.ReadableTransaction;
+import com.salesmanager.shop.populator.customer.CustomerPopulator;
+import com.salesmanager.shop.populator.customer.PersistableCustomerPopulator;
+import com.salesmanager.shop.populator.order.OrderProductPopulator;
+import com.salesmanager.shop.populator.order.PersistableOrderApiPopulator;
+import com.salesmanager.shop.populator.order.ReadableOrderPopulator;
+import com.salesmanager.shop.populator.order.ReadableOrderProductPopulator;
+import com.salesmanager.shop.populator.order.ShoppingCartItemPopulator;
+import com.salesmanager.shop.populator.order.transaction.PersistablePaymentPopulator;
+import com.salesmanager.shop.populator.order.transaction.ReadableTransactionPopulator;
+import com.salesmanager.shop.store.api.exception.ResourceNotFoundException;
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+import com.salesmanager.shop.store.controller.customer.facade.CustomerFacade;
+import com.salesmanager.shop.store.controller.shoppingCart.facade.ShoppingCartFacade;
+import com.salesmanager.shop.utils.DateUtil;
+import com.salesmanager.shop.utils.EmailTemplatesUtils;
+import com.salesmanager.shop.utils.ImageFilePath;
+import com.salesmanager.shop.utils.LabelUtils;
+import com.salesmanager.shop.utils.LocaleUtils;
+
+@Service(&quot;orderFacade&quot;)
+<span class="fc" id="L114">public class OrderFacadeImpl implements OrderFacade {</span>
+
+<span class="fc" id="L116">	private static final Logger LOGGER = LoggerFactory.getLogger(OrderFacadeImpl.class);</span>
+
+	@Inject
+	private OrderService orderService;
+	@Inject
+	private ProductService productService;
+	@Inject
+	private ProductAttributeService productAttributeService;
+	@Inject
+	private ShoppingCartService shoppingCartService;
+	@Inject
+	private DigitalProductService digitalProductService;
+	@Inject
+	private ShippingService shippingService;
+	@Inject
+	private CustomerFacade customerFacade;
+	@Inject
+	private PricingService pricingService;
+	@Inject
+	private ShoppingCartFacade shoppingCartFacade;
+	@Inject
+	private ShippingQuoteService shippingQuoteService;
+	@Inject
+	private CoreConfiguration coreConfiguration;
+	@Inject
+	private PaymentService paymentService;
+	@Inject
+	private CountryService countryService;
+	@Inject
+	private ZoneService zoneService;
+
+
+	@Autowired
+	private PersistableOrderApiPopulator persistableOrderApiPopulator;
+
+	@Autowired
+	private ReadableOrderPopulator readableOrderPopulator;
+
+	@Autowired
+	private CustomerPopulator customerPopulator;
+
+	@Autowired
+	private TransactionService transactionService;
+
+	@Inject
+	private EmailTemplatesUtils emailTemplatesUtils;
+
+	@Inject
+	private LabelUtils messages;
+	
+	@Autowired
+	private ProductPriceUtils productPriceUtils;
+
+	@Inject
+	@Qualifier(&quot;img&quot;)
+	private ImageFilePath imageUtils;
+
+	@Override
+	public ShopOrder initializeOrder(MerchantStore store, Customer customer, ShoppingCart shoppingCart,
+			Language language) throws Exception {
+
+		// assert not null shopping cart items
+
+<span class="nc" id="L179">		ShopOrder order = new ShopOrder();</span>
+
+<span class="nc" id="L181">		OrderStatus orderStatus = OrderStatus.ORDERED;</span>
+<span class="nc" id="L182">		order.setOrderStatus(orderStatus);</span>
+
+<span class="nc bnc" id="L184" title="All 2 branches missed.">		if (customer == null) {</span>
+<span class="nc" id="L185">			customer = this.initEmptyCustomer(store);</span>
+		}
+
+<span class="nc" id="L188">		PersistableCustomer persistableCustomer = persistableCustomer(customer, store, language);</span>
+<span class="nc" id="L189">		order.setCustomer(persistableCustomer);</span>
+
+		// keep list of shopping cart items for core price calculation
+<span class="nc" id="L192">		List&lt;ShoppingCartItem&gt; items = new ArrayList&lt;ShoppingCartItem&gt;(shoppingCart.getLineItems());</span>
+<span class="nc" id="L193">		order.setShoppingCartItems(items);</span>
+
+<span class="nc" id="L195">		return order;</span>
+	}
+
+	@Override
+	public OrderTotalSummary calculateOrderTotal(MerchantStore store, ShopOrder order, Language language)
+			throws Exception {
+
+<span class="nc" id="L202">		Customer customer = customerFacade.getCustomerModel(order.getCustomer(), store, language);</span>
+<span class="nc" id="L203">		OrderTotalSummary summary = calculateOrderTotal(store, customer, order, language);</span>
+<span class="nc" id="L204">		this.setOrderTotals(order, summary);</span>
+<span class="nc" id="L205">		return summary;</span>
+	}
+
+	@Override
+	public OrderTotalSummary calculateOrderTotal(MerchantStore store,
+			com.salesmanager.shop.model.order.v0.PersistableOrder order, Language language) throws Exception {
+
+<span class="nc" id="L212">		List&lt;PersistableOrderProduct&gt; orderProducts = order.getOrderProductItems();</span>
+
+<span class="nc" id="L214">		ShoppingCartItemPopulator populator = new ShoppingCartItemPopulator();</span>
+<span class="nc" id="L215">		populator.setProductAttributeService(productAttributeService);</span>
+<span class="nc" id="L216">		populator.setProductService(productService);</span>
+<span class="nc" id="L217">		populator.setShoppingCartService(shoppingCartService);</span>
+
+<span class="nc" id="L219">		List&lt;ShoppingCartItem&gt; items = new ArrayList&lt;ShoppingCartItem&gt;();</span>
+<span class="nc bnc" id="L220" title="All 2 branches missed.">		for (PersistableOrderProduct orderProduct : orderProducts) {</span>
+<span class="nc" id="L221">			ShoppingCartItem item = populator.populate(orderProduct, new ShoppingCartItem(), store, language);</span>
+<span class="nc" id="L222">			items.add(item);</span>
+<span class="nc" id="L223">		}</span>
+
+<span class="nc" id="L225">		Customer customer = customer(order.getCustomer(), store, language);</span>
+
+<span class="nc" id="L227">		OrderTotalSummary summary = this.calculateOrderTotal(store, customer, order, language);</span>
+
+<span class="nc" id="L229">		return summary;</span>
+	}
+
+	private OrderTotalSummary calculateOrderTotal(MerchantStore store, Customer customer,
+			com.salesmanager.shop.model.order.v0.PersistableOrder order, Language language) throws Exception {
+
+<span class="nc" id="L235">		OrderTotalSummary orderTotalSummary = null;</span>
+
+<span class="nc" id="L237">		OrderSummary summary = new OrderSummary();</span>
+
+<span class="nc bnc" id="L239" title="All 2 branches missed.">		if (order instanceof ShopOrder) {</span>
+<span class="nc" id="L240">			ShopOrder o = (ShopOrder) order;</span>
+<span class="nc" id="L241">			summary.setProducts(o.getShoppingCartItems());</span>
+
+<span class="nc bnc" id="L243" title="All 2 branches missed.">			if (o.getShippingSummary() != null) {</span>
+<span class="nc" id="L244">				summary.setShippingSummary(o.getShippingSummary());</span>
+			}
+
+<span class="nc bnc" id="L247" title="All 2 branches missed.">			if (!StringUtils.isBlank(o.getCartCode())) {</span>
+
+<span class="nc" id="L249">				ShoppingCart shoppingCart = shoppingCartFacade.getShoppingCartModel(o.getCartCode(), store);</span>
+
+				// promo code
+<span class="nc bnc" id="L252" title="All 2 branches missed.">				if (!StringUtils.isBlank(shoppingCart.getPromoCode())) {</span>
+<span class="nc" id="L253">					Date promoDateAdded = shoppingCart.getPromoAdded();// promo</span>
+																		// valid
+																		// 1 day
+<span class="nc" id="L256">					Instant instant = promoDateAdded.toInstant();</span>
+<span class="nc" id="L257">					ZonedDateTime zdt = instant.atZone(ZoneId.systemDefault());</span>
+<span class="nc" id="L258">					LocalDate date = zdt.toLocalDate();</span>
+					// date added &lt; date + 1 day
+<span class="nc" id="L260">					LocalDate tomorrow = LocalDate.now().plusDays(1);</span>
+<span class="nc bnc" id="L261" title="All 2 branches missed.">					if (date.isBefore(tomorrow)) {</span>
+<span class="nc" id="L262">						summary.setPromoCode(shoppingCart.getPromoCode());</span>
+					} else {
+						// clear promo
+<span class="nc" id="L265">						shoppingCart.setPromoCode(null);</span>
+<span class="nc" id="L266">						shoppingCartService.saveOrUpdate(shoppingCart);</span>
+					}
+				}
+
+			}
+
+<span class="nc" id="L272">			orderTotalSummary = orderService.caculateOrderTotal(summary, customer, store, language);</span>
+<span class="nc" id="L273">		} else {</span>
+			// need Set of ShoppingCartItem
+			// PersistableOrder not implemented
+<span class="nc" id="L276">			throw new Exception(&quot;calculateOrderTotal not yet implemented for PersistableOrder&quot;);</span>
+		}
+
+<span class="nc" id="L279">		return orderTotalSummary;</span>
+
+	}
+
+	private PersistableCustomer persistableCustomer(Customer customer, MerchantStore store, Language language)
+			throws Exception {
+
+<span class="nc" id="L286">		PersistableCustomerPopulator customerPopulator = new PersistableCustomerPopulator();</span>
+<span class="nc" id="L287">		PersistableCustomer persistableCustomer = customerPopulator.populate(customer, new PersistableCustomer(), store,</span>
+				language);
+<span class="nc" id="L289">		return persistableCustomer;</span>
+
+	}
+
+	private Customer customer(PersistableCustomer customer, MerchantStore store, Language language) throws Exception {
+
+<span class="nc" id="L295">		Customer cust = customerPopulator.populate(customer, new Customer(), store, language);</span>
+<span class="nc" id="L296">		return cust;</span>
+
+	}
+
+	private void setOrderTotals(OrderEntity order, OrderTotalSummary summary) {
+
+<span class="nc" id="L302">		List&lt;OrderTotal&gt; totals = new ArrayList&lt;OrderTotal&gt;();</span>
+<span class="nc" id="L303">		List&lt;com.salesmanager.core.model.order.OrderTotal&gt; orderTotals = summary.getTotals();</span>
+<span class="nc bnc" id="L304" title="All 2 branches missed.">		for (com.salesmanager.core.model.order.OrderTotal t : orderTotals) {</span>
+<span class="nc" id="L305">			OrderTotal total = new OrderTotal();</span>
+<span class="nc" id="L306">			total.setCode(t.getOrderTotalCode());</span>
+<span class="nc" id="L307">			total.setTitle(t.getTitle());</span>
+<span class="nc" id="L308">			total.setValue(t.getValue());</span>
+<span class="nc" id="L309">			totals.add(total);</span>
+<span class="nc" id="L310">		}</span>
+
+<span class="nc" id="L312">		order.setTotals(totals);</span>
+
+<span class="nc" id="L314">	}</span>
+
+	/**
+	 * Submitted object must be valided prior to the invocation of this method
+	 */
+	@Override
+	public Order processOrder(ShopOrder order, Customer customer, MerchantStore store, Language language)
+			throws ServiceException {
+
+<span class="nc" id="L323">		return processOrderModel(order, customer, null, store, language);</span>
+
+	}
+
+	@Override
+	public Order processOrder(ShopOrder order, Customer customer, Transaction transaction, MerchantStore store,
+			Language language) throws ServiceException {
+
+<span class="nc" id="L331">		return processOrderModel(order, customer, transaction, store, language);</span>
+
+	}
+
+	/**
+	 * Commit an order
+	 * @param order
+	 * @param customer
+	 * @param transaction
+	 * @param store
+	 * @param language
+	 * @return
+	 * @throws ServiceException
+	 */
+	private Order processOrderModel(ShopOrder order, Customer customer, Transaction transaction, MerchantStore store,
+			Language language) throws ServiceException {
+
+		try {
+
+<span class="nc bnc" id="L350" title="All 2 branches missed.">			if (order.isShipToBillingAdress()) {// customer shipping is billing</span>
+<span class="nc" id="L351">				PersistableCustomer orderCustomer = order.getCustomer();</span>
+<span class="nc" id="L352">				Address billing = orderCustomer.getBilling();</span>
+<span class="nc" id="L353">				orderCustomer.setDelivery(billing);</span>
+			}
+
+<span class="nc" id="L356">			Order modelOrder = new Order();</span>
+<span class="nc" id="L357">			modelOrder.setDatePurchased(new Date());</span>
+<span class="nc" id="L358">			modelOrder.setBilling(customer.getBilling());</span>
+<span class="nc" id="L359">			modelOrder.setDelivery(customer.getDelivery());</span>
+<span class="nc" id="L360">			modelOrder.setPaymentModuleCode(order.getPaymentModule());</span>
+<span class="nc" id="L361">			modelOrder.setPaymentType(PaymentType.valueOf(order.getPaymentMethodType()));</span>
+<span class="nc" id="L362">			modelOrder.setShippingModuleCode(order.getShippingModule());</span>
+<span class="nc" id="L363">			modelOrder.setCustomerAgreement(order.isCustomerAgreed());</span>
+<span class="nc" id="L364">			modelOrder.setLocale(LocaleUtils.getLocale(store));// set the store</span>
+																// locale based
+																// on the
+																// country for
+																// order $
+																// formatting
+
+<span class="nc" id="L371">			List&lt;ShoppingCartItem&gt; shoppingCartItems = order.getShoppingCartItems();</span>
+<span class="nc" id="L372">			Set&lt;OrderProduct&gt; orderProducts = new LinkedHashSet&lt;OrderProduct&gt;();</span>
+
+<span class="nc bnc" id="L374" title="All 2 branches missed.">			if (!StringUtils.isBlank(order.getComments())) {</span>
+<span class="nc" id="L375">				OrderStatusHistory statusHistory = new OrderStatusHistory();</span>
+<span class="nc" id="L376">				statusHistory.setStatus(OrderStatus.ORDERED);</span>
+<span class="nc" id="L377">				statusHistory.setOrder(modelOrder);</span>
+<span class="nc" id="L378">				statusHistory.setDateAdded(new Date());</span>
+<span class="nc" id="L379">				statusHistory.setComments(order.getComments());</span>
+<span class="nc" id="L380">				modelOrder.getOrderHistory().add(statusHistory);</span>
+			}
+
+<span class="nc" id="L383">			OrderProductPopulator orderProductPopulator = new OrderProductPopulator();</span>
+<span class="nc" id="L384">			orderProductPopulator.setDigitalProductService(digitalProductService);</span>
+<span class="nc" id="L385">			orderProductPopulator.setProductAttributeService(productAttributeService);</span>
+<span class="nc" id="L386">			orderProductPopulator.setProductService(productService);</span>
+<span class="nc" id="L387">			String shoppingCartCode = null;</span>
+
+<span class="nc bnc" id="L389" title="All 2 branches missed.">			for (ShoppingCartItem item : shoppingCartItems) {</span>
+
+<span class="nc bnc" id="L391" title="All 4 branches missed.">				if(shoppingCartCode == null &amp;&amp; item.getShoppingCart()!=null) {</span>
+<span class="nc" id="L392">					shoppingCartCode = item.getShoppingCart().getShoppingCartCode();</span>
+				}
+
+				/**
+				 * Before processing order quantity of item must be &gt; 0
+				 */
+
+<span class="nc" id="L399">				Product product = productService.getBySku(item.getSku(), store, language);</span>
+<span class="nc bnc" id="L400" title="All 2 branches missed.">				if (product == null) {</span>
+<span class="nc" id="L401">					throw new ServiceException(ServiceException.EXCEPTION_INVENTORY_MISMATCH);</span>
+				}
+
+<span class="nc" id="L404">				LOGGER.debug(&quot;Validate inventory&quot;);</span>
+<span class="nc bnc" id="L405" title="All 2 branches missed.">				for (ProductAvailability availability : product.getAvailabilities()) {</span>
+<span class="nc bnc" id="L406" title="All 2 branches missed.">					if (availability.getRegion().equals(Constants.ALL_REGIONS)) {</span>
+<span class="nc" id="L407">						int qty = availability.getProductQuantity();</span>
+<span class="nc bnc" id="L408" title="All 2 branches missed.">						if (qty &lt; item.getQuantity()) {</span>
+<span class="nc" id="L409">							throw new ServiceException(ServiceException.EXCEPTION_INVENTORY_MISMATCH);</span>
+						}
+					}
+<span class="nc" id="L412">				}</span>
+
+<span class="nc" id="L414">				OrderProduct orderProduct = new OrderProduct();</span>
+<span class="nc" id="L415">				orderProduct = orderProductPopulator.populate(item, orderProduct, store, language);</span>
+<span class="nc" id="L416">				orderProduct.setOrder(modelOrder);</span>
+<span class="nc" id="L417">				orderProducts.add(orderProduct);</span>
+<span class="nc" id="L418">			}</span>
+
+<span class="nc" id="L420">			modelOrder.setOrderProducts(orderProducts);</span>
+
+<span class="nc" id="L422">			OrderTotalSummary summary = order.getOrderTotalSummary();</span>
+<span class="nc" id="L423">			List&lt;com.salesmanager.core.model.order.OrderTotal&gt; totals = summary.getTotals();</span>
+
+			// re-order totals
+<span class="nc" id="L426">			Collections.sort(totals, new Comparator&lt;com.salesmanager.core.model.order.OrderTotal&gt;() {</span>
+				public int compare(com.salesmanager.core.model.order.OrderTotal x,
+						com.salesmanager.core.model.order.OrderTotal y) {
+<span class="nc bnc" id="L429" title="All 2 branches missed.">					if (x.getSortOrder() == y.getSortOrder())</span>
+<span class="nc" id="L430">						return 0;</span>
+<span class="nc bnc" id="L431" title="All 2 branches missed.">					return x.getSortOrder() &lt; y.getSortOrder() ? -1 : 1;</span>
+				}
+
+			});
+
+<span class="nc" id="L436">			Set&lt;com.salesmanager.core.model.order.OrderTotal&gt; modelTotals = new LinkedHashSet&lt;com.salesmanager.core.model.order.OrderTotal&gt;();</span>
+<span class="nc bnc" id="L437" title="All 2 branches missed.">			for (com.salesmanager.core.model.order.OrderTotal total : totals) {</span>
+<span class="nc" id="L438">				total.setOrder(modelOrder);</span>
+<span class="nc" id="L439">				modelTotals.add(total);</span>
+<span class="nc" id="L440">			}</span>
+
+<span class="nc" id="L442">			modelOrder.setOrderTotal(modelTotals);</span>
+<span class="nc" id="L443">			modelOrder.setTotal(order.getOrderTotalSummary().getTotal());</span>
+
+			// order misc objects
+<span class="nc" id="L446">			modelOrder.setCurrency(store.getCurrency());</span>
+<span class="nc" id="L447">			modelOrder.setMerchant(store);</span>
+
+			// customer object
+<span class="nc" id="L450">			orderCustomer(customer, modelOrder, language);</span>
+
+			// populate shipping information
+<span class="nc bnc" id="L453" title="All 2 branches missed.">			if (!StringUtils.isBlank(order.getShippingModule())) {</span>
+<span class="nc" id="L454">				modelOrder.setShippingModuleCode(order.getShippingModule());</span>
+			}
+
+<span class="nc" id="L457">			String paymentType = order.getPaymentMethodType();</span>
+<span class="nc" id="L458">			Payment payment = new Payment();</span>
+<span class="nc" id="L459">			payment.setPaymentType(PaymentType.valueOf(paymentType));</span>
+<span class="nc" id="L460">			payment.setAmount(order.getOrderTotalSummary().getTotal());</span>
+<span class="nc" id="L461">			payment.setModuleName(order.getPaymentModule());</span>
+<span class="nc" id="L462">			payment.setCurrency(modelOrder.getCurrency());</span>
+
+<span class="nc bnc" id="L464" title="All 4 branches missed.">			if (order.getPayment() != null &amp;&amp; order.getPayment().get(&quot;paymentToken&quot;) != null) {// set</span>
+																				// token
+<span class="nc" id="L466">				String paymentToken = order.getPayment().get(&quot;paymentToken&quot;);</span>
+<span class="nc" id="L467">				Map&lt;String, String&gt; paymentMetaData = new HashMap&lt;String, String&gt;();</span>
+<span class="nc" id="L468">				payment.setPaymentMetaData(paymentMetaData);</span>
+<span class="nc" id="L469">				paymentMetaData.put(&quot;paymentToken&quot;, paymentToken);</span>
+			}
+
+<span class="nc bnc" id="L472" title="All 2 branches missed.">			if (PaymentType.CREDITCARD.name().equals(paymentType)) {</span>
+
+<span class="nc" id="L474">				payment = new CreditCardPayment();</span>
+<span class="nc" id="L475">				((CreditCardPayment) payment).setCardOwner(order.getPayment().get(&quot;creditcard_card_holder&quot;));</span>
+<span class="nc" id="L476">				((CreditCardPayment) payment)</span>
+<span class="nc" id="L477">						.setCredidCardValidationNumber(order.getPayment().get(&quot;creditcard_card_cvv&quot;));</span>
+<span class="nc" id="L478">				((CreditCardPayment) payment).setCreditCardNumber(order.getPayment().get(&quot;creditcard_card_number&quot;));</span>
+<span class="nc" id="L479">				((CreditCardPayment) payment)</span>
+<span class="nc" id="L480">						.setExpirationMonth(order.getPayment().get(&quot;creditcard_card_expirationmonth&quot;));</span>
+<span class="nc" id="L481">				((CreditCardPayment) payment)</span>
+<span class="nc" id="L482">						.setExpirationYear(order.getPayment().get(&quot;creditcard_card_expirationyear&quot;));</span>
+
+<span class="nc" id="L484">				Map&lt;String, String&gt; paymentMetaData = order.getPayment();</span>
+<span class="nc" id="L485">				payment.setPaymentMetaData(paymentMetaData);</span>
+<span class="nc" id="L486">				payment.setPaymentType(PaymentType.valueOf(paymentType));</span>
+<span class="nc" id="L487">				payment.setAmount(order.getOrderTotalSummary().getTotal());</span>
+<span class="nc" id="L488">				payment.setModuleName(order.getPaymentModule());</span>
+<span class="nc" id="L489">				payment.setCurrency(modelOrder.getCurrency());</span>
+
+<span class="nc" id="L491">				CreditCardType creditCardType = null;</span>
+<span class="nc" id="L492">				String cardType = order.getPayment().get(&quot;creditcard_card_type&quot;);</span>
+
+				// supported credit cards
+<span class="nc bnc" id="L495" title="All 2 branches missed.">				if (CreditCardType.AMEX.name().equalsIgnoreCase(cardType)) {</span>
+<span class="nc" id="L496">					creditCardType = CreditCardType.AMEX;</span>
+<span class="nc bnc" id="L497" title="All 2 branches missed.">				} else if (CreditCardType.VISA.name().equalsIgnoreCase(cardType)) {</span>
+<span class="nc" id="L498">					creditCardType = CreditCardType.VISA;</span>
+<span class="nc bnc" id="L499" title="All 2 branches missed.">				} else if (CreditCardType.MASTERCARD.name().equalsIgnoreCase(cardType)) {</span>
+<span class="nc" id="L500">					creditCardType = CreditCardType.MASTERCARD;</span>
+<span class="nc bnc" id="L501" title="All 2 branches missed.">				} else if (CreditCardType.DINERS.name().equalsIgnoreCase(cardType)) {</span>
+<span class="nc" id="L502">					creditCardType = CreditCardType.DINERS;</span>
+<span class="nc bnc" id="L503" title="All 2 branches missed.">				} else if (CreditCardType.DISCOVERY.name().equalsIgnoreCase(cardType)) {</span>
+<span class="nc" id="L504">					creditCardType = CreditCardType.DISCOVERY;</span>
+				}
+
+<span class="nc" id="L507">				((CreditCardPayment) payment).setCreditCard(creditCardType);</span>
+
+<span class="nc bnc" id="L509" title="All 2 branches missed.">				if (creditCardType != null) {</span>
+
+<span class="nc" id="L511">					CreditCard cc = new CreditCard();</span>
+<span class="nc" id="L512">					cc.setCardType(creditCardType);</span>
+<span class="nc" id="L513">					cc.setCcCvv(((CreditCardPayment) payment).getCredidCardValidationNumber());</span>
+<span class="nc" id="L514">					cc.setCcOwner(((CreditCardPayment) payment).getCardOwner());</span>
+<span class="nc" id="L515">					cc.setCcExpires(((CreditCardPayment) payment).getExpirationMonth() + &quot;-&quot;</span>
+<span class="nc" id="L516">							+ ((CreditCardPayment) payment).getExpirationYear());</span>
+
+					// hash credit card number
+<span class="nc bnc" id="L519" title="All 2 branches missed.">					if (!StringUtils.isBlank(cc.getCcNumber())) {</span>
+<span class="nc" id="L520">						String maskedNumber = CreditCardUtils</span>
+<span class="nc" id="L521">								.maskCardNumber(order.getPayment().get(&quot;creditcard_card_number&quot;));</span>
+<span class="nc" id="L522">						cc.setCcNumber(maskedNumber);</span>
+<span class="nc" id="L523">						modelOrder.setCreditCard(cc);</span>
+					}
+
+				}
+
+			}
+
+<span class="nc bnc" id="L530" title="All 2 branches missed.">			if (PaymentType.PAYPAL.name().equals(paymentType)) {</span>
+
+				// check for previous transaction
+<span class="nc bnc" id="L533" title="All 2 branches missed.">				if (transaction == null) {</span>
+<span class="nc" id="L534">					throw new ServiceException(&quot;payment.error&quot;);</span>
+				}
+
+<span class="nc" id="L537">				payment = new com.salesmanager.core.model.payments.PaypalPayment();</span>
+
+<span class="nc" id="L539">				((com.salesmanager.core.model.payments.PaypalPayment) payment)</span>
+<span class="nc" id="L540">						.setPayerId(transaction.getTransactionDetails().get(&quot;PAYERID&quot;));</span>
+<span class="nc" id="L541">				((com.salesmanager.core.model.payments.PaypalPayment) payment)</span>
+<span class="nc" id="L542">						.setPaymentToken(transaction.getTransactionDetails().get(&quot;TOKEN&quot;));</span>
+
+			}
+
+<span class="nc" id="L546">			modelOrder.setShoppingCartCode(shoppingCartCode);</span>
+<span class="nc" id="L547">			modelOrder.setPaymentModuleCode(order.getPaymentModule());</span>
+<span class="nc" id="L548">			payment.setModuleName(order.getPaymentModule());</span>
+
+<span class="nc bnc" id="L550" title="All 2 branches missed.">			if (transaction != null) {</span>
+<span class="nc" id="L551">				orderService.processOrder(modelOrder, customer, order.getShoppingCartItems(), summary, payment, store);</span>
+			} else {
+<span class="nc" id="L553">				orderService.processOrder(modelOrder, customer, order.getShoppingCartItems(), summary, payment,</span>
+						transaction, store);
+			}
+
+<span class="nc" id="L557">			return modelOrder;</span>
+
+<span class="nc" id="L559">		} catch (ServiceException se) {// may be invalid credit card</span>
+<span class="nc" id="L560">			throw se;</span>
+<span class="nc" id="L561">		} catch (Exception e) {</span>
+<span class="nc" id="L562">			throw new ServiceException(e);</span>
+		}
+
+	}
+
+	private void orderCustomer(Customer customer, Order order, Language language) throws Exception {
+
+		// populate customer
+<span class="nc" id="L570">		order.setBilling(customer.getBilling());</span>
+<span class="nc" id="L571">		order.setDelivery(customer.getDelivery());</span>
+<span class="nc" id="L572">		order.setCustomerEmailAddress(customer.getEmailAddress());</span>
+<span class="nc" id="L573">		order.setCustomerId(customer.getId());</span>
+		//set username
+<span class="nc bnc" id="L575" title="All 4 branches missed.">		if(! customer.isAnonymous() &amp;&amp; !StringUtils.isBlank(customer.getPassword())) {</span>
+<span class="nc" id="L576">			customer.setNick(customer.getEmailAddress());</span>
+		}
+
+<span class="nc" id="L579">	}</span>
+
+	@Override
+	public Customer initEmptyCustomer(MerchantStore store) {
+
+<span class="nc" id="L584">		Customer customer = new Customer();</span>
+<span class="nc" id="L585">		Billing billing = new Billing();</span>
+<span class="nc" id="L586">		billing.setCountry(store.getCountry());</span>
+<span class="nc" id="L587">		billing.setZone(store.getZone());</span>
+<span class="nc" id="L588">		billing.setState(store.getStorestateprovince());</span>
+		/** empty postal code for initial quote **/
+		// billing.setPostalCode(store.getStorepostalcode());
+<span class="nc" id="L591">		customer.setBilling(billing);</span>
+
+<span class="nc" id="L593">		Delivery delivery = new Delivery();</span>
+<span class="nc" id="L594">		delivery.setCountry(store.getCountry());</span>
+<span class="nc" id="L595">		delivery.setZone(store.getZone());</span>
+<span class="nc" id="L596">		delivery.setState(store.getStorestateprovince());</span>
+		/** empty postal code for initial quote **/
+		// delivery.setPostalCode(store.getStorepostalcode());
+<span class="nc" id="L599">		customer.setDelivery(delivery);</span>
+
+<span class="nc" id="L601">		return customer;</span>
+	}
+
+	@Override
+	public void refreshOrder(ShopOrder order, MerchantStore store, Customer customer, ShoppingCart shoppingCart,
+			Language language) throws Exception {
+<span class="nc bnc" id="L607" title="All 4 branches missed.">		if (customer == null &amp;&amp; order.getCustomer() != null) {</span>
+<span class="nc" id="L608">			order.getCustomer().setId(0L);// reset customer id</span>
+		}
+
+<span class="nc bnc" id="L611" title="All 2 branches missed.">		if (customer != null) {</span>
+<span class="nc" id="L612">			PersistableCustomer persistableCustomer = persistableCustomer(customer, store, language);</span>
+<span class="nc" id="L613">			order.setCustomer(persistableCustomer);</span>
+		}
+
+<span class="nc" id="L616">		List&lt;ShoppingCartItem&gt; items = new ArrayList&lt;ShoppingCartItem&gt;(shoppingCart.getLineItems());</span>
+<span class="nc" id="L617">		order.setShoppingCartItems(items);</span>
+
+<span class="nc" id="L619">		return;</span>
+	}
+
+	@Override
+	public ShippingQuote getShippingQuote(PersistableCustomer persistableCustomer, ShoppingCart cart, ShopOrder order,
+			MerchantStore store, Language language) throws Exception {
+
+		// create shipping products
+<span class="nc" id="L627">		List&lt;ShippingProduct&gt; shippingProducts = shoppingCartService.createShippingProduct(cart);</span>
+
+<span class="nc bnc" id="L629" title="All 2 branches missed.">		if (CollectionUtils.isEmpty(shippingProducts)) {</span>
+<span class="nc" id="L630">			return null;// products are virtual</span>
+		}
+
+<span class="nc" id="L633">		Customer customer = customerFacade.getCustomerModel(persistableCustomer, store, language);</span>
+
+<span class="nc" id="L635">		Delivery delivery = new Delivery();</span>
+
+		// adjust shipping and billing
+<span class="nc bnc" id="L638" title="All 4 branches missed.">		if (order.isShipToBillingAdress() &amp;&amp; !order.isShipToDeliveryAddress()) {</span>
+
+<span class="nc" id="L640">			Billing billing = customer.getBilling();</span>
+
+<span class="nc" id="L642">			String postalCode = billing.getPostalCode();</span>
+<span class="nc" id="L643">			postalCode = validatePostalCode(postalCode);</span>
+
+<span class="nc" id="L645">			delivery.setAddress(billing.getAddress());</span>
+<span class="nc" id="L646">			delivery.setCompany(billing.getCompany());</span>
+<span class="nc" id="L647">			delivery.setCity(billing.getCity());</span>
+<span class="nc" id="L648">			delivery.setPostalCode(billing.getPostalCode());</span>
+<span class="nc" id="L649">			delivery.setState(billing.getState());</span>
+<span class="nc" id="L650">			delivery.setCountry(billing.getCountry());</span>
+<span class="nc" id="L651">			delivery.setZone(billing.getZone());</span>
+<span class="nc" id="L652">		} else {</span>
+<span class="nc" id="L653">			delivery = customer.getDelivery();</span>
+		}
+
+<span class="nc" id="L656">		ShippingQuote quote = shippingService.getShippingQuote(cart.getId(), store, delivery, shippingProducts,</span>
+				language);
+
+<span class="nc" id="L659">		return quote;</span>
+
+	}
+
+	private String validatePostalCode(String postalCode) {
+
+<span class="nc" id="L665">		String patternString = &quot;__&quot;;// this one is set in the template</span>
+<span class="nc bnc" id="L666" title="All 2 branches missed.">		if (postalCode.contains(patternString)) {</span>
+<span class="nc" id="L667">			postalCode = null;</span>
+		}
+<span class="nc" id="L669">		return postalCode;</span>
+	}
+
+	@Override
+	public List&lt;Country&gt; getShipToCountry(MerchantStore store, Language language) throws Exception {
+
+<span class="nc" id="L675">		List&lt;Country&gt; shippingCountriesList = shippingService.getShipToCountryList(store, language);</span>
+<span class="nc" id="L676">		return shippingCountriesList;</span>
+
+	}
+
+	/**
+	 * ShippingSummary contains the subset of information of a ShippingQuote
+	 */
+	@Override
+	public ShippingSummary getShippingSummary(ShippingQuote quote, MerchantStore store, Language language) {
+
+<span class="nc" id="L686">		ShippingSummary summary = new ShippingSummary();</span>
+<span class="nc bnc" id="L687" title="All 2 branches missed.">		if (quote.getSelectedShippingOption() != null) {</span>
+<span class="nc" id="L688">			summary.setShippingQuote(true);</span>
+<span class="nc" id="L689">			summary.setFreeShipping(quote.isFreeShipping());</span>
+<span class="nc" id="L690">			summary.setTaxOnShipping(quote.isApplyTaxOnShipping());</span>
+<span class="nc" id="L691">			summary.setHandling(quote.getHandlingFees());</span>
+<span class="nc" id="L692">			summary.setShipping(quote.getSelectedShippingOption().getOptionPrice());</span>
+<span class="nc" id="L693">			summary.setShippingOption(quote.getSelectedShippingOption().getOptionName());</span>
+<span class="nc" id="L694">			summary.setShippingModule(quote.getShippingModuleCode());</span>
+<span class="nc" id="L695">			summary.setShippingOptionCode(quote.getSelectedShippingOption().getOptionCode());</span>
+
+<span class="nc bnc" id="L697" title="All 2 branches missed.">			if (quote.getDeliveryAddress() != null) {</span>
+<span class="nc" id="L698">				summary.setDeliveryAddress(quote.getDeliveryAddress());</span>
+			}
+
+		}
+
+<span class="nc" id="L703">		return summary;</span>
+	}
+
+	@Override
+	public void validateOrder(ShopOrder order, BindingResult bindingResult, Map&lt;String, String&gt; messagesResult,
+			MerchantStore store, Locale locale) throws ServiceException {
+
+<span class="nc" id="L710">		Validate.notNull(messagesResult, &quot;messagesResult should not be null&quot;);</span>
+
+		try {
+
+			// Language language = (Language)request.getAttribute(&quot;LANGUAGE&quot;);
+
+			// validate order shipping and billing
+<span class="nc bnc" id="L717" title="All 2 branches missed.">			if (StringUtils.isBlank(order.getCustomer().getBilling().getFirstName())) {</span>
+<span class="nc" id="L718">				FieldError error = new FieldError(&quot;customer.billing.firstName&quot;, &quot;customer.billing.firstName&quot;,</span>
+<span class="nc" id="L719">						messages.getMessage(&quot;NotEmpty.customer.firstName&quot;, locale));</span>
+<span class="nc" id="L720">				bindingResult.addError(error);</span>
+<span class="nc" id="L721">				messagesResult.put(&quot;customer.billing.firstName&quot;,</span>
+<span class="nc" id="L722">						messages.getMessage(&quot;NotEmpty.customer.firstName&quot;, locale));</span>
+			}
+
+<span class="nc bnc" id="L725" title="All 2 branches missed.">			if (StringUtils.isBlank(order.getCustomer().getBilling().getLastName())) {</span>
+<span class="nc" id="L726">				FieldError error = new FieldError(&quot;customer.billing.lastName&quot;, &quot;customer.billing.lastName&quot;,</span>
+<span class="nc" id="L727">						messages.getMessage(&quot;NotEmpty.customer.lastName&quot;, locale));</span>
+<span class="nc" id="L728">				bindingResult.addError(error);</span>
+<span class="nc" id="L729">				messagesResult.put(&quot;customer.billing.lastName&quot;,</span>
+<span class="nc" id="L730">						messages.getMessage(&quot;NotEmpty.customer.lastName&quot;, locale));</span>
+			}
+
+<span class="nc bnc" id="L733" title="All 2 branches missed.">			if (StringUtils.isBlank(order.getCustomer().getEmailAddress())) {</span>
+<span class="nc" id="L734">				FieldError error = new FieldError(&quot;customer.emailAddress&quot;, &quot;customer.emailAddress&quot;,</span>
+<span class="nc" id="L735">						messages.getMessage(&quot;NotEmpty.customer.emailAddress&quot;, locale));</span>
+<span class="nc" id="L736">				bindingResult.addError(error);</span>
+<span class="nc" id="L737">				messagesResult.put(&quot;customer.emailAddress&quot;,</span>
+<span class="nc" id="L738">						messages.getMessage(&quot;NotEmpty.customer.emailAddress&quot;, locale));</span>
+			}
+
+<span class="nc bnc" id="L741" title="All 2 branches missed.">			if (StringUtils.isBlank(order.getCustomer().getBilling().getAddress())) {</span>
+<span class="nc" id="L742">				FieldError error = new FieldError(&quot;customer.billing.address&quot;, &quot;customer.billing.address&quot;,</span>
+<span class="nc" id="L743">						messages.getMessage(&quot;NotEmpty.customer.billing.address&quot;, locale));</span>
+<span class="nc" id="L744">				bindingResult.addError(error);</span>
+<span class="nc" id="L745">				messagesResult.put(&quot;customer.billing.address&quot;,</span>
+<span class="nc" id="L746">						messages.getMessage(&quot;NotEmpty.customer.billing.address&quot;, locale));</span>
+			}
+
+<span class="nc bnc" id="L749" title="All 2 branches missed.">			if (StringUtils.isBlank(order.getCustomer().getBilling().getCity())) {</span>
+<span class="nc" id="L750">				FieldError error = new FieldError(&quot;customer.billing.city&quot;, &quot;customer.billing.city&quot;,</span>
+<span class="nc" id="L751">						messages.getMessage(&quot;NotEmpty.customer.billing.city&quot;, locale));</span>
+<span class="nc" id="L752">				bindingResult.addError(error);</span>
+<span class="nc" id="L753">				messagesResult.put(&quot;customer.billing.city&quot;,</span>
+<span class="nc" id="L754">						messages.getMessage(&quot;NotEmpty.customer.billing.city&quot;, locale));</span>
+			}
+
+<span class="nc bnc" id="L757" title="All 2 branches missed.">			if (StringUtils.isBlank(order.getCustomer().getBilling().getCountry())) {</span>
+<span class="nc" id="L758">				FieldError error = new FieldError(&quot;customer.billing.country&quot;, &quot;customer.billing.country&quot;,</span>
+<span class="nc" id="L759">						messages.getMessage(&quot;NotEmpty.customer.billing.country&quot;, locale));</span>
+<span class="nc" id="L760">				bindingResult.addError(error);</span>
+<span class="nc" id="L761">				messagesResult.put(&quot;customer.billing.country&quot;,</span>
+<span class="nc" id="L762">						messages.getMessage(&quot;NotEmpty.customer.billing.country&quot;, locale));</span>
+			}
+
+<span class="nc bnc" id="L765" title="All 2 branches missed.">			if (StringUtils.isBlank(order.getCustomer().getBilling().getZone())</span>
+<span class="nc bnc" id="L766" title="All 2 branches missed.">					&amp;&amp; StringUtils.isBlank(order.getCustomer().getBilling().getStateProvince())) {</span>
+<span class="nc" id="L767">				FieldError error = new FieldError(&quot;customer.billing.stateProvince&quot;, &quot;customer.billing.stateProvince&quot;,</span>
+<span class="nc" id="L768">						messages.getMessage(&quot;NotEmpty.customer.billing.stateProvince&quot;, locale));</span>
+<span class="nc" id="L769">				bindingResult.addError(error);</span>
+<span class="nc" id="L770">				messagesResult.put(&quot;customer.billing.stateProvince&quot;,</span>
+<span class="nc" id="L771">						messages.getMessage(&quot;NotEmpty.customer.billing.stateProvince&quot;, locale));</span>
+			}
+
+<span class="nc bnc" id="L774" title="All 2 branches missed.">			if (StringUtils.isBlank(order.getCustomer().getBilling().getPhone())) {</span>
+<span class="nc" id="L775">				FieldError error = new FieldError(&quot;customer.billing.phone&quot;, &quot;customer.billing.phone&quot;,</span>
+<span class="nc" id="L776">						messages.getMessage(&quot;NotEmpty.customer.billing.phone&quot;, locale));</span>
+<span class="nc" id="L777">				bindingResult.addError(error);</span>
+<span class="nc" id="L778">				messagesResult.put(&quot;customer.billing.phone&quot;,</span>
+<span class="nc" id="L779">						messages.getMessage(&quot;NotEmpty.customer.billing.phone&quot;, locale));</span>
+			}
+
+<span class="nc bnc" id="L782" title="All 2 branches missed.">			if (StringUtils.isBlank(order.getCustomer().getBilling().getPostalCode())) {</span>
+<span class="nc" id="L783">				FieldError error = new FieldError(&quot;customer.billing.postalCode&quot;, &quot;customer.billing.postalCode&quot;,</span>
+<span class="nc" id="L784">						messages.getMessage(&quot;NotEmpty.customer.billing.postalCode&quot;, locale));</span>
+<span class="nc" id="L785">				bindingResult.addError(error);</span>
+<span class="nc" id="L786">				messagesResult.put(&quot;customer.billing.postalCode&quot;,</span>
+<span class="nc" id="L787">						messages.getMessage(&quot;NotEmpty.customer.billing.postalCode&quot;, locale));</span>
+			}
+
+<span class="nc bnc" id="L790" title="All 2 branches missed.">			if (!order.isShipToBillingAdress()) {</span>
+
+<span class="nc bnc" id="L792" title="All 2 branches missed.">				if (StringUtils.isBlank(order.getCustomer().getDelivery().getFirstName())) {</span>
+<span class="nc" id="L793">					FieldError error = new FieldError(&quot;customer.delivery.firstName&quot;, &quot;customer.delivery.firstName&quot;,</span>
+<span class="nc" id="L794">							messages.getMessage(&quot;NotEmpty.customer.shipping.firstName&quot;, locale));</span>
+<span class="nc" id="L795">					bindingResult.addError(error);</span>
+<span class="nc" id="L796">					messagesResult.put(&quot;customer.delivery.firstName&quot;,</span>
+<span class="nc" id="L797">							messages.getMessage(&quot;NotEmpty.customer.shipping.firstName&quot;, locale));</span>
+				}
+
+<span class="nc bnc" id="L800" title="All 2 branches missed.">				if (StringUtils.isBlank(order.getCustomer().getDelivery().getLastName())) {</span>
+<span class="nc" id="L801">					FieldError error = new FieldError(&quot;customer.delivery.lastName&quot;, &quot;customer.delivery.lastName&quot;,</span>
+<span class="nc" id="L802">							messages.getMessage(&quot;NotEmpty.customer.shipping.lastName&quot;, locale));</span>
+<span class="nc" id="L803">					bindingResult.addError(error);</span>
+<span class="nc" id="L804">					messagesResult.put(&quot;customer.delivery.lastName&quot;,</span>
+<span class="nc" id="L805">							messages.getMessage(&quot;NotEmpty.customer.shipping.lastName&quot;, locale));</span>
+				}
+
+<span class="nc bnc" id="L808" title="All 2 branches missed.">				if (StringUtils.isBlank(order.getCustomer().getDelivery().getAddress())) {</span>
+<span class="nc" id="L809">					FieldError error = new FieldError(&quot;customer.delivery.address&quot;, &quot;customer.delivery.address&quot;,</span>
+<span class="nc" id="L810">							messages.getMessage(&quot;NotEmpty.customer.shipping.address&quot;, locale));</span>
+<span class="nc" id="L811">					bindingResult.addError(error);</span>
+<span class="nc" id="L812">					messagesResult.put(&quot;customer.delivery.address&quot;,</span>
+<span class="nc" id="L813">							messages.getMessage(&quot;NotEmpty.customer.shipping.address&quot;, locale));</span>
+				}
+
+<span class="nc bnc" id="L816" title="All 2 branches missed.">				if (StringUtils.isBlank(order.getCustomer().getDelivery().getCity())) {</span>
+<span class="nc" id="L817">					FieldError error = new FieldError(&quot;customer.delivery.city&quot;, &quot;customer.delivery.city&quot;,</span>
+<span class="nc" id="L818">							messages.getMessage(&quot;NotEmpty.customer.shipping.city&quot;, locale));</span>
+<span class="nc" id="L819">					bindingResult.addError(error);</span>
+<span class="nc" id="L820">					messagesResult.put(&quot;customer.delivery.city&quot;,</span>
+<span class="nc" id="L821">							messages.getMessage(&quot;NotEmpty.customer.shipping.city&quot;, locale));</span>
+				}
+
+<span class="nc bnc" id="L824" title="All 2 branches missed.">				if (StringUtils.isBlank(order.getCustomer().getDelivery().getCountry())) {</span>
+<span class="nc" id="L825">					FieldError error = new FieldError(&quot;customer.delivery.country&quot;, &quot;customer.delivery.country&quot;,</span>
+<span class="nc" id="L826">							messages.getMessage(&quot;NotEmpty.customer.shipping.country&quot;, locale));</span>
+<span class="nc" id="L827">					bindingResult.addError(error);</span>
+<span class="nc" id="L828">					messagesResult.put(&quot;customer.delivery.country&quot;,</span>
+<span class="nc" id="L829">							messages.getMessage(&quot;NotEmpty.customer.shipping.country&quot;, locale));</span>
+				}
+
+<span class="nc bnc" id="L832" title="All 2 branches missed.">				if (StringUtils.isBlank(order.getCustomer().getDelivery().getZone())</span>
+<span class="nc bnc" id="L833" title="All 2 branches missed.">						&amp;&amp; StringUtils.isBlank(order.getCustomer().getDelivery().getStateProvince())) {</span>
+<span class="nc" id="L834">					FieldError error = new FieldError(&quot;customer.delivery.stateProvince&quot;,</span>
+							&quot;customer.delivery.stateProvince&quot;,
+<span class="nc" id="L836">							messages.getMessage(&quot;NotEmpty.customer.shipping.stateProvince&quot;, locale));</span>
+<span class="nc" id="L837">					bindingResult.addError(error);</span>
+<span class="nc" id="L838">					messagesResult.put(&quot;customer.delivery.stateProvince&quot;,</span>
+<span class="nc" id="L839">							messages.getMessage(&quot;NotEmpty.customer.shipping.stateProvince&quot;, locale));</span>
+				}
+
+<span class="nc bnc" id="L842" title="All 2 branches missed.">				if (StringUtils.isBlank(order.getCustomer().getDelivery().getPostalCode())) {</span>
+<span class="nc" id="L843">					FieldError error = new FieldError(&quot;customer.delivery.postalCode&quot;, &quot;customer.delivery.postalCode&quot;,</span>
+<span class="nc" id="L844">							messages.getMessage(&quot;NotEmpty.customer.shipping.postalCode&quot;, locale));</span>
+<span class="nc" id="L845">					bindingResult.addError(error);</span>
+<span class="nc" id="L846">					messagesResult.put(&quot;customer.delivery.postalCode&quot;,</span>
+<span class="nc" id="L847">							messages.getMessage(&quot;NotEmpty.customer.shipping.postalCode&quot;, locale));</span>
+				}
+
+			}
+
+<span class="nc bnc" id="L852" title="All 2 branches missed.">			if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L853">				return;</span>
+
+			}
+
+<span class="nc" id="L857">			String paymentType = order.getPaymentMethodType();</span>
+
+			// validate payment
+<span class="nc bnc" id="L860" title="All 2 branches missed.">			if (paymentType == null) {</span>
+<span class="nc" id="L861">				ServiceException serviceException = new ServiceException(ServiceException.EXCEPTION_VALIDATION,</span>
+						&quot;payment.required&quot;);
+<span class="nc" id="L863">				throw serviceException;</span>
+			}
+
+			// validate shipping
+<span class="nc bnc" id="L867" title="All 2 branches missed.">			if (shippingService.requiresShipping(order.getShoppingCartItems(), store)</span>
+<span class="nc bnc" id="L868" title="All 2 branches missed.">					&amp;&amp; order.getSelectedShippingOption() == null) {</span>
+<span class="nc" id="L869">				ServiceException serviceException = new ServiceException(ServiceException.EXCEPTION_VALIDATION,</span>
+						&quot;shipping.required&quot;);
+<span class="nc" id="L871">				throw serviceException;</span>
+			}
+
+			// pre-validate credit card
+<span class="nc bnc" id="L875" title="All 2 branches missed.">			if (PaymentType.CREDITCARD.name().equals(paymentType)</span>
+<span class="nc bnc" id="L876" title="All 2 branches missed.">					&amp;&amp; &quot;true&quot;.equals(coreConfiguration.getProperty(&quot;VALIDATE_CREDIT_CARD&quot;))) {</span>
+<span class="nc" id="L877">				String cco = order.getPayment().get(&quot;creditcard_card_holder&quot;);</span>
+<span class="nc" id="L878">				String cvv = order.getPayment().get(&quot;creditcard_card_cvv&quot;);</span>
+<span class="nc" id="L879">				String ccn = order.getPayment().get(&quot;creditcard_card_number&quot;);</span>
+<span class="nc" id="L880">				String ccm = order.getPayment().get(&quot;creditcard_card_expirationmonth&quot;);</span>
+<span class="nc" id="L881">				String ccd = order.getPayment().get(&quot;creditcard_card_expirationyear&quot;);</span>
+
+<span class="nc bnc" id="L883" title="All 6 branches missed.">				if (StringUtils.isBlank(cco) || StringUtils.isBlank(cvv) || StringUtils.isBlank(ccn)</span>
+<span class="nc bnc" id="L884" title="All 4 branches missed.">						|| StringUtils.isBlank(ccm) || StringUtils.isBlank(ccd)) {</span>
+<span class="nc" id="L885">					ObjectError error = new ObjectError(&quot;creditcard&quot;,</span>
+<span class="nc" id="L886">							messages.getMessage(&quot;messages.error.creditcard&quot;, locale));</span>
+<span class="nc" id="L887">					bindingResult.addError(error);</span>
+<span class="nc" id="L888">					messagesResult.put(&quot;creditcard&quot;, messages.getMessage(&quot;messages.error.creditcard&quot;, locale));</span>
+<span class="nc" id="L889">					return;</span>
+				}
+
+<span class="nc" id="L892">				CreditCardType creditCardType = null;</span>
+<span class="nc" id="L893">				String cardType = order.getPayment().get(&quot;creditcard_card_type&quot;);</span>
+
+<span class="nc bnc" id="L895" title="All 2 branches missed.">				if (cardType.equalsIgnoreCase(CreditCardType.AMEX.name())) {</span>
+<span class="nc" id="L896">					creditCardType = CreditCardType.AMEX;</span>
+<span class="nc bnc" id="L897" title="All 2 branches missed.">				} else if (cardType.equalsIgnoreCase(CreditCardType.VISA.name())) {</span>
+<span class="nc" id="L898">					creditCardType = CreditCardType.VISA;</span>
+<span class="nc bnc" id="L899" title="All 2 branches missed.">				} else if (cardType.equalsIgnoreCase(CreditCardType.MASTERCARD.name())) {</span>
+<span class="nc" id="L900">					creditCardType = CreditCardType.MASTERCARD;</span>
+<span class="nc bnc" id="L901" title="All 2 branches missed.">				} else if (cardType.equalsIgnoreCase(CreditCardType.DINERS.name())) {</span>
+<span class="nc" id="L902">					creditCardType = CreditCardType.DINERS;</span>
+<span class="nc bnc" id="L903" title="All 2 branches missed.">				} else if (cardType.equalsIgnoreCase(CreditCardType.DISCOVERY.name())) {</span>
+<span class="nc" id="L904">					creditCardType = CreditCardType.DISCOVERY;</span>
+				}
+
+<span class="nc bnc" id="L907" title="All 2 branches missed.">				if (creditCardType == null) {</span>
+<span class="nc" id="L908">					ServiceException serviceException = new ServiceException(ServiceException.EXCEPTION_VALIDATION,</span>
+							&quot;cc.type&quot;);
+<span class="nc" id="L910">					throw serviceException;</span>
+				}
+
+			}
+
+<span class="nc" id="L915">		} catch (ServiceException se) {</span>
+<span class="nc" id="L916">			LOGGER.error(&quot;Error while commiting order&quot;, se);</span>
+<span class="nc" id="L917">			throw se;</span>
+<span class="nc" id="L918">		}</span>
+
+<span class="nc" id="L920">	}</span>
+
+	@Override
+	public com.salesmanager.shop.model.order.v0.ReadableOrderList getReadableOrderList(MerchantStore store,
+			Customer customer, int start, int maxCount, Language language) throws Exception {
+
+<span class="nc" id="L926">		OrderCriteria criteria = new OrderCriteria();</span>
+<span class="nc" id="L927">		criteria.setStartIndex(start);</span>
+<span class="nc" id="L928">		criteria.setMaxCount(maxCount);</span>
+<span class="nc" id="L929">		criteria.setCustomerId(customer.getId());</span>
+
+<span class="nc" id="L931">		return this.getReadableOrderList(criteria, store, language);</span>
+
+	}
+
+	@Override
+	public com.salesmanager.shop.model.order.v0.ReadableOrderList getReadableOrderList(OrderCriteria criteria,
+			MerchantStore store) {
+
+		try {
+<span class="nc" id="L940">			criteria.setLegacyPagination(false);</span>
+
+<span class="nc" id="L942">			OrderList orderList = orderService.getOrders(criteria, store);</span>
+
+<span class="nc" id="L944">			List&lt;Order&gt; orders = orderList.getOrders();</span>
+<span class="nc" id="L945">			com.salesmanager.shop.model.order.v0.ReadableOrderList returnList = new com.salesmanager.shop.model.order.v0.ReadableOrderList();</span>
+
+<span class="nc bnc" id="L947" title="All 2 branches missed.">			if (CollectionUtils.isEmpty(orders)) {</span>
+<span class="nc" id="L948">				returnList.setRecordsTotal(0);</span>
+<span class="nc" id="L949">				return returnList;</span>
+			}
+
+<span class="nc" id="L952">			List&lt;com.salesmanager.shop.model.order.v0.ReadableOrder&gt; readableOrders = new ArrayList&lt;com.salesmanager.shop.model.order.v0.ReadableOrder&gt;();</span>
+<span class="nc bnc" id="L953" title="All 2 branches missed.">			for (Order order : orders) {</span>
+<span class="nc" id="L954">				com.salesmanager.shop.model.order.v0.ReadableOrder readableOrder = new com.salesmanager.shop.model.order.v0.ReadableOrder();</span>
+<span class="nc" id="L955">				readableOrderPopulator.populate(order, readableOrder, null, null);</span>
+<span class="nc" id="L956">				readableOrders.add(readableOrder);</span>
+
+<span class="nc" id="L958">			}</span>
+<span class="nc" id="L959">			returnList.setOrders(readableOrders);</span>
+
+<span class="nc" id="L961">			returnList.setRecordsTotal(orderList.getTotalCount());</span>
+<span class="nc" id="L962">			returnList.setTotalPages(orderList.getTotalPages());</span>
+<span class="nc" id="L963">			returnList.setNumber(orderList.getOrders().size());</span>
+<span class="nc" id="L964">			returnList.setRecordsFiltered(orderList.getOrders().size());</span>
+
+<span class="nc" id="L966">			return returnList;</span>
+
+<span class="nc" id="L968">		} catch (Exception e) {</span>
+<span class="nc" id="L969">			throw new ServiceRuntimeException(&quot;Error while getting orders&quot;, e);</span>
+		}
+
+	}
+
+	@Override
+	public ShippingQuote getShippingQuote(Customer customer, ShoppingCart cart,
+			com.salesmanager.shop.model.order.v0.PersistableOrder order, MerchantStore store, Language language)
+			throws Exception {
+		// create shipping products
+<span class="nc" id="L979">		List&lt;ShippingProduct&gt; shippingProducts = shoppingCartService.createShippingProduct(cart);</span>
+
+<span class="nc bnc" id="L981" title="All 2 branches missed.">		if (CollectionUtils.isEmpty(shippingProducts)) {</span>
+<span class="nc" id="L982">			return null;// products are virtual</span>
+		}
+
+<span class="nc" id="L985">		Delivery delivery = new Delivery();</span>
+
+		// adjust shipping and billing
+<span class="nc bnc" id="L988" title="All 2 branches missed.">		if (order.isShipToBillingAdress()) {</span>
+<span class="nc" id="L989">			Billing billing = customer.getBilling();</span>
+<span class="nc" id="L990">			delivery.setAddress(billing.getAddress());</span>
+<span class="nc" id="L991">			delivery.setCity(billing.getCity());</span>
+<span class="nc" id="L992">			delivery.setCompany(billing.getCompany());</span>
+<span class="nc" id="L993">			delivery.setPostalCode(billing.getPostalCode());</span>
+<span class="nc" id="L994">			delivery.setState(billing.getState());</span>
+<span class="nc" id="L995">			delivery.setCountry(billing.getCountry());</span>
+<span class="nc" id="L996">			delivery.setZone(billing.getZone());</span>
+<span class="nc" id="L997">		} else {</span>
+<span class="nc" id="L998">			delivery = customer.getDelivery();</span>
+		}
+
+<span class="nc" id="L1001">		ShippingQuote quote = shippingService.getShippingQuote(cart.getId(), store, delivery, shippingProducts,</span>
+				language);
+
+<span class="nc" id="L1004">		return quote;</span>
+	}
+
+	private com.salesmanager.shop.model.order.v0.ReadableOrderList populateOrderList(final OrderList orderList,
+			final MerchantStore store, final Language language) {
+<span class="nc" id="L1009">		List&lt;Order&gt; orders = orderList.getOrders();</span>
+<span class="nc" id="L1010">		com.salesmanager.shop.model.order.v0.ReadableOrderList returnList = new com.salesmanager.shop.model.order.v0.ReadableOrderList();</span>
+<span class="nc bnc" id="L1011" title="All 2 branches missed.">		if (CollectionUtils.isEmpty(orders)) {</span>
+<span class="nc" id="L1012">			LOGGER.info(&quot;Order list if empty..Returning empty list&quot;);</span>
+<span class="nc" id="L1013">			returnList.setRecordsTotal(0);</span>
+			// returnList.setMessage(&quot;No results for store code &quot; + store);
+<span class="nc" id="L1015">			return returnList;</span>
+		}
+
+		// ReadableOrderPopulator orderPopulator = new ReadableOrderPopulator();
+<span class="nc" id="L1019">		Locale locale = LocaleUtils.getLocale(language);</span>
+<span class="nc" id="L1020">		readableOrderPopulator.setLocale(locale);</span>
+
+<span class="nc" id="L1022">		List&lt;com.salesmanager.shop.model.order.v0.ReadableOrder&gt; readableOrders = new ArrayList&lt;com.salesmanager.shop.model.order.v0.ReadableOrder&gt;();</span>
+<span class="nc bnc" id="L1023" title="All 2 branches missed.">		for (Order order : orders) {</span>
+<span class="nc" id="L1024">			com.salesmanager.shop.model.order.v0.ReadableOrder readableOrder = new com.salesmanager.shop.model.order.v0.ReadableOrder();</span>
+			try {
+<span class="nc" id="L1026">				readableOrderPopulator.populate(order, readableOrder, store, language);</span>
+<span class="nc" id="L1027">				setOrderProductList(order, locale, store, language, readableOrder);</span>
+<span class="nc" id="L1028">			} catch (ConversionException ex) {</span>
+<span class="nc" id="L1029">				LOGGER.error(&quot;Error while converting order to order data&quot;, ex);</span>
+
+<span class="nc" id="L1031">			}</span>
+<span class="nc" id="L1032">			readableOrders.add(readableOrder);</span>
+
+<span class="nc" id="L1034">		}</span>
+
+<span class="nc" id="L1036">		returnList.setOrders(readableOrders);</span>
+<span class="nc" id="L1037">		return returnList;</span>
+
+	}
+
+	private void setOrderProductList(final Order order, final Locale locale, final MerchantStore store,
+			final Language language, final com.salesmanager.shop.model.order.v0.ReadableOrder readableOrder)
+			throws ConversionException {
+<span class="nc" id="L1044">		List&lt;ReadableOrderProduct&gt; orderProducts = new ArrayList&lt;ReadableOrderProduct&gt;();</span>
+<span class="nc bnc" id="L1045" title="All 2 branches missed.">		for (OrderProduct p : order.getOrderProducts()) {</span>
+<span class="nc" id="L1046">			ReadableOrderProductPopulator orderProductPopulator = new ReadableOrderProductPopulator();</span>
+<span class="nc" id="L1047">			orderProductPopulator.setLocale(locale);</span>
+<span class="nc" id="L1048">			orderProductPopulator.setProductService(productService);</span>
+<span class="nc" id="L1049">			orderProductPopulator.setPricingService(pricingService);</span>
+<span class="nc" id="L1050">			orderProductPopulator.setimageUtils(imageUtils);</span>
+<span class="nc" id="L1051">			ReadableOrderProduct orderProduct = new ReadableOrderProduct();</span>
+<span class="nc" id="L1052">			orderProductPopulator.populate(p, orderProduct, store, language);</span>
+
+			// image
+
+			// attributes
+
+<span class="nc" id="L1058">			orderProducts.add(orderProduct);</span>
+<span class="nc" id="L1059">		}</span>
+
+<span class="nc" id="L1061">		readableOrder.setProducts(orderProducts);</span>
+<span class="nc" id="L1062">	}</span>
+
+	private com.salesmanager.shop.model.order.v0.ReadableOrderList getReadableOrderList(OrderCriteria criteria,
+			MerchantStore store, Language language) throws Exception {
+
+<span class="nc" id="L1067">		OrderList orderList = orderService.listByStore(store, criteria);</span>
+
+		// ReadableOrderPopulator orderPopulator = new ReadableOrderPopulator();
+<span class="nc" id="L1070">		Locale locale = LocaleUtils.getLocale(language);</span>
+<span class="nc" id="L1071">		readableOrderPopulator.setLocale(locale);</span>
+
+<span class="nc" id="L1073">		List&lt;Order&gt; orders = orderList.getOrders();</span>
+<span class="nc" id="L1074">		com.salesmanager.shop.model.order.v0.ReadableOrderList returnList = new com.salesmanager.shop.model.order.v0.ReadableOrderList();</span>
+
+<span class="nc bnc" id="L1076" title="All 2 branches missed.">		if (CollectionUtils.isEmpty(orders)) {</span>
+<span class="nc" id="L1077">			returnList.setRecordsTotal(0);</span>
+			// returnList.setMessage(&quot;No results for store code &quot; + store);
+<span class="nc" id="L1079">			return null;</span>
+		}
+
+<span class="nc" id="L1082">		List&lt;com.salesmanager.shop.model.order.v0.ReadableOrder&gt; readableOrders = new ArrayList&lt;com.salesmanager.shop.model.order.v0.ReadableOrder&gt;();</span>
+<span class="nc bnc" id="L1083" title="All 2 branches missed.">		for (Order order : orders) {</span>
+<span class="nc" id="L1084">			com.salesmanager.shop.model.order.v0.ReadableOrder readableOrder = new com.salesmanager.shop.model.order.v0.ReadableOrder();</span>
+<span class="nc" id="L1085">			readableOrderPopulator.populate(order, readableOrder, store, language);</span>
+<span class="nc" id="L1086">			readableOrders.add(readableOrder);</span>
+
+<span class="nc" id="L1088">		}</span>
+
+<span class="nc" id="L1090">		returnList.setRecordsTotal(orderList.getTotalCount());</span>
+<span class="nc" id="L1091">		return this.populateOrderList(orderList, store, language);</span>
+
+	}
+
+	@Override
+	public com.salesmanager.shop.model.order.v0.ReadableOrderList getReadableOrderList(MerchantStore store, int start,
+			int maxCount, Language language) throws Exception {
+
+<span class="nc" id="L1099">		OrderCriteria criteria = new OrderCriteria();</span>
+<span class="nc" id="L1100">		criteria.setStartIndex(start);</span>
+<span class="nc" id="L1101">		criteria.setMaxCount(maxCount);</span>
+
+<span class="nc" id="L1103">		return getReadableOrderList(criteria, store, language);</span>
+	}
+
+	@Override
+	public com.salesmanager.shop.model.order.v0.ReadableOrder getReadableOrder(Long orderId, MerchantStore store,
+			Language language) {
+<span class="nc" id="L1109">		Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);</span>
+<span class="nc" id="L1110">		Order modelOrder = orderService.getOrder(orderId, store);</span>
+<span class="nc bnc" id="L1111" title="All 2 branches missed.">		if (modelOrder == null) {</span>
+<span class="nc" id="L1112">			throw new ResourceNotFoundException(&quot;Order not found with id &quot; + orderId);</span>
+		}
+
+<span class="nc" id="L1115">		com.salesmanager.shop.model.order.v0.ReadableOrder readableOrder = new com.salesmanager.shop.model.order.v0.ReadableOrder();</span>
+
+<span class="nc" id="L1117">		Long customerId = modelOrder.getCustomerId();</span>
+<span class="nc bnc" id="L1118" title="All 2 branches missed.">		if (customerId != null) {</span>
+<span class="nc" id="L1119">			ReadableCustomer readableCustomer = customerFacade.getCustomerById(customerId, store, language);</span>
+<span class="nc bnc" id="L1120" title="All 2 branches missed.">			if (readableCustomer == null) {</span>
+<span class="nc" id="L1121">				LOGGER.warn(&quot;Customer id &quot; + customerId + &quot; not found in order &quot; + orderId);</span>
+			} else {
+<span class="nc" id="L1123">				readableOrder.setCustomer(readableCustomer);</span>
+			}
+		}
+
+		try {
+<span class="nc" id="L1128">			readableOrderPopulator.populate(modelOrder, readableOrder, store, language);</span>
+
+			// order products
+<span class="nc" id="L1131">			List&lt;ReadableOrderProduct&gt; orderProducts = new ArrayList&lt;ReadableOrderProduct&gt;();</span>
+<span class="nc bnc" id="L1132" title="All 2 branches missed.">			for (OrderProduct p : modelOrder.getOrderProducts()) {</span>
+<span class="nc" id="L1133">				ReadableOrderProductPopulator orderProductPopulator = new ReadableOrderProductPopulator();</span>
+<span class="nc" id="L1134">				orderProductPopulator.setProductService(productService);</span>
+<span class="nc" id="L1135">				orderProductPopulator.setPricingService(pricingService);</span>
+<span class="nc" id="L1136">				orderProductPopulator.setimageUtils(imageUtils);</span>
+
+<span class="nc" id="L1138">				ReadableOrderProduct orderProduct = new ReadableOrderProduct();</span>
+<span class="nc" id="L1139">				orderProductPopulator.populate(p, orderProduct, store, language);</span>
+<span class="nc" id="L1140">				orderProducts.add(orderProduct);</span>
+<span class="nc" id="L1141">			}</span>
+
+<span class="nc" id="L1143">			readableOrder.setProducts(orderProducts);</span>
+<span class="nc" id="L1144">		} catch (Exception e) {</span>
+<span class="nc" id="L1145">			throw new ServiceRuntimeException(&quot;Error while getting order [&quot; + orderId + &quot;]&quot;);</span>
+<span class="nc" id="L1146">		}</span>
+
+<span class="nc" id="L1148">		return readableOrder;</span>
+	}
+
+	@Override
+	public ShippingQuote getShippingQuote(Customer customer, ShoppingCart cart, MerchantStore store, Language language)
+			throws Exception {
+
+<span class="nc" id="L1155">		Validate.notNull(customer, &quot;Customer cannot be null&quot;);</span>
+<span class="nc" id="L1156">		Validate.notNull(cart, &quot;cart cannot be null&quot;);</span>
+
+		// create shipping products
+<span class="nc" id="L1159">		List&lt;ShippingProduct&gt; shippingProducts = shoppingCartService.createShippingProduct(cart);</span>
+
+<span class="nc bnc" id="L1161" title="All 2 branches missed.">		if (CollectionUtils.isEmpty(shippingProducts)) {</span>
+<span class="nc" id="L1162">			return null;// products are virtual</span>
+		}
+
+<span class="nc" id="L1165">		Delivery delivery = new Delivery();</span>
+<span class="nc" id="L1166">		Billing billing = new Billing();</span>
+		//default value
+<span class="nc" id="L1168">		billing.setCountry(store.getCountry());</span>
+
+
+		// adjust shipping and billing
+<span class="nc bnc" id="L1172" title="All 4 branches missed.">		if (customer.getDelivery() == null || StringUtils.isBlank(customer.getDelivery().getPostalCode())) {</span>
+<span class="nc bnc" id="L1173" title="All 2 branches missed.">			if(customer.getBilling()!=null) {</span>
+<span class="nc" id="L1174">				billing = customer.getBilling();</span>
+			}
+<span class="nc" id="L1176">			delivery.setAddress(billing.getAddress());</span>
+<span class="nc" id="L1177">			delivery.setCity(billing.getCity());</span>
+<span class="nc" id="L1178">			delivery.setCompany(billing.getCompany());</span>
+<span class="nc" id="L1179">			delivery.setPostalCode(billing.getPostalCode());</span>
+<span class="nc" id="L1180">			delivery.setState(billing.getState());</span>
+<span class="nc" id="L1181">			delivery.setCountry(billing.getCountry());</span>
+<span class="nc" id="L1182">			delivery.setZone(billing.getZone());</span>
+		} else {
+<span class="nc" id="L1184">			delivery = customer.getDelivery();</span>
+		}
+
+<span class="nc" id="L1187">		ShippingQuote quote = shippingService.getShippingQuote(cart.getId(), store, delivery, shippingProducts,</span>
+				language);
+<span class="nc" id="L1189">		return quote;</span>
+	}
+
+	/**
+	 * Process order from api
+	 */
+	@Override
+	public Order processOrder(com.salesmanager.shop.model.order.v1.PersistableOrder order, Customer customer,
+			MerchantStore store, Language language, Locale locale) throws ServiceException {
+
+<span class="nc" id="L1199">		Validate.notNull(order, &quot;Order cannot be null&quot;);</span>
+<span class="nc" id="L1200">		Validate.notNull(customer, &quot;Customer cannot be null&quot;);</span>
+<span class="nc" id="L1201">		Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);</span>
+<span class="nc" id="L1202">		Validate.notNull(language, &quot;Language cannot be null&quot;);</span>
+<span class="nc" id="L1203">		Validate.notNull(locale, &quot;Locale cannot be null&quot;);</span>
+
+		try {
+
+
+<span class="nc" id="L1208">			Order modelOrder = new Order();</span>
+<span class="nc" id="L1209">			persistableOrderApiPopulator.populate(order, modelOrder, store, language);</span>
+
+<span class="nc" id="L1211">			Long shoppingCartId = order.getShoppingCartId();</span>
+<span class="nc" id="L1212">			ShoppingCart cart = shoppingCartService.getById(shoppingCartId, store);</span>
+
+<span class="nc bnc" id="L1214" title="All 2 branches missed.">			if (cart == null) {</span>
+<span class="nc" id="L1215">				throw new ServiceException(&quot;Shopping cart with id &quot; + shoppingCartId + &quot; does not exist&quot;);</span>
+			}
+
+<span class="nc" id="L1218">			Set&lt;ShoppingCartItem&gt; shoppingCartItems = cart.getLineItems();</span>
+
+<span class="nc" id="L1220">			List&lt;ShoppingCartItem&gt; items = new ArrayList&lt;ShoppingCartItem&gt;(shoppingCartItems);</span>
+
+<span class="nc" id="L1222">			Set&lt;OrderProduct&gt; orderProducts = new LinkedHashSet&lt;OrderProduct&gt;();</span>
+
+<span class="nc" id="L1224">			OrderProductPopulator orderProductPopulator = new OrderProductPopulator();</span>
+<span class="nc" id="L1225">			orderProductPopulator.setDigitalProductService(digitalProductService);</span>
+<span class="nc" id="L1226">			orderProductPopulator.setProductAttributeService(productAttributeService);</span>
+<span class="nc" id="L1227">			orderProductPopulator.setProductService(productService);</span>
+
+<span class="nc bnc" id="L1229" title="All 2 branches missed.">			for (ShoppingCartItem item : shoppingCartItems) {</span>
+<span class="nc" id="L1230">				OrderProduct orderProduct = new OrderProduct();</span>
+<span class="nc" id="L1231">				orderProduct = orderProductPopulator.populate(item, orderProduct, store, language);</span>
+<span class="nc" id="L1232">				orderProduct.setOrder(modelOrder);</span>
+<span class="nc" id="L1233">				orderProducts.add(orderProduct);</span>
+<span class="nc" id="L1234">			}</span>
+
+<span class="nc" id="L1236">			modelOrder.setOrderProducts(orderProducts);</span>
+
+<span class="nc bnc" id="L1238" title="All 4 branches missed.">			if (order.getAttributes() != null &amp;&amp; order.getAttributes().size() &gt; 0) {</span>
+<span class="nc" id="L1239">				Set&lt;OrderAttribute&gt; attrs = new HashSet&lt;OrderAttribute&gt;();</span>
+<span class="nc bnc" id="L1240" title="All 2 branches missed.">				for (com.salesmanager.shop.model.order.OrderAttribute attribute : order.getAttributes()) {</span>
+<span class="nc" id="L1241">					OrderAttribute attr = new OrderAttribute();</span>
+<span class="nc" id="L1242">					attr.setKey(attribute.getKey());</span>
+<span class="nc" id="L1243">					attr.setValue(attribute.getValue());</span>
+<span class="nc" id="L1244">					attr.setOrder(modelOrder);</span>
+<span class="nc" id="L1245">					attrs.add(attr);</span>
+<span class="nc" id="L1246">				}</span>
+<span class="nc" id="L1247">				modelOrder.setOrderAttributes(attrs);</span>
+			}
+
+			// requires Shipping information (need a quote id calculated)
+<span class="nc" id="L1251">			ShippingSummary shippingSummary = null;</span>
+
+			// get shipping quote if asked for
+<span class="nc bnc" id="L1254" title="All 4 branches missed.">			if (order.getShippingQuote() != null &amp;&amp; order.getShippingQuote().longValue() &gt; 0) {</span>
+<span class="nc" id="L1255">				shippingSummary = shippingQuoteService.getShippingSummary(order.getShippingQuote(), store);</span>
+<span class="nc bnc" id="L1256" title="All 2 branches missed.">				if (shippingSummary != null) {</span>
+<span class="nc" id="L1257">					modelOrder.setShippingModuleCode(shippingSummary.getShippingModule());</span>
+				}
+			}
+
+			// requires Order Totals, this needs recalculation and then compare
+			// total with the amount sent as part
+			// of process order request. If totals does not match, an error
+			// should be thrown.
+
+<span class="nc" id="L1266">			OrderTotalSummary orderTotalSummary = null;</span>
+
+<span class="nc" id="L1268">			OrderSummary orderSummary = new OrderSummary();</span>
+<span class="nc" id="L1269">			orderSummary.setShippingSummary(shippingSummary);</span>
+<span class="nc" id="L1270">			List&lt;ShoppingCartItem&gt; itemsSet = new ArrayList&lt;ShoppingCartItem&gt;(cart.getLineItems());</span>
+<span class="nc" id="L1271">			orderSummary.setProducts(itemsSet);</span>
+
+<span class="nc" id="L1273">			orderTotalSummary = orderService.caculateOrderTotal(orderSummary, customer, store, language);</span>
+
+<span class="nc bnc" id="L1275" title="All 2 branches missed.">			if (order.getPayment().getAmount() == null) {</span>
+<span class="nc" id="L1276">				throw new ConversionException(&quot;Requires Payment.amount&quot;);</span>
+			}
+
+<span class="nc" id="L1279">			String submitedAmount = order.getPayment().getAmount();</span>
+
+<span class="nc" id="L1281">			BigDecimal formattedSubmittedAmount = productPriceUtils.getAmount(submitedAmount);</span>
+
+<span class="nc" id="L1283">			BigDecimal submitedAmountFormat = productPriceUtils.getAmount(submitedAmount);</span>
+
+<span class="nc" id="L1285">			BigDecimal calculatedAmount = orderTotalSummary.getTotal();</span>
+<span class="nc" id="L1286">			String strCalculatedTotal = calculatedAmount.toPlainString();</span>
+
+			// compare both prices
+<span class="nc bnc" id="L1289" title="All 2 branches missed.">			if (calculatedAmount.compareTo(formattedSubmittedAmount) != 0) {</span>
+
+
+<span class="nc" id="L1292">				throw new ConversionException(&quot;Payment.amount does not match what the system has calculated &quot;</span>
+						+ strCalculatedTotal + &quot; (received &quot; + submitedAmount + &quot;) please recalculate the order and submit again&quot;);
+			}
+
+<span class="nc" id="L1296">			modelOrder.setTotal(calculatedAmount);</span>
+<span class="nc" id="L1297">			List&lt;com.salesmanager.core.model.order.OrderTotal&gt; totals = orderTotalSummary.getTotals();</span>
+<span class="nc" id="L1298">			Set&lt;com.salesmanager.core.model.order.OrderTotal&gt; set = new HashSet&lt;com.salesmanager.core.model.order.OrderTotal&gt;();</span>
+
+<span class="nc bnc" id="L1300" title="All 2 branches missed.">			if (!CollectionUtils.isEmpty(totals)) {</span>
+<span class="nc bnc" id="L1301" title="All 2 branches missed.">				for (com.salesmanager.core.model.order.OrderTotal total : totals) {</span>
+<span class="nc" id="L1302">					total.setOrder(modelOrder);</span>
+<span class="nc" id="L1303">					set.add(total);</span>
+<span class="nc" id="L1304">				}</span>
+			}
+<span class="nc" id="L1306">			modelOrder.setOrderTotal(set);</span>
+
+<span class="nc" id="L1308">			PersistablePaymentPopulator paymentPopulator = new PersistablePaymentPopulator();</span>
+<span class="nc" id="L1309">			paymentPopulator.setPricingService(pricingService);</span>
+<span class="nc" id="L1310">			Payment paymentModel = new Payment();</span>
+<span class="nc" id="L1311">			paymentPopulator.populate(order.getPayment(), paymentModel, store, language);</span>
+
+<span class="nc" id="L1313">			modelOrder.setShoppingCartCode(cart.getShoppingCartCode());</span>
+
+			//lookup existing customer
+			//if customer exist then do not set authentication for this customer and send an instructions email
+			/** **/
+<span class="nc bnc" id="L1318" title="All 4 branches missed.">			if(!StringUtils.isBlank(customer.getNick()) &amp;&amp; !customer.isAnonymous()) {</span>
+<span class="nc bnc" id="L1319" title="All 4 branches missed.">				if(order.getCustomerId() == null &amp;&amp; (customerFacade.checkIfUserExists(customer.getNick(), store))) {</span>
+<span class="nc" id="L1320">					customer.setAnonymous(true);</span>
+<span class="nc" id="L1321">					customer.setNick(null);</span>
+					//send email instructions
+				}
+			}
+
+
+			//order service
+<span class="nc" id="L1328">			modelOrder = orderService.processOrder(modelOrder, customer, items, orderTotalSummary, paymentModel, store);</span>
+
+			// update cart
+			try {
+<span class="nc" id="L1332">				cart.setOrderId(modelOrder.getId());</span>
+<span class="nc" id="L1333">				shoppingCartFacade.saveOrUpdateShoppingCart(cart);</span>
+<span class="nc" id="L1334">			} catch (Exception e) {</span>
+<span class="nc" id="L1335">				LOGGER.error(&quot;Cannot delete cart &quot; + cart.getId(), e);</span>
+<span class="nc" id="L1336">			}</span>
+
+			//email management
+<span class="nc bnc" id="L1339" title="All 2 branches missed.">			if (&quot;true&quot;.equals(coreConfiguration.getProperty(&quot;ORDER_EMAIL_API&quot;))) {</span>
+				// send email
+				try {
+
+<span class="nc" id="L1343">					notify(modelOrder, customer, store, language, locale);</span>
+
+
+<span class="nc" id="L1346">				} catch (Exception e) {</span>
+<span class="nc" id="L1347">					LOGGER.error(&quot;Cannot send order confirmation email&quot;, e);</span>
+<span class="nc" id="L1348">				}</span>
+			}
+
+<span class="nc" id="L1351">			return modelOrder;</span>
+
+<span class="nc" id="L1353">		} catch (Exception e) {</span>
+
+<span class="nc" id="L1355">			throw new ServiceException(e);</span>
+
+		}
+
+	}
+
+	@Async
+	private void notify(Order order, Customer customer, MerchantStore store, Language language, Locale locale) throws Exception {
+
+		// send order confirmation email to customer
+<span class="nc" id="L1365">		emailTemplatesUtils.sendOrderEmail(customer.getEmailAddress(), customer, order, locale,</span>
+<span class="nc" id="L1366">				language, store, coreConfiguration.getProperty(&quot;CONTEXT_PATH&quot;));</span>
+
+<span class="nc bnc" id="L1368" title="All 2 branches missed.">		if (orderService.hasDownloadFiles(order)) {</span>
+<span class="nc" id="L1369">			emailTemplatesUtils.sendOrderDownloadEmail(customer, order, store, locale,</span>
+<span class="nc" id="L1370">					coreConfiguration.getProperty(&quot;CONTEXT_PATH&quot;));</span>
+		}
+
+		// send customer credentials
+
+		// send order confirmation email to merchant
+<span class="nc" id="L1376">		emailTemplatesUtils.sendOrderEmail(store.getStoreEmailAddress(), customer, order, locale,</span>
+<span class="nc" id="L1377">				language, store, coreConfiguration.getProperty(&quot;CONTEXT_PATH&quot;));</span>
+
+
+<span class="nc" id="L1380">	}</span>
+
+	@Override
+	public com.salesmanager.shop.model.order.v0.ReadableOrderList getCapturableOrderList(MerchantStore store,
+			Date startDate, Date endDate, Language language) throws Exception {
+
+		// get all transactions for the given date
+<span class="nc" id="L1387">		List&lt;Order&gt; orders = orderService.getCapturableOrders(store, startDate, endDate);</span>
+
+		// ReadableOrderPopulator orderPopulator = new ReadableOrderPopulator();
+<span class="nc" id="L1390">		Locale locale = LocaleUtils.getLocale(language);</span>
+<span class="nc" id="L1391">		readableOrderPopulator.setLocale(locale);</span>
+
+<span class="nc" id="L1393">		com.salesmanager.shop.model.order.v0.ReadableOrderList returnList = new com.salesmanager.shop.model.order.v0.ReadableOrderList();</span>
+
+<span class="nc bnc" id="L1395" title="All 2 branches missed.">		if (CollectionUtils.isEmpty(orders)) {</span>
+<span class="nc" id="L1396">			returnList.setRecordsTotal(0);</span>
+			// returnList.setMessage(&quot;No results for store code &quot; + store);
+<span class="nc" id="L1398">			return null;</span>
+		}
+
+<span class="nc" id="L1401">		List&lt;com.salesmanager.shop.model.order.v0.ReadableOrder&gt; readableOrders = new ArrayList&lt;com.salesmanager.shop.model.order.v0.ReadableOrder&gt;();</span>
+<span class="nc bnc" id="L1402" title="All 2 branches missed.">		for (Order order : orders) {</span>
+<span class="nc" id="L1403">			com.salesmanager.shop.model.order.v0.ReadableOrder readableOrder = new com.salesmanager.shop.model.order.v0.ReadableOrder();</span>
+<span class="nc" id="L1404">			readableOrderPopulator.populate(order, readableOrder, store, language);</span>
+<span class="nc" id="L1405">			readableOrders.add(readableOrder);</span>
+
+<span class="nc" id="L1407">		}</span>
+
+<span class="nc" id="L1409">		returnList.setRecordsTotal(orders.size());</span>
+<span class="nc" id="L1410">		returnList.setOrders(readableOrders);</span>
+
+<span class="nc" id="L1412">		return returnList;</span>
+	}
+
+	@Override
+	public ReadableTransaction captureOrder(MerchantStore store, Order order, Customer customer, Language language)
+			throws Exception {
+<span class="nc" id="L1418">		Transaction transactionModel = paymentService.processCapturePayment(order, customer, store);</span>
+
+<span class="nc" id="L1420">		ReadableTransaction transaction = new ReadableTransaction();</span>
+<span class="nc" id="L1421">		ReadableTransactionPopulator trxPopulator = new ReadableTransactionPopulator();</span>
+<span class="nc" id="L1422">		trxPopulator.setOrderService(orderService);</span>
+<span class="nc" id="L1423">		trxPopulator.setPricingService(pricingService);</span>
+
+<span class="nc" id="L1425">		trxPopulator.populate(transactionModel, transaction, store, language);</span>
+
+<span class="nc" id="L1427">		return transaction;</span>
+
+	}
+
+	@Override
+	public List&lt;ReadableOrderStatusHistory&gt; getReadableOrderHistory(Long orderId, MerchantStore store,
+			Language language) {
+
+<span class="nc" id="L1435">		Order order = orderService.getOrder(orderId, store);</span>
+<span class="nc bnc" id="L1436" title="All 2 branches missed.">		if (order == null) {</span>
+<span class="nc" id="L1437">			throw new ResourceNotFoundException(</span>
+<span class="nc" id="L1438">					&quot;Order id [&quot; + orderId + &quot;] not found for merchand [&quot; + store.getId() + &quot;]&quot;);</span>
+		}
+
+<span class="nc" id="L1441">		Set&lt;OrderStatusHistory&gt; historyList = order.getOrderHistory();</span>
+<span class="nc" id="L1442">		List&lt;ReadableOrderStatusHistory&gt; returnList = historyList.stream().map(f -&gt; mapToReadbleOrderStatusHistory(f))</span>
+<span class="nc" id="L1443">				.collect(Collectors.toList());</span>
+<span class="nc" id="L1444">		return returnList;</span>
+	}
+
+	ReadableOrderStatusHistory mapToReadbleOrderStatusHistory(OrderStatusHistory source) {
+<span class="nc" id="L1448">		ReadableOrderStatusHistory readable = new ReadableOrderStatusHistory();</span>
+<span class="nc" id="L1449">		readable.setComments(source.getComments());</span>
+<span class="nc" id="L1450">		readable.setDate(DateUtil.formatLongDate(source.getDateAdded()));</span>
+<span class="nc" id="L1451">		readable.setId(source.getId());</span>
+<span class="nc" id="L1452">		readable.setOrderId(source.getOrder().getId());</span>
+<span class="nc" id="L1453">		readable.setOrderStatus(source.getStatus().name());</span>
+
+<span class="nc" id="L1455">		return readable;</span>
+	}
+
+	@Override
+	public void createOrderStatus(PersistableOrderStatusHistory status, Long id, MerchantStore store) {
+<span class="nc" id="L1460">		Validate.notNull(status, &quot;OrderStatusHistory must not be null&quot;);</span>
+<span class="nc" id="L1461">		Validate.notNull(id, &quot;Order id must not be null&quot;);</span>
+<span class="nc" id="L1462">		Validate.notNull(store, &quot;MerchantStore must not be null&quot;);</span>
+
+		// retrieve original order
+<span class="nc" id="L1465">		Order order = orderService.getOrder(id, store);</span>
+<span class="nc bnc" id="L1466" title="All 2 branches missed.">		if (order == null) {</span>
+<span class="nc" id="L1467">			throw new ResourceNotFoundException(</span>
+<span class="nc" id="L1468">					&quot;Order with id [&quot; + id + &quot;] does not exist for merchant [&quot; + store.getCode() + &quot;]&quot;);</span>
+		}
+
+		try {
+<span class="nc" id="L1472">			OrderStatusHistory history = new OrderStatusHistory();</span>
+<span class="nc" id="L1473">			history.setComments(status.getComments());</span>
+<span class="nc" id="L1474">			history.setDateAdded(DateUtil.getDate(status.getDate()));</span>
+<span class="nc" id="L1475">			history.setOrder(order);</span>
+<span class="nc" id="L1476">			history.setStatus(status.getStatus());</span>
+
+<span class="nc" id="L1478">			orderService.addOrderStatusHistory(order, history);</span>
+
+<span class="nc" id="L1480">		} catch (Exception e) {</span>
+<span class="nc" id="L1481">			throw new ServiceRuntimeException(&quot;An error occured while converting orderstatushistory&quot;, e);</span>
+<span class="nc" id="L1482">		}</span>
+
+<span class="nc" id="L1484">	}</span>
+
+	@Override
+	public void updateOrderCustomre(Long orderId, PersistableCustomer customer, MerchantStore store) {
+		// TODO Auto-generated method stub
+
+		try {
+
+		//get order by order id
+<span class="nc" id="L1493">		Order modelOrder = orderService.getOrder(orderId, store);</span>
+
+<span class="nc bnc" id="L1495" title="All 2 branches missed.">		if(modelOrder == null) {</span>
+<span class="nc" id="L1496">			throw new ResourceNotFoundException(&quot;Order id [&quot; + orderId + &quot;] not found for store [&quot; + store.getCode() + &quot;]&quot;);</span>
+		}
+
+		//set customer information
+<span class="nc" id="L1500">		modelOrder.setCustomerEmailAddress(customer.getEmailAddress());</span>
+<span class="nc" id="L1501">		modelOrder.setBilling(this.convertBilling(customer.getBilling()));</span>
+<span class="nc" id="L1502">		modelOrder.setDelivery(this.convertDelivery(customer.getDelivery()));</span>
+
+<span class="nc" id="L1504">		orderService.saveOrUpdate(modelOrder);</span>
+
+<span class="nc" id="L1506">		} catch(Exception e) {</span>
+<span class="nc" id="L1507">			throw new ServiceRuntimeException(&quot;An error occured while updating order customer&quot;, e);</span>
+<span class="nc" id="L1508">		}</span>
+
+<span class="nc" id="L1510">	}</span>
+
+	private Billing convertBilling(Address source) throws ServiceException {
+<span class="nc" id="L1513">		Billing target = new Billing();</span>
+<span class="nc" id="L1514">        target.setCity(source.getCity());</span>
+<span class="nc" id="L1515">        target.setCompany(source.getCompany());</span>
+<span class="nc" id="L1516">        target.setFirstName(source.getFirstName());</span>
+<span class="nc" id="L1517">        target.setLastName(source.getLastName());</span>
+<span class="nc" id="L1518">        target.setPostalCode(source.getPostalCode());</span>
+<span class="nc" id="L1519">        target.setTelephone(source.getPhone());</span>
+<span class="nc" id="L1520">        target.setAddress(source.getAddress());</span>
+<span class="nc bnc" id="L1521" title="All 2 branches missed.">        if(source.getCountry()!=null) {</span>
+<span class="nc" id="L1522">        	target.setCountry(countryService.getByCode(source.getCountry()));</span>
+        }
+
+<span class="nc bnc" id="L1525" title="All 2 branches missed.">        if(source.getZone()!=null) {</span>
+<span class="nc" id="L1526">            target.setZone(zoneService.getByCode(source.getZone()));</span>
+        }
+<span class="nc" id="L1528">        target.setState(source.getBilstateOther());</span>
+
+<span class="nc" id="L1530">        return target;</span>
+	}
+
+	private Delivery convertDelivery(Address source) throws ServiceException {
+<span class="nc" id="L1534">		Delivery target = new Delivery();</span>
+<span class="nc" id="L1535">        target.setCity(source.getCity());</span>
+<span class="nc" id="L1536">        target.setCompany(source.getCompany());</span>
+<span class="nc" id="L1537">        target.setFirstName(source.getFirstName());</span>
+<span class="nc" id="L1538">        target.setLastName(source.getLastName());</span>
+<span class="nc" id="L1539">        target.setPostalCode(source.getPostalCode());</span>
+<span class="nc" id="L1540">        target.setTelephone(source.getPhone());</span>
+<span class="nc" id="L1541">        target.setAddress(source.getAddress());</span>
+<span class="nc bnc" id="L1542" title="All 2 branches missed.">        if(source.getCountry()!=null) {</span>
+<span class="nc" id="L1543">        	target.setCountry(countryService.getByCode(source.getCountry()));</span>
+        }
+
+<span class="nc bnc" id="L1546" title="All 2 branches missed.">        if(source.getZone()!=null) {</span>
+<span class="nc" id="L1547">            target.setZone(zoneService.getByCode(source.getZone()));</span>
+        }
+<span class="nc" id="L1549">        target.setState(source.getBilstateOther());</span>
+
+<span class="nc" id="L1551">        return target;</span>
+	}
+
+	@Override
+	public TransactionType nextTransaction(Long orderId, MerchantStore store) {
+
+		try {
+
+<span class="nc" id="L1559">			Order modelOrder = orderService.getOrder(orderId, store);</span>
+
+<span class="nc bnc" id="L1561" title="All 2 branches missed.">			if(modelOrder == null) {</span>
+<span class="nc" id="L1562">				throw new ResourceNotFoundException(&quot;Order id [&quot; + orderId + &quot;] not found for store [&quot; + store.getCode() + &quot;]&quot;);</span>
+			}
+
+<span class="nc" id="L1565">			Transaction last = transactionService.lastTransaction(modelOrder, store);</span>
+
+<span class="nc bnc" id="L1567" title="All 2 branches missed.">			if(last.getTransactionType().name().equals(TransactionType.AUTHORIZE.name())) {</span>
+<span class="nc" id="L1568">				return TransactionType.CAPTURE;</span>
+<span class="nc bnc" id="L1569" title="All 2 branches missed.">			} else if(last.getTransactionType().name().equals(TransactionType.AUTHORIZECAPTURE.name())) {</span>
+<span class="nc" id="L1570">				return TransactionType.REFUND;</span>
+<span class="nc bnc" id="L1571" title="All 2 branches missed.">			} else if(last.getTransactionType().name().equals(TransactionType.CAPTURE.name())) {</span>
+<span class="nc" id="L1572">				return TransactionType.REFUND;</span>
+<span class="nc bnc" id="L1573" title="All 2 branches missed.">			} else if(last.getTransactionType().name().equals(TransactionType.REFUND.name())) {</span>
+<span class="nc" id="L1574">				return TransactionType.OK;</span>
+			} else {
+<span class="nc" id="L1576">				return TransactionType.OK;</span>
+			}
+
+
+<span class="nc" id="L1580">		} catch(Exception e) {</span>
+<span class="nc" id="L1581">			throw new ServiceRuntimeException(&quot;Error while getting last transaction for order [&quot; + orderId + &quot;]&quot;,e);</span>
+		}
+
+
+	}
+
+	@Override
+	public List&lt;ReadableTransaction&gt; listTransactions(Long orderId, MerchantStore store) {
+<span class="nc" id="L1589">		Validate.notNull(orderId, &quot;orderId must not be null&quot;);</span>
+<span class="nc" id="L1590">		Validate.notNull(store, &quot;MerchantStore must not be null&quot;);</span>
+<span class="nc" id="L1591">		List&lt;ReadableTransaction&gt; trx = new ArrayList&lt;ReadableTransaction&gt;();</span>
+		try {
+<span class="nc" id="L1593">			Order modelOrder = orderService.getOrder(orderId, store);</span>
+
+<span class="nc bnc" id="L1595" title="All 2 branches missed.">			if(modelOrder == null) {</span>
+<span class="nc" id="L1596">				throw new ResourceNotFoundException(&quot;Order id [&quot; + orderId + &quot;] not found for store [&quot; + store.getCode() + &quot;]&quot;);</span>
+			}
+
+<span class="nc" id="L1599">			List&lt;Transaction&gt; transactions = transactionService.listTransactions(modelOrder);</span>
+
+<span class="nc" id="L1601">			ReadableTransaction transaction = null;</span>
+<span class="nc" id="L1602">			ReadableTransactionPopulator trxPopulator = null;</span>
+
+<span class="nc bnc" id="L1604" title="All 2 branches missed.">			for(Transaction tr : transactions) {</span>
+<span class="nc" id="L1605">				transaction = new ReadableTransaction();</span>
+<span class="nc" id="L1606">				trxPopulator = new ReadableTransactionPopulator();</span>
+
+<span class="nc" id="L1608">				trxPopulator.setOrderService(orderService);</span>
+<span class="nc" id="L1609">				trxPopulator.setPricingService(pricingService);</span>
+
+<span class="nc" id="L1611">				trxPopulator.populate(tr, transaction, store, store.getDefaultLanguage());</span>
+<span class="nc" id="L1612">				trx.add(transaction);</span>
+<span class="nc" id="L1613">			}</span>
+
+<span class="nc" id="L1615">			return trx;</span>
+
+<span class="nc" id="L1617">		} catch(Exception e) {</span>
+<span class="nc" id="L1618">			LOGGER.error(&quot;Error while getting transactions for order [&quot; + orderId + &quot;] and store code [&quot; + store.getCode() + &quot;]&quot;);</span>
+<span class="nc" id="L1619">			throw new ServiceRuntimeException(&quot;Error while getting transactions for order [&quot; + orderId + &quot;] and store code [&quot; + store.getCode() + &quot;]&quot;);</span>
+		}
+
+	}
+
+	@Override
+	public void updateOrderStatus(Order order, OrderStatus newStatus, MerchantStore store) {
+
+		// make sure we are changing to different that current status
+<span class="nc bnc" id="L1628" title="All 2 branches missed.">		if (order.getStatus().equals(newStatus)) {</span>
+<span class="nc" id="L1629">			return; // we have the same status, lets just return</span>
+		}
+<span class="nc" id="L1631">		OrderStatus oldStatus = order.getStatus();</span>
+<span class="nc" id="L1632">		order.setStatus(newStatus);</span>
+<span class="nc" id="L1633">		OrderStatusHistory history = new OrderStatusHistory();</span>
+
+<span class="nc" id="L1635">		history.setComments( messages.getMessage(&quot;email.order.status.changed&quot;, new String[] {oldStatus.name(),</span>
+<span class="nc" id="L1636">				newStatus.name()}, LocaleUtils.getLocale(store)));</span>
+<span class="nc" id="L1637">		history.setCustomerNotified(0);</span>
+<span class="nc" id="L1638">		history.setStatus(newStatus);</span>
+<span class="nc" id="L1639">		history.setDateAdded(new Date() );</span>
+
+		try {
+<span class="nc" id="L1642">			orderService.addOrderStatusHistory(order, history);</span>
+<span class="nc" id="L1643">		} catch (ServiceException e) {</span>
+<span class="nc" id="L1644">			e.printStackTrace();</span>
+<span class="nc" id="L1645">		}</span>
+
+<span class="nc" id="L1647">	}</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

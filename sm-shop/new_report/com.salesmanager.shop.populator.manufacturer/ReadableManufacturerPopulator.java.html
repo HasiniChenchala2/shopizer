@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReadableManufacturerPopulator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.populator.manufacturer</a> &gt; <span class="el_source">ReadableManufacturerPopulator.java</span></div><h1>ReadableManufacturerPopulator.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.populator.manufacturer;
+
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.utils.AbstractDataPopulator;
+import com.salesmanager.core.model.catalog.product.manufacturer.ManufacturerDescription;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.model.catalog.manufacturer.ReadableManufacturer;
+import com.salesmanager.shop.model.catalog.manufacturer.ReadableManufacturerFull;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+
+<span class="nc" id="L14">public class ReadableManufacturerPopulator extends</span>
+    AbstractDataPopulator&lt;com.salesmanager.core.model.catalog.product.manufacturer.Manufacturer, ReadableManufacturer&gt; {
+
+
+
+  @Override
+  public ReadableManufacturer populate(
+      com.salesmanager.core.model.catalog.product.manufacturer.Manufacturer source,
+      ReadableManufacturer target, MerchantStore store, Language language)
+      throws ConversionException {
+
+
+<span class="nc bnc" id="L26" title="All 2 branches missed.">    if (language == null) {</span>
+<span class="nc" id="L27">      target = new ReadableManufacturerFull();</span>
+    }
+<span class="nc" id="L29">    target.setOrder(source.getOrder());</span>
+<span class="nc" id="L30">    target.setId(source.getId());</span>
+<span class="nc" id="L31">    target.setCode(source.getCode());</span>
+<span class="nc bnc" id="L32" title="All 4 branches missed.">    if (source.getDescriptions() != null &amp;&amp; source.getDescriptions().size() &gt; 0) {</span>
+
+<span class="nc" id="L34">      List&lt;com.salesmanager.shop.model.catalog.manufacturer.ManufacturerDescription&gt; fulldescriptions =</span>
+          new ArrayList&lt;com.salesmanager.shop.model.catalog.manufacturer.ManufacturerDescription&gt;();
+
+<span class="nc" id="L37">      Set&lt;ManufacturerDescription&gt; descriptions = source.getDescriptions();</span>
+<span class="nc" id="L38">      ManufacturerDescription description = null;</span>
+<span class="nc bnc" id="L39" title="All 2 branches missed.">      for (ManufacturerDescription desc : descriptions) {</span>
+<span class="nc bnc" id="L40" title="All 4 branches missed.">        if (language != null &amp;&amp; desc.getLanguage().getCode().equals(language.getCode())) {</span>
+<span class="nc" id="L41">          description = desc;</span>
+<span class="nc" id="L42">          break;</span>
+        } else {
+<span class="nc" id="L44">          fulldescriptions.add(populateDescription(desc));</span>
+        }
+<span class="nc" id="L46">      }</span>
+
+
+
+<span class="nc bnc" id="L50" title="All 2 branches missed.">      if (description != null) {</span>
+<span class="nc" id="L51">        com.salesmanager.shop.model.catalog.manufacturer.ManufacturerDescription d =</span>
+<span class="nc" id="L52">            populateDescription(description);</span>
+<span class="nc" id="L53">        target.setDescription(d);</span>
+      }
+
+<span class="nc bnc" id="L56" title="All 2 branches missed.">      if (target instanceof ReadableManufacturerFull) {</span>
+<span class="nc" id="L57">        ((ReadableManufacturerFull) target).setDescriptions(fulldescriptions);</span>
+      }
+
+    }
+
+
+
+<span class="nc" id="L64">    return target;</span>
+  }
+
+  @Override
+  protected ReadableManufacturer createTarget() {
+<span class="nc" id="L69">    return null;</span>
+  }
+
+  com.salesmanager.shop.model.catalog.manufacturer.ManufacturerDescription populateDescription(
+      ManufacturerDescription description) {
+<span class="nc bnc" id="L74" title="All 2 branches missed.">    if (description == null) {</span>
+<span class="nc" id="L75">      return null;</span>
+    }
+<span class="nc" id="L77">    com.salesmanager.shop.model.catalog.manufacturer.ManufacturerDescription d =</span>
+        new com.salesmanager.shop.model.catalog.manufacturer.ManufacturerDescription();
+<span class="nc" id="L79">    d.setName(description.getName());</span>
+<span class="nc" id="L80">    d.setDescription(description.getDescription());</span>
+<span class="nc" id="L81">    d.setId(description.getId());</span>
+<span class="nc" id="L82">    d.setTitle(description.getTitle());</span>
+<span class="nc bnc" id="L83" title="All 2 branches missed.">    if (description.getLanguage() != null) {</span>
+<span class="nc" id="L84">      d.setLanguage(description.getLanguage().getCode());</span>
+    }
+<span class="nc" id="L86">    return d;</span>
+  }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

@@ -1,0 +1,312 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PersistableProductMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.mapper.catalog.product</a> &gt; <span class="el_source">PersistableProductMapper.java</span></div><h1>PersistableProductMapper.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.mapper.catalog.product;
+
+import java.io.ByteArrayInputStream;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Validate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import com.salesmanager.core.business.constants.Constants;
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.services.catalog.category.CategoryService;
+import com.salesmanager.core.business.services.catalog.product.manufacturer.ManufacturerService;
+import com.salesmanager.core.business.services.catalog.product.type.ProductTypeService;
+import com.salesmanager.core.business.services.catalog.product.variant.ProductVariantService;
+import com.salesmanager.core.business.services.reference.language.LanguageService;
+import com.salesmanager.core.model.catalog.category.Category;
+import com.salesmanager.core.model.catalog.product.Product;
+import com.salesmanager.core.model.catalog.product.attribute.ProductAttribute;
+import com.salesmanager.core.model.catalog.product.availability.ProductAvailability;
+import com.salesmanager.core.model.catalog.product.description.ProductDescription;
+import com.salesmanager.core.model.catalog.product.image.ProductImage;
+import com.salesmanager.core.model.catalog.product.manufacturer.Manufacturer;
+import com.salesmanager.core.model.catalog.product.price.ProductPrice;
+import com.salesmanager.core.model.catalog.product.price.ProductPriceDescription;
+import com.salesmanager.core.model.catalog.product.type.ProductType;
+import com.salesmanager.core.model.catalog.product.variant.ProductVariant;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.mapper.Mapper;
+import com.salesmanager.shop.mapper.catalog.PersistableProductAttributeMapper;
+import com.salesmanager.shop.model.catalog.product.PersistableImage;
+import com.salesmanager.shop.model.catalog.product.ProductPriceEntity;
+import com.salesmanager.shop.model.catalog.product.product.PersistableProduct;
+import com.salesmanager.shop.model.catalog.product.product.PersistableProductInventory;
+import com.salesmanager.shop.model.catalog.product.product.variant.PersistableProductVariant;
+import com.salesmanager.shop.store.api.exception.ConversionRuntimeException;
+import com.salesmanager.shop.utils.DateUtil;
+
+
+/**
+ * Transforms a fully configured PersistableProduct
+ * to a Product with inventory and Variants if any
+ * @author carlsamson
+ *
+ */
+
+
+@Component
+<span class="fc" id="L59">public class PersistableProductMapper implements Mapper&lt;PersistableProduct, Product&gt; {</span>
+	
+	
+	@Autowired
+	private PersistableProductAvailabilityMapper persistableProductAvailabilityMapper;
+	
+	@Autowired
+	private PersistableProductVariantMapper persistableProductVariantMapper;
+	
+
+	
+	@Autowired
+	private CategoryService categoryService;
+	@Autowired
+	private LanguageService languageService;
+
+	
+	
+	@Autowired
+	private ManufacturerService manufacturerService;
+	
+	@Autowired
+	private ProductTypeService productTypeService;
+
+	@Override
+	public Product convert(PersistableProduct source, MerchantStore store, Language language) {
+<span class="nc" id="L85">		Product product = new Product();</span>
+<span class="nc" id="L86">		return this.merge(source, product, store, language);</span>
+	}
+
+	@Override
+	public Product merge(PersistableProduct source, Product destination, MerchantStore store, Language language) {
+
+		  
+<span class="fc" id="L93">	    Validate.notNull(destination,&quot;Product must not be null&quot;);</span>
+
+		try {
+
+			//core properties
+<span class="fc" id="L98">			destination.setSku(source.getSku());</span>
+
+<span class="fc" id="L100">			destination.setAvailable(source.isVisible());</span>
+<span class="fc" id="L101">			destination.setDateAvailable(new Date());</span>
+
+<span class="fc" id="L103">			destination.setRefSku(source.getRefSku());</span>
+			
+			
+<span class="pc bpc" id="L106" title="2 of 4 branches missed.">			if(source.getId() != null &amp;&amp; source.getId().longValue()==0) {</span>
+<span class="fc" id="L107">				destination.setId(null);</span>
+			} else {
+<span class="nc" id="L109">				destination.setId(source.getId());</span>
+			}
+			
+			
+			/**
+			 * SPEIFICATIONS
+			 */
+<span class="pc bpc" id="L116" title="1 of 2 branches missed.">			if(source.getProductSpecifications()!=null) {</span>
+<span class="fc" id="L117">				destination.setProductHeight(source.getProductSpecifications().getHeight());</span>
+<span class="fc" id="L118">				destination.setProductLength(source.getProductSpecifications().getLength());</span>
+<span class="fc" id="L119">				destination.setProductWeight(source.getProductSpecifications().getWeight());</span>
+<span class="fc" id="L120">				destination.setProductWidth(source.getProductSpecifications().getWidth());</span>
+
+				 /**
+				  * BRANDING
+				  */
+
+<span class="pc bpc" id="L126" title="1 of 2 branches missed.">    	         if(source.getProductSpecifications().getManufacturer()!=null) {</span>
+    	        	 
+<span class="fc" id="L128">    					Manufacturer manufacturer = manufacturerService.getByCode(store, source.getProductSpecifications().getManufacturer());</span>
+<span class="pc bpc" id="L129" title="1 of 2 branches missed.">    					if(manufacturer == null) {</span>
+<span class="nc" id="L130">    						throw new ConversionException(&quot;Manufacturer [&quot; + source.getProductSpecifications().getManufacturer() + &quot;] does not exist&quot;);</span>
+    					}
+<span class="fc" id="L132">    					destination.setManufacturer(manufacturer);</span>
+               }
+			}
+			
+			
+			//PRODUCT TYPE
+<span class="pc bpc" id="L138" title="1 of 2 branches missed.">			if(!StringUtils.isBlank(source.getType())) {</span>
+<span class="nc" id="L139">				ProductType type = productTypeService.getByCode(source.getType(), store, language);</span>
+<span class="nc bnc" id="L140" title="All 2 branches missed.">				if(type == null) {</span>
+<span class="nc" id="L141">					throw new ConversionException(&quot;Product type [&quot; + source.getType() + &quot;] does not exist&quot;);</span>
+				}
+<span class="nc" id="L143">				destination.setType(type);</span>
+			}
+
+			
+<span class="pc bpc" id="L147" title="1 of 2 branches missed.">			if(!StringUtils.isBlank(source.getDateAvailable())) {</span>
+<span class="nc" id="L148">				destination.setDateAvailable(DateUtil.getDate(source.getDateAvailable()));</span>
+			}
+			
+<span class="fc" id="L151">			destination.setMerchantStore(store);</span>
+			
+			/**
+			 * descriptions
+			 */
+<span class="fc" id="L156">			List&lt;Language&gt; languages = new ArrayList&lt;Language&gt;();</span>
+<span class="fc" id="L157">			Set&lt;ProductDescription&gt; descriptions = new HashSet&lt;ProductDescription&gt;();</span>
+<span class="pc bpc" id="L158" title="1 of 2 branches missed.">			if(!CollectionUtils.isEmpty(source.getDescriptions())) {</span>
+<span class="fc bfc" id="L159" title="All 2 branches covered.">				for(com.salesmanager.shop.model.catalog.product.ProductDescription description : source.getDescriptions()) {</span>
+					
+<span class="fc" id="L161">				  ProductDescription productDescription = new ProductDescription();</span>
+<span class="fc" id="L162">				  Language lang = languageService.getByCode(description.getLanguage());</span>
+<span class="pc bpc" id="L163" title="1 of 2 branches missed.">	              if(lang==null) {</span>
+<span class="nc" id="L164">	                    throw new ConversionException(&quot;Language code &quot; + description.getLanguage() + &quot; is invalid, use ISO code (en, fr ...)&quot;);</span>
+	               }
+<span class="pc bpc" id="L166" title="1 of 2 branches missed.">				   if(!CollectionUtils.isEmpty(destination.getDescriptions())) {</span>
+<span class="nc bnc" id="L167" title="All 2 branches missed.">				      for(ProductDescription desc : destination.getDescriptions()) {</span>
+<span class="nc bnc" id="L168" title="All 2 branches missed.">				        if(desc.getLanguage().getCode().equals(description.getLanguage())) {</span>
+<span class="nc" id="L169">				          productDescription = desc;</span>
+<span class="nc" id="L170">				          break;</span>
+				        }
+<span class="nc" id="L172">				      }</span>
+				    }
+
+<span class="fc" id="L175">					productDescription.setProduct(destination);</span>
+<span class="fc" id="L176">					productDescription.setDescription(description.getDescription());</span>
+
+<span class="fc" id="L178">					productDescription.setProductHighlight(description.getHighlights());</span>
+
+<span class="fc" id="L180">					productDescription.setName(description.getName());</span>
+<span class="fc" id="L181">					productDescription.setSeUrl(description.getFriendlyUrl());</span>
+<span class="fc" id="L182">					productDescription.setMetatagKeywords(description.getKeyWords());</span>
+<span class="fc" id="L183">					productDescription.setMetatagDescription(description.getMetaDescription());</span>
+<span class="fc" id="L184">					productDescription.setTitle(description.getTitle());</span>
+					
+<span class="fc" id="L186">					languages.add(lang);</span>
+<span class="fc" id="L187">					productDescription.setLanguage(lang);</span>
+<span class="fc" id="L188">					descriptions.add(productDescription);</span>
+<span class="fc" id="L189">				}</span>
+			}
+			
+<span class="pc bpc" id="L192" title="1 of 2 branches missed.">			if(descriptions.size()&gt;0) {</span>
+<span class="fc" id="L193">				destination.setDescriptions(descriptions);</span>
+			}
+			
+<span class="fc" id="L196">			destination.setSortOrder(source.getSortOrder());</span>
+<span class="fc" id="L197">			destination.setProductVirtual(source.isProductVirtual());</span>
+<span class="fc" id="L198">			destination.setProductShipeable(source.isProductShipeable());</span>
+<span class="pc bpc" id="L199" title="1 of 2 branches missed.">			if(source.getRating() != null) {</span>
+<span class="fc" id="L200">				destination.setProductReviewAvg(new BigDecimal(source.getRating()));</span>
+			}
+<span class="fc" id="L202">			destination.setProductReviewCount(source.getRatingCount());</span>
+			
+
+			
+			/**
+			 * Category
+			 */
+
+<span class="pc bpc" id="L210" title="1 of 2 branches missed.">			if(!CollectionUtils.isEmpty(source.getCategories())) {</span>
+<span class="fc bfc" id="L211" title="All 2 branches covered.">				for(com.salesmanager.shop.model.catalog.category.Category categ : source.getCategories()) {</span>
+					
+<span class="fc" id="L213">					Category c = null;</span>
+<span class="pc bpc" id="L214" title="1 of 2 branches missed.">					if(!StringUtils.isBlank(categ.getCode())) {</span>
+<span class="fc" id="L215">						c = categoryService.getByCode(store, categ.getCode());</span>
+					} else {
+<span class="nc" id="L217">						Validate.notNull(categ.getId(), &quot;Category id nust not be null&quot;);</span>
+<span class="nc" id="L218">						c = categoryService.getById(categ.getId(), store.getId());</span>
+					}
+					
+<span class="pc bpc" id="L221" title="1 of 2 branches missed.">					if(c==null) {</span>
+<span class="nc bnc" id="L222" title="All 2 branches missed.">						if(!StringUtils.isBlank(categ.getCode())) {</span>
+<span class="nc" id="L223">							throw new ConversionException(&quot;Category code &quot; + categ.getCode() + &quot; does not exist&quot;);</span>
+						} else {
+<span class="nc" id="L225">							throw new ConversionException(&quot;Category id &quot; + categ.getId() + &quot; does not exist&quot;);</span>
+						}
+					}
+<span class="pc bpc" id="L228" title="1 of 2 branches missed.">					if(c.getMerchantStore().getId().intValue()!=store.getId().intValue()) {</span>
+<span class="nc" id="L229">						throw new ConversionException(&quot;Invalid category id&quot;);</span>
+					}
+<span class="fc" id="L231">					destination.getCategories().add(c);</span>
+<span class="fc" id="L232">				}</span>
+			}
+			
+			/**
+			 * Variants
+			 */
+<span class="pc bpc" id="L238" title="1 of 2 branches missed.">			if(!CollectionUtils.isEmpty(source.getVariants())) {</span>
+<span class="nc" id="L239">				Set&lt;ProductVariant&gt; variants = source.getVariants().stream().map(v -&gt; this.variant(destination, v, store, language)).collect(Collectors.toSet());</span>
+
+<span class="nc" id="L241">				destination.setVariants(variants);</span>
+			}
+			
+			/**
+			 * Default inventory
+			 */
+			
+<span class="pc bpc" id="L248" title="1 of 2 branches missed.">			if(source.getInventory() != null) {</span>
+<span class="fc" id="L249">				ProductAvailability productAvailability = persistableProductAvailabilityMapper.convert(source.getInventory(), store, language);</span>
+<span class="fc" id="L250">				productAvailability.setProduct(destination);</span>
+<span class="fc" id="L251">				destination.getAvailabilities().add(productAvailability);</span>
+<span class="fc" id="L252">			} else {</span>
+				//need an inventory to create a Product
+<span class="nc bnc" id="L254" title="All 2 branches missed.">				if(!CollectionUtils.isEmpty(destination.getVariants())) {</span>
+<span class="nc" id="L255">					ProductAvailability defaultAvailability = null;	</span>
+<span class="nc bnc" id="L256" title="All 2 branches missed.">					for(ProductVariant variant : destination.getVariants()) {</span>
+<span class="nc" id="L257">						defaultAvailability = this.defaultAvailability(variant.getAvailabilities().stream().collect(Collectors.toList()));</span>
+<span class="nc bnc" id="L258" title="All 2 branches missed.">						if(defaultAvailability != null) {</span>
+<span class="nc" id="L259">							break;</span>
+						}
+<span class="nc" id="L261">					}</span>
+					
+<span class="nc" id="L263">					defaultAvailability.setProduct(destination);</span>
+<span class="nc" id="L264">					destination.getAvailabilities().add(defaultAvailability);</span>
+					
+				}
+			}
+			
+			//images
+<span class="pc bpc" id="L270" title="1 of 2 branches missed.">			if(!CollectionUtils.isEmpty(source.getImages())) {</span>
+<span class="nc bnc" id="L271" title="All 2 branches missed.">				for(PersistableImage img : source.getImages()) {</span>
+<span class="nc" id="L272">					ProductImage productImage = new ProductImage();</span>
+<span class="nc" id="L273">					productImage.setImageType(img.getImageType());</span>
+<span class="nc" id="L274">					productImage.setDefaultImage(img.isDefaultImage());</span>
+<span class="nc bnc" id="L275" title="All 2 branches missed.">					if (img.getImageType() == 1) {//external url</span>
+<span class="nc" id="L276">						productImage.setProductImageUrl(img.getImageUrl());</span>
+<span class="nc" id="L277">						productImage.setImage(new ByteArrayInputStream(new byte[0]));</span>
+					} else {
+<span class="nc" id="L279">						ByteArrayInputStream in = new ByteArrayInputStream(img.getBytes());</span>
+<span class="nc" id="L280">						productImage.setImage(in);</span>
+					}
+<span class="nc" id="L282">					productImage.setProduct(destination);</span>
+<span class="nc" id="L283">					productImage.setProductImage(img.getName());</span>
+
+<span class="nc" id="L285">					destination.getImages().add(productImage);</span>
+<span class="nc" id="L286">				}</span>
+			}
+
+
+<span class="fc" id="L290">			return destination;</span>
+		
+<span class="nc" id="L292">		} catch (Exception e) {</span>
+<span class="nc" id="L293">			throw new ConversionRuntimeException(&quot;Error converting product mapper&quot;,e);</span>
+		}
+		
+		
+	}
+	
+	private ProductVariant variant(Product product, PersistableProductVariant variant, MerchantStore store, Language language) {
+<span class="nc" id="L300">		ProductVariant var = persistableProductVariantMapper.convert(variant, store, language);</span>
+<span class="nc" id="L301">		var.setProduct(product);</span>
+<span class="nc" id="L302">		return var;</span>
+	}
+	
+	private ProductAvailability defaultAvailability(List &lt;ProductAvailability&gt; availabilityList) {
+<span class="nc bnc" id="L306" title="All 4 branches missed.">		return availabilityList.stream().filter(a -&gt; a.getRegion() != null &amp;&amp; a.getRegion().equals(Constants.ALL_REGIONS)).findFirst().get();</span>
+	}
+	
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AutoCompleteRequest.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.model.search</a> &gt; <span class="el_source">AutoCompleteRequest.java</span></div><h1>AutoCompleteRequest.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.model.search;
+
+import org.json.simple.JSONObject;
+
+public class AutoCompleteRequest {
+	
+	private String merchantCode;
+	private String languageCode;
+	
+	
+	private final static String WILDCARD_QUERY = &quot;wildcard&quot;;
+	private final static String KEYWORD = &quot;keyword&quot;;
+	private final static String UNDERSCORE = &quot;_&quot;;
+	private final static String ALL = &quot;*&quot;;
+	private final static String TYPE = &quot;type&quot;;
+	private final static String ANALYZER = &quot;analyzer&quot;;
+	private final static String STD_ANALYZER = &quot;standard&quot;;
+	private final static String TYPE_PHRASE = &quot;phrase_prefix&quot;;
+	private final static String QUERY = &quot;query&quot;;
+	private final static String MATCH = &quot;match&quot;;
+	
+<span class="nc" id="L22">	public AutoCompleteRequest(String merchantCode, String languageCode) {</span>
+<span class="nc" id="L23">		this.merchantCode = merchantCode;</span>
+<span class="nc" id="L24">		this.languageCode = languageCode;</span>
+<span class="nc" id="L25">	}</span>
+
+	@SuppressWarnings(&quot;unchecked&quot;)
+	@Deprecated
+	public String toJSONString(String query) {
+
+		//{&quot;size&quot;: 10,&quot;query&quot;: {&quot;match&quot;: {&quot;keyword&quot;: {&quot;query&quot;: &quot;wat&quot;,&quot;operator&quot;:&quot;and&quot;}}}}&quot;;
+
+		
+		
+<span class="nc" id="L35">		JSONObject keyword = new JSONObject();</span>
+<span class="nc" id="L36">		JSONObject q = new JSONObject();</span>
+<span class="nc" id="L37">		JSONObject mq = new JSONObject();</span>
+<span class="nc" id="L38">		JSONObject match = new JSONObject();</span>
+		
+<span class="nc" id="L40">		q.put(QUERY, query);</span>
+<span class="nc" id="L41">		q.put(ANALYZER, STD_ANALYZER);</span>
+		
+<span class="nc" id="L43">		keyword.put(KEYWORD, q);</span>
+		
+<span class="nc" id="L45">		match.put(MATCH, keyword);</span>
+		
+<span class="nc" id="L47">		mq.put(QUERY, match);</span>
+<span class="nc" id="L48">		return mq.toJSONString();</span>
+	}
+	
+	/** keyword_en_default **/
+	public String getCollectionName() {
+<span class="nc" id="L53">		StringBuilder qBuilder = new StringBuilder();</span>
+<span class="nc" id="L54">		qBuilder.append(KEYWORD).append(UNDERSCORE).append(getLanguageCode()).append(UNDERSCORE)</span>
+<span class="nc" id="L55">		.append(getMerchantCode());</span>
+		
+<span class="nc" id="L57">		return qBuilder.toString().toLowerCase();</span>
+	}
+	
+	
+
+	public String getMerchantCode() {
+<span class="nc" id="L63">		return merchantCode;</span>
+	}
+
+	public void setMerchantCode(String merchantCode) {
+<span class="nc" id="L67">		this.merchantCode = merchantCode;</span>
+<span class="nc" id="L68">	}</span>
+
+	public String getLanguageCode() {
+<span class="nc" id="L71">		return languageCode;</span>
+	}
+
+	public void setLanguageCode(String languageCode) {
+<span class="nc" id="L75">		this.languageCode = languageCode;</span>
+<span class="nc" id="L76">	}</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

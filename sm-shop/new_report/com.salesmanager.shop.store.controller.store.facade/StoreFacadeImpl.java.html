@@ -1,0 +1,585 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>StoreFacadeImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.controller.store.facade</a> &gt; <span class="el_source">StoreFacadeImpl.java</span></div><h1>StoreFacadeImpl.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.controller.store.facade;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import javax.inject.Inject;
+import javax.servlet.http.HttpServletRequest;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.Validate;
+import org.drools.core.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.domain.Page;
+import org.springframework.stereotype.Service;
+
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.content.ContentService;
+import com.salesmanager.core.business.services.merchant.MerchantStoreService;
+import com.salesmanager.core.business.services.reference.language.LanguageService;
+import com.salesmanager.core.business.services.system.MerchantConfigurationService;
+import com.salesmanager.core.constants.MeasureUnit;
+import com.salesmanager.core.model.common.GenericEntityList;
+import com.salesmanager.core.model.content.InputContentFile;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.merchant.MerchantStoreCriteria;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.core.model.system.MerchantConfiguration;
+import com.salesmanager.core.model.system.MerchantConfigurationType;
+import com.salesmanager.shop.model.content.ReadableImage;
+import com.salesmanager.shop.model.store.MerchantConfigEntity;
+import com.salesmanager.shop.model.store.PersistableBrand;
+import com.salesmanager.shop.model.store.PersistableMerchantStore;
+import com.salesmanager.shop.model.store.ReadableBrand;
+import com.salesmanager.shop.model.store.ReadableMerchantStore;
+import com.salesmanager.shop.model.store.ReadableMerchantStoreList;
+import com.salesmanager.shop.populator.store.PersistableMerchantStorePopulator;
+import com.salesmanager.shop.populator.store.ReadableMerchantStorePopulator;
+import com.salesmanager.shop.store.api.exception.ConversionRuntimeException;
+import com.salesmanager.shop.store.api.exception.ResourceNotFoundException;
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+import com.salesmanager.shop.utils.ImageFilePath;
+import com.salesmanager.shop.utils.LanguageUtils;
+
+@Service(&quot;storeFacade&quot;)
+<span class="fc" id="L52">public class StoreFacadeImpl implements StoreFacade {</span>
+
+	@Inject
+	private MerchantStoreService merchantStoreService;
+
+	@Inject
+	private MerchantConfigurationService merchantConfigurationService;
+
+	@Inject
+	private LanguageService languageService;
+
+	@Inject
+	private ContentService contentService;
+
+	@Inject
+	private PersistableMerchantStorePopulator persistableMerchantStorePopulator;
+
+	@Inject
+	@Qualifier(&quot;img&quot;)
+	private ImageFilePath imageUtils;
+
+	@Inject
+	private LanguageUtils languageUtils;
+	
+	@Autowired
+	private ReadableMerchantStorePopulator readableMerchantStorePopulator;
+
+<span class="fc" id="L79">	private static final Logger LOG = LoggerFactory.getLogger(StoreFacadeImpl.class);</span>
+
+	@Override
+	public MerchantStore getByCode(HttpServletRequest request) {
+<span class="nc" id="L83">		String code = request.getParameter(&quot;store&quot;);</span>
+<span class="nc bnc" id="L84" title="All 2 branches missed.">		if (StringUtils.isEmpty(code)) {</span>
+<span class="nc" id="L85">			code = com.salesmanager.core.business.constants.Constants.DEFAULT_STORE;</span>
+		}
+<span class="nc" id="L87">		return get(code);</span>
+	}
+
+	@Override
+	public MerchantStore get(String code) {
+		try {
+<span class="fc" id="L93">			MerchantStore store = merchantStoreService.getByCode(code);</span>
+<span class="fc" id="L94">			return store;</span>
+<span class="nc" id="L95">		} catch (ServiceException e) {</span>
+<span class="nc" id="L96">			LOG.error(&quot;Error while getting MerchantStore&quot;, e);</span>
+<span class="nc" id="L97">			throw new ServiceRuntimeException(e);</span>
+		}
+
+	}
+
+	@Override
+	public ReadableMerchantStore getByCode(String code, String lang) {
+<span class="fc" id="L104">		Language language = getLanguage(lang);</span>
+<span class="fc" id="L105">		return getByCode(code, language);</span>
+	}
+
+	@Override
+	public ReadableMerchantStore getFullByCode(String code, String lang) {
+<span class="nc" id="L110">		Language language = getLanguage(lang);</span>
+<span class="nc" id="L111">		return getFullByCode(code, language);</span>
+	}
+
+	private Language getLanguage(String lang) {
+<span class="fc" id="L115">		return languageUtils.getServiceLanguage(lang);</span>
+	}
+
+	@Override
+	public ReadableMerchantStore getByCode(String code, Language language) {
+<span class="fc" id="L120">		MerchantStore store = getMerchantStoreByCode(code);</span>
+<span class="fc" id="L121">		return convertMerchantStoreToReadableMerchantStore(language, store);</span>
+	}
+
+	@Override
+	public ReadableMerchantStore getFullByCode(String code, Language language) {
+<span class="nc" id="L126">		MerchantStore store = getMerchantStoreByCode(code);</span>
+<span class="nc" id="L127">		return convertMerchantStoreToReadableMerchantStoreWithFullDetails(language, store);</span>
+	}
+
+	@Override
+	public boolean existByCode(String code) {
+		try {
+<span class="nc bnc" id="L133" title="All 2 branches missed.">			return merchantStoreService.getByCode(code) != null;</span>
+<span class="nc" id="L134">		} catch (ServiceException e) {</span>
+<span class="nc" id="L135">			throw new ServiceRuntimeException(e);</span>
+		}
+	}
+
+	private ReadableMerchantStore convertMerchantStoreToReadableMerchantStore(Language language, MerchantStore store) {
+<span class="fc" id="L140">		ReadableMerchantStore readable = new ReadableMerchantStore();</span>
+
+		/**
+		 * Language is not important for this conversion using default language
+		 */
+		try {			
+<span class="fc" id="L146">			readableMerchantStorePopulator.populate(store, readable, store, language);</span>
+<span class="nc" id="L147">		} catch (Exception e) {</span>
+<span class="nc" id="L148">			throw new ConversionRuntimeException(&quot;Error while populating MerchantStore &quot; + e.getMessage());</span>
+<span class="fc" id="L149">		}</span>
+<span class="fc" id="L150">		return readable;</span>
+	}
+
+	private ReadableMerchantStore convertMerchantStoreToReadableMerchantStoreWithFullDetails(Language language, MerchantStore store) {
+<span class="nc" id="L154">		ReadableMerchantStore readable = new ReadableMerchantStore();</span>
+
+
+		/**
+		 * Language is not important for this conversion using default language
+		 */
+		try {
+<span class="nc" id="L161">			readableMerchantStorePopulator.populate(store, readable, store, language);</span>
+<span class="nc" id="L162">		} catch (Exception e) {</span>
+<span class="nc" id="L163">			throw new ConversionRuntimeException(&quot;Error while populating MerchantStore &quot; + e.getMessage());</span>
+<span class="nc" id="L164">		}</span>
+<span class="nc" id="L165">		return readable;</span>
+	}
+
+	private MerchantStore getMerchantStoreByCode(String code) {
+<span class="fc" id="L169">		return Optional.ofNullable(get(code))</span>
+<span class="pc" id="L170">				.orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Merchant store code [&quot; + code + &quot;] not found&quot;));</span>
+	}
+
+	@Override
+	public void create(PersistableMerchantStore store) {
+
+<span class="fc" id="L176">		Validate.notNull(store, &quot;PersistableMerchantStore must not be null&quot;);</span>
+<span class="fc" id="L177">		Validate.notNull(store.getCode(), &quot;PersistableMerchantStore.code must not be null&quot;);</span>
+
+		// check if store code exists
+<span class="fc" id="L180">		MerchantStore storeForCheck = get(store.getCode());</span>
+<span class="pc bpc" id="L181" title="1 of 2 branches missed.">		if (storeForCheck != null) {</span>
+<span class="nc" id="L182">			throw new ServiceRuntimeException(&quot;MerhantStore &quot; + store.getCode() + &quot; already exists&quot;);</span>
+		}
+
+<span class="fc" id="L185">		MerchantStore mStore = convertPersistableMerchantStoreToMerchantStore(store, languageService.defaultLanguage());</span>
+<span class="fc" id="L186">		createMerchantStore(mStore);</span>
+
+<span class="fc" id="L188">	}</span>
+
+	private void createMerchantStore(MerchantStore mStore) {
+		try {
+<span class="fc" id="L192">			merchantStoreService.saveOrUpdate(mStore);</span>
+<span class="nc" id="L193">		} catch (ServiceException e) {</span>
+<span class="nc" id="L194">			throw new ServiceRuntimeException(e);</span>
+<span class="fc" id="L195">		}</span>
+<span class="fc" id="L196">	}</span>
+
+	private MerchantStore convertPersistableMerchantStoreToMerchantStore(PersistableMerchantStore store,
+			Language language) {
+<span class="fc" id="L200">		MerchantStore mStore = new MerchantStore();</span>
+
+		// set default values
+<span class="fc" id="L203">		mStore.setWeightunitcode(MeasureUnit.KG.name());</span>
+<span class="fc" id="L204">		mStore.setSeizeunitcode(MeasureUnit.IN.name());</span>
+
+		try {
+<span class="fc" id="L207">			mStore = persistableMerchantStorePopulator.populate(store, mStore, language);</span>
+<span class="nc" id="L208">		} catch (ConversionException e) {</span>
+<span class="nc" id="L209">			throw new ConversionRuntimeException(e);</span>
+<span class="fc" id="L210">		}</span>
+<span class="fc" id="L211">		return mStore;</span>
+	}
+
+	@Override
+	public void update(PersistableMerchantStore store) {
+
+<span class="nc" id="L217">		Validate.notNull(store);</span>
+
+<span class="nc" id="L219">		MerchantStore mStore = mergePersistableMerchantStoreToMerchantStore(store, store.getCode(),</span>
+<span class="nc" id="L220">				languageService.defaultLanguage());</span>
+
+<span class="nc" id="L222">		updateMerchantStore(mStore);</span>
+
+<span class="nc" id="L224">	}</span>
+
+	private void updateMerchantStore(MerchantStore mStore) {
+		try {
+<span class="fc" id="L228">			merchantStoreService.update(mStore);</span>
+<span class="nc" id="L229">		} catch (ServiceException e) {</span>
+<span class="nc" id="L230">			throw new ServiceRuntimeException(e);</span>
+<span class="fc" id="L231">		}</span>
+
+<span class="fc" id="L233">	}</span>
+
+	private MerchantStore mergePersistableMerchantStoreToMerchantStore(PersistableMerchantStore store, String code,
+			Language language) {
+
+<span class="nc" id="L238">		MerchantStore mStore = getMerchantStoreByCode(code);</span>
+
+<span class="nc" id="L240">		store.setId(mStore.getId());</span>
+
+		try {
+<span class="nc" id="L243">			mStore = persistableMerchantStorePopulator.populate(store, mStore, language);</span>
+<span class="nc" id="L244">		} catch (ConversionException e) {</span>
+<span class="nc" id="L245">			throw new ConversionRuntimeException(e);</span>
+<span class="nc" id="L246">		}</span>
+<span class="nc" id="L247">		return mStore;</span>
+	}
+
+	@Override
+	public ReadableMerchantStoreList getByCriteria(MerchantStoreCriteria criteria, Language lang) {
+<span class="nc" id="L252">		return  getMerchantStoresByCriteria(criteria, lang);</span>
+
+	}
+
+
+
+	private ReadableMerchantStoreList getMerchantStoresByCriteria(MerchantStoreCriteria criteria, Language language) {
+		try {
+<span class="nc" id="L260">			GenericEntityList&lt;MerchantStore&gt; stores =  Optional.ofNullable(merchantStoreService.getByCriteria(criteria))</span>
+<span class="nc" id="L261">					.orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Criteria did not match any store&quot;));</span>
+			
+			
+<span class="nc" id="L264">			ReadableMerchantStoreList storeList = new ReadableMerchantStoreList();</span>
+<span class="nc" id="L265">			storeList.setData(</span>
+<span class="nc" id="L266">					(List&lt;ReadableMerchantStore&gt;) stores.getList().stream()</span>
+<span class="nc" id="L267">					.map(s -&gt; convertMerchantStoreToReadableMerchantStore(language, s))</span>
+<span class="nc" id="L268">			        .collect(Collectors.toList())</span>
+					);
+<span class="nc" id="L270">			storeList.setTotalPages(stores.getTotalPages());</span>
+<span class="nc" id="L271">			storeList.setRecordsTotal(stores.getTotalCount());</span>
+<span class="nc" id="L272">			storeList.setNumber(stores.getList().size());</span>
+			
+<span class="nc" id="L274">			return storeList;</span>
+			
+<span class="nc" id="L276">		} catch (ServiceException e) {</span>
+<span class="nc" id="L277">			throw new ServiceRuntimeException(e);</span>
+		}
+
+	}
+
+	@Override
+	public void delete(String code) {
+
+<span class="nc bnc" id="L285" title="All 2 branches missed.">		if (MerchantStore.DEFAULT_STORE.equals(code.toUpperCase())) {</span>
+<span class="nc" id="L286">			throw new ServiceRuntimeException(&quot;Cannot remove default store&quot;);</span>
+		}
+
+<span class="nc" id="L289">		MerchantStore mStore = getMerchantStoreByCode(code);</span>
+
+		try {
+<span class="nc" id="L292">			merchantStoreService.delete(mStore);</span>
+<span class="nc" id="L293">		} catch (Exception e) {</span>
+<span class="nc" id="L294">			LOG.error(&quot;Error while deleting MerchantStore&quot;, e);</span>
+<span class="nc" id="L295">			throw new ServiceRuntimeException(&quot;Error while deleting MerchantStore &quot; + e.getMessage());</span>
+<span class="nc" id="L296">		}</span>
+
+<span class="nc" id="L298">	}</span>
+
+	@Override
+	public ReadableBrand getBrand(String code) {
+<span class="nc" id="L302">		MerchantStore mStore = getMerchantStoreByCode(code);</span>
+
+<span class="nc" id="L304">		ReadableBrand readableBrand = new ReadableBrand();</span>
+<span class="nc bnc" id="L305" title="All 2 branches missed.">		if (!StringUtils.isEmpty(mStore.getStoreLogo())) {</span>
+<span class="nc" id="L306">			String imagePath = imageUtils.buildStoreLogoFilePath(mStore);</span>
+<span class="nc" id="L307">			ReadableImage image = createReadableImage(mStore.getStoreLogo(), imagePath);</span>
+<span class="nc" id="L308">			readableBrand.setLogo(image);</span>
+		}
+<span class="nc" id="L310">		List&lt;MerchantConfigEntity&gt; merchantConfigTOs = getMerchantConfigEntities(mStore);</span>
+<span class="nc" id="L311">		readableBrand.getSocialNetworks().addAll(merchantConfigTOs);</span>
+<span class="nc" id="L312">		return readableBrand;</span>
+	}
+
+	private List&lt;MerchantConfigEntity&gt; getMerchantConfigEntities(MerchantStore mStore) {
+<span class="nc" id="L316">		List&lt;MerchantConfiguration&gt; configurations = getMergeConfigurationsByStore(MerchantConfigurationType.SOCIAL,</span>
+				mStore);
+
+<span class="nc" id="L319">		return configurations.stream().map(config -&gt; convertToMerchantConfigEntity(config))</span>
+<span class="nc" id="L320">				.collect(Collectors.toList());</span>
+	}
+
+	private List&lt;MerchantConfiguration&gt; getMergeConfigurationsByStore(MerchantConfigurationType configurationType,
+			MerchantStore mStore) {
+		try {
+<span class="nc" id="L326">			return merchantConfigurationService.listByType(configurationType, mStore);</span>
+<span class="nc" id="L327">		} catch (ServiceException e) {</span>
+<span class="nc" id="L328">			throw new ServiceRuntimeException(&quot;Error wile getting merchantConfigurations &quot; + e.getMessage());</span>
+		}
+	}
+
+	private MerchantConfigEntity convertToMerchantConfigEntity(MerchantConfiguration config) {
+<span class="nc" id="L333">		MerchantConfigEntity configTO = new MerchantConfigEntity();</span>
+<span class="nc" id="L334">		configTO.setId(config.getId());</span>
+<span class="nc" id="L335">		configTO.setKey(config.getKey());</span>
+<span class="nc" id="L336">		configTO.setType(config.getMerchantConfigurationType());</span>
+<span class="nc" id="L337">		configTO.setValue(config.getValue());</span>
+<span class="nc bnc" id="L338" title="All 2 branches missed.">		configTO.setActive(config.getActive() != null ? config.getActive().booleanValue() : false);</span>
+<span class="nc" id="L339">		return configTO;</span>
+	}
+
+	private MerchantConfiguration convertToMerchantConfiguration(MerchantConfigEntity config,
+			MerchantConfigurationType configurationType) {
+<span class="nc" id="L344">		MerchantConfiguration configTO = new MerchantConfiguration();</span>
+<span class="nc" id="L345">		configTO.setId(config.getId());</span>
+<span class="nc" id="L346">		configTO.setKey(config.getKey());</span>
+<span class="nc" id="L347">		configTO.setMerchantConfigurationType(configurationType);</span>
+<span class="nc" id="L348">		configTO.setValue(config.getValue());</span>
+<span class="nc" id="L349">		configTO.setActive(new Boolean(config.isActive()));</span>
+<span class="nc" id="L350">		return configTO;</span>
+	}
+
+	private ReadableImage createReadableImage(String storeLogo, String imagePath) {
+<span class="nc" id="L354">		ReadableImage image = new ReadableImage();</span>
+<span class="nc" id="L355">		image.setName(storeLogo);</span>
+<span class="nc" id="L356">		image.setPath(imagePath);</span>
+<span class="nc" id="L357">		return image;</span>
+	}
+
+	@Override
+	public void deleteLogo(String code) {
+<span class="fc" id="L362">		MerchantStore store = getByCode(code);</span>
+<span class="fc" id="L363">		String image = store.getStoreLogo();</span>
+<span class="fc" id="L364">		store.setStoreLogo(null);</span>
+
+		try {
+<span class="fc" id="L367">			updateMerchantStore(store);</span>
+<span class="pc bpc" id="L368" title="1 of 2 branches missed.">			if (!StringUtils.isEmpty(image)) {</span>
+<span class="fc" id="L369">				contentService.removeFile(store.getCode(), image);</span>
+			}
+<span class="nc" id="L371">		} catch (ServiceException e) {</span>
+<span class="nc" id="L372">			throw new ServiceRuntimeException(e.getMessage());</span>
+<span class="fc" id="L373">		}</span>
+<span class="fc" id="L374">	}</span>
+
+	@Override
+	public MerchantStore getByCode(String code) {
+<span class="fc" id="L378">		return getMerchantStoreByCode(code);</span>
+	}
+
+	@Override
+	public void addStoreLogo(String code, InputContentFile cmsContentImage) {
+<span class="fc" id="L383">		MerchantStore store = getByCode(code);</span>
+<span class="fc" id="L384">		store.setStoreLogo(cmsContentImage.getFileName());</span>
+<span class="fc" id="L385">		saveMerchantStore(store);</span>
+<span class="fc" id="L386">		addLogoToStore(code, cmsContentImage);</span>
+<span class="fc" id="L387">	}</span>
+
+	private void addLogoToStore(String code, InputContentFile cmsContentImage) {
+		try {
+<span class="fc" id="L391">			contentService.addLogo(code, cmsContentImage);</span>
+<span class="nc" id="L392">		} catch (ServiceException e) {</span>
+<span class="nc" id="L393">			throw new ServiceRuntimeException(e);</span>
+<span class="fc" id="L394">		}</span>
+<span class="fc" id="L395">	}</span>
+
+	private void saveMerchantStore(MerchantStore store) {
+		try {
+<span class="fc" id="L399">			merchantStoreService.save(store);</span>
+<span class="nc" id="L400">		} catch (ServiceException e) {</span>
+<span class="nc" id="L401">			throw new ServiceRuntimeException(e);</span>
+<span class="fc" id="L402">		}</span>
+
+<span class="fc" id="L404">	}</span>
+
+	@Override
+	public void createBrand(String merchantStoreCode, PersistableBrand brand) {
+<span class="nc" id="L408">		MerchantStore mStore = getMerchantStoreByCode(merchantStoreCode);</span>
+
+<span class="nc" id="L410">		List&lt;MerchantConfigEntity&gt; createdConfigs = brand.getSocialNetworks();</span>
+
+<span class="nc" id="L412">		List&lt;MerchantConfiguration&gt; configurations = createdConfigs.stream()</span>
+<span class="nc" id="L413">				.map(config -&gt; convertToMerchantConfiguration(config, MerchantConfigurationType.SOCIAL))</span>
+<span class="nc" id="L414">				.collect(Collectors.toList());</span>
+		try {
+<span class="nc bnc" id="L416" title="All 2 branches missed.">			for (MerchantConfiguration mConfigs : configurations) {</span>
+<span class="nc" id="L417">				mConfigs.setMerchantStore(mStore);</span>
+<span class="nc bnc" id="L418" title="All 2 branches missed.">				if (!StringUtils.isEmpty(mConfigs.getValue())) {</span>
+<span class="nc" id="L419">					mConfigs.setMerchantConfigurationType(MerchantConfigurationType.SOCIAL);</span>
+<span class="nc" id="L420">					merchantConfigurationService.saveOrUpdate(mConfigs);</span>
+				} else {// remove if submited blank and exists
+<span class="nc" id="L422">					MerchantConfiguration config = merchantConfigurationService</span>
+<span class="nc" id="L423">							.getMerchantConfiguration(mConfigs.getKey(), mStore);</span>
+<span class="nc bnc" id="L424" title="All 2 branches missed.">					if (config != null) {</span>
+<span class="nc" id="L425">						merchantConfigurationService.delete(config);</span>
+					}
+				}
+<span class="nc" id="L428">			}</span>
+<span class="nc" id="L429">		} catch (ServiceException se) {</span>
+<span class="nc" id="L430">			throw new ServiceRuntimeException(se);</span>
+<span class="nc" id="L431">		}</span>
+
+<span class="nc" id="L433">	}</span>
+
+	@Override
+	public ReadableMerchantStoreList getChildStores(Language language, String code, int page, int count) {
+		try {
+
+			// first check if store is retailer
+<span class="nc" id="L440">			MerchantStore retailer = this.getByCode(code);</span>
+<span class="nc bnc" id="L441" title="All 2 branches missed.">			if (retailer == null) {</span>
+<span class="nc" id="L442">				throw new ResourceNotFoundException(&quot;Merchant [&quot; + code + &quot;] not found&quot;);</span>
+			}
+
+<span class="nc bnc" id="L445" title="All 4 branches missed.">			if (retailer.isRetailer() == null || !retailer.isRetailer().booleanValue()) {</span>
+<span class="nc" id="L446">				throw new ResourceNotFoundException(&quot;Merchant [&quot; + code + &quot;] not a retailer&quot;);</span>
+			}
+
+			
+<span class="nc" id="L450">			Page&lt;MerchantStore&gt; children = merchantStoreService.listChildren(code, page, count);</span>
+<span class="nc" id="L451">			List&lt;ReadableMerchantStore&gt; readableStores = new ArrayList&lt;ReadableMerchantStore&gt;();</span>
+<span class="nc" id="L452">			ReadableMerchantStoreList readableList = new ReadableMerchantStoreList();</span>
+<span class="nc bnc" id="L453" title="All 2 branches missed.">			if (!CollectionUtils.isEmpty(children.getContent())) {</span>
+<span class="nc bnc" id="L454" title="All 2 branches missed.">				for (MerchantStore store : children)</span>
+<span class="nc" id="L455">					readableStores.add(convertMerchantStoreToReadableMerchantStore(language, store));</span>
+			}
+<span class="nc" id="L457">			readableList.setData(readableStores);</span>
+<span class="nc" id="L458">			readableList.setRecordsFiltered(children.getSize());</span>
+<span class="nc" id="L459">			readableList.setTotalPages(children.getTotalPages());</span>
+<span class="nc" id="L460">			readableList.setRecordsTotal(children.getTotalElements());</span>
+<span class="nc" id="L461">			readableList.setNumber(children.getNumber());</span>
+			
+<span class="nc" id="L463">			return readableList;</span>
+			
+			
+			
+/*			List&lt;MerchantStore&gt; children = merchantStoreService.listChildren(code);
+			List&lt;ReadableMerchantStore&gt; readableStores = new ArrayList&lt;ReadableMerchantStore&gt;();
+			if (!CollectionUtils.isEmpty(children)) {
+				for (MerchantStore store : children)
+					readableStores.add(convertMerchantStoreToReadableMerchantStore(language, store));
+			}
+			return readableStores;*/
+<span class="nc" id="L474">		} catch (ServiceException e) {</span>
+<span class="nc" id="L475">			throw new ServiceRuntimeException(e);</span>
+		}
+
+	}
+
+	@Override
+	public ReadableMerchantStoreList findAll(MerchantStoreCriteria criteria, Language language, int page, int count) {
+		
+		try {
+<span class="nc" id="L484">			Page&lt;MerchantStore&gt; stores = null;</span>
+<span class="nc" id="L485">			List&lt;ReadableMerchantStore&gt; readableStores = new ArrayList&lt;ReadableMerchantStore&gt;();</span>
+<span class="nc" id="L486">			ReadableMerchantStoreList readableList = new ReadableMerchantStoreList();</span>
+			
+<span class="nc" id="L488">			Optional&lt;String&gt; code = Optional.ofNullable(criteria.getStoreCode());</span>
+<span class="nc" id="L489">			Optional&lt;String&gt; name = Optional.ofNullable(criteria.getName());</span>
+<span class="nc bnc" id="L490" title="All 2 branches missed.">			if(code.isPresent()) {</span>
+				
+<span class="nc" id="L492">				stores = merchantStoreService.listByGroup(name, code.get(), page, count);</span>
+
+			} else {
+<span class="nc bnc" id="L495" title="All 2 branches missed.">				if(criteria.isRetailers()) {</span>
+<span class="nc" id="L496">					stores = merchantStoreService.listAllRetailers(name, page, count);</span>
+				} else {
+<span class="nc" id="L498">					stores = merchantStoreService.listAll(name, page, count);</span>
+				}
+			}
+
+
+<span class="nc bnc" id="L503" title="All 2 branches missed.">			if (!CollectionUtils.isEmpty(stores.getContent())) {</span>
+<span class="nc bnc" id="L504" title="All 2 branches missed.">				for (MerchantStore store : stores)</span>
+<span class="nc" id="L505">					readableStores.add(convertMerchantStoreToReadableMerchantStore(language, store));</span>
+			}
+<span class="nc" id="L507">			readableList.setData(readableStores);</span>
+<span class="nc" id="L508">			readableList.setRecordsTotal(stores.getTotalElements());</span>
+<span class="nc" id="L509">			readableList.setTotalPages(stores.getTotalPages());</span>
+<span class="nc" id="L510">			readableList.setNumber(stores.getSize());</span>
+<span class="nc" id="L511">			readableList.setRecordsFiltered(stores.getSize());</span>
+<span class="nc" id="L512">						return readableList;</span>
+
+<span class="nc" id="L514">		} catch (ServiceException e) {</span>
+<span class="nc" id="L515">			throw new ServiceRuntimeException(&quot;Error while finding all merchant&quot;, e);</span>
+		}
+
+
+	}
+	
+	private ReadableMerchantStore convertStoreName(MerchantStore store) {
+<span class="nc" id="L522">		ReadableMerchantStore convert = new ReadableMerchantStore();</span>
+<span class="nc" id="L523">		convert.setId(store.getId());</span>
+<span class="nc" id="L524">		convert.setCode(store.getCode());</span>
+<span class="nc" id="L525">		convert.setName(store.getStorename());</span>
+<span class="nc" id="L526">		return convert;</span>
+	}
+
+	@Override
+	public List&lt;ReadableMerchantStore&gt; getMerchantStoreNames(MerchantStoreCriteria criteria) {
+<span class="nc" id="L531">		Validate.notNull(criteria, &quot;MerchantStoreCriteria must not be null&quot;);</span>
+		
+		try {
+			
+<span class="nc" id="L535">			List&lt;ReadableMerchantStore&gt; stores = null;</span>
+<span class="nc" id="L536">			Optional&lt;String&gt; code = Optional.ofNullable(criteria.getStoreCode());</span>
+			
+			
+			//TODO Pageable
+<span class="nc bnc" id="L540" title="All 2 branches missed.">			if(code.isPresent()) {</span>
+				
+<span class="nc" id="L542">				stores = merchantStoreService.findAllStoreNames(code.get()).stream()</span>
+<span class="nc" id="L543">						.map(s -&gt; convertStoreName(s))</span>
+<span class="nc" id="L544">						.collect(Collectors.toList());</span>
+			} else {
+<span class="nc" id="L546">				stores = merchantStoreService.findAllStoreNames().stream()</span>
+<span class="nc" id="L547">						.map(s -&gt; convertStoreName(s))</span>
+<span class="nc" id="L548">						.collect(Collectors.toList());</span>
+			}
+			
+			
+<span class="nc" id="L552">			return stores;</span>
+<span class="nc" id="L553">		} catch (ServiceException e) {</span>
+<span class="nc" id="L554">			throw new ServiceRuntimeException(&quot;Exception while getting store name&quot;,e);</span>
+		}
+		
+
+	}
+
+	@Override
+	public List&lt;Language&gt; supportedLanguages(MerchantStore store) {
+		
+<span class="nc" id="L563">		Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);</span>
+<span class="nc" id="L564">		Validate.notNull(store.getClass(), &quot;MerchantStore code cannot be null&quot;);</span>
+		
+<span class="nc bnc" id="L566" title="All 2 branches missed.">		if(!CollectionUtils.isEmpty(store.getLanguages())) {</span>
+<span class="nc" id="L567">			return store.getLanguages();</span>
+		}
+		
+		//refresh
+		try {
+<span class="nc" id="L572">			store = merchantStoreService.getByCode(store.getCode());</span>
+<span class="nc" id="L573">		} catch (ServiceException e) {</span>
+<span class="nc" id="L574">			throw new ServiceRuntimeException(&quot;An exception occured when getting store [&quot; + store.getCode() + &quot;]&quot;);</span>
+<span class="nc" id="L575">		}</span>
+		
+<span class="nc bnc" id="L577" title="All 2 branches missed.">		if(store!=null) {</span>
+<span class="nc" id="L578">			return store.getLanguages();</span>
+		}
+		
+<span class="nc" id="L581">		return Collections.emptyList();</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

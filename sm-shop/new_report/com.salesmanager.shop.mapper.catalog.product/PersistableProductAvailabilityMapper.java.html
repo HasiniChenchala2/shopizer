@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PersistableProductAvailabilityMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.mapper.catalog.product</a> &gt; <span class="el_source">PersistableProductAvailabilityMapper.java</span></div><h1>PersistableProductAvailabilityMapper.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.mapper.catalog.product;
+
+import java.util.Date;
+import java.util.Optional;
+
+import org.springframework.stereotype.Component;
+
+import com.salesmanager.core.business.constants.Constants;
+import com.salesmanager.core.model.catalog.product.availability.ProductAvailability;
+import com.salesmanager.core.model.catalog.product.price.ProductPrice;
+import com.salesmanager.core.model.catalog.product.price.ProductPriceDescription;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.mapper.Mapper;
+import com.salesmanager.shop.model.catalog.product.product.PersistableProductInventory;
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+import com.salesmanager.shop.utils.DateUtil;
+
+@Component
+<span class="fc" id="L20">public class PersistableProductAvailabilityMapper implements Mapper&lt;PersistableProductInventory, ProductAvailability&gt; {</span>
+
+	@Override
+	public ProductAvailability convert(PersistableProductInventory source, MerchantStore store, Language language) {
+<span class="fc" id="L24">		return this.merge(source, new ProductAvailability(), store, language);</span>
+	}
+
+	@Override
+	public ProductAvailability merge(PersistableProductInventory source, ProductAvailability destination,
+			MerchantStore store, Language language) {
+
+		try {
+
+<span class="fc" id="L33">			destination.setRegion(Constants.ALL_REGIONS);</span>
+
+<span class="fc" id="L35">			destination.setProductQuantity(source.getQuantity());</span>
+<span class="fc" id="L36">			destination.setProductQuantityOrderMin(1);</span>
+<span class="fc" id="L37">			destination.setProductQuantityOrderMax(1);</span>
+
+<span class="pc bpc" id="L39" title="1 of 2 branches missed.">			if (source.getPrice() != null) {</span>
+
+<span class="fc" id="L41">				ProductPrice price = new ProductPrice();</span>
+<span class="fc" id="L42">				price.setProductAvailability(destination);</span>
+<span class="fc" id="L43">				price.setDefaultPrice(source.getPrice().isDefaultPrice());</span>
+<span class="fc" id="L44">				price.setProductPriceAmount(source.getPrice().getPrice());</span>
+<span class="fc" id="L45">				price.setCode(source.getPrice().getCode());</span>
+<span class="fc" id="L46">				price.setProductPriceSpecialAmount(source.getPrice().getDiscountedPrice());</span>
+<span class="pc bpc" id="L47" title="1 of 2 branches missed.">				if (source.getPrice().getDiscountStartDate() != null) {</span>
+					Date startDate;
+
+<span class="nc" id="L50">					startDate = DateUtil.getDate(source.getPrice().getDiscountStartDate());</span>
+
+<span class="nc" id="L52">					price.setProductPriceSpecialStartDate(startDate);</span>
+				}
+<span class="pc bpc" id="L54" title="1 of 2 branches missed.">				if (source.getPrice().getDiscountEndDate() != null) {</span>
+<span class="nc" id="L55">					Date endDate = DateUtil.getDate(source.getPrice().getDiscountEndDate());</span>
+<span class="nc" id="L56">					price.setProductPriceSpecialEndDate(endDate);</span>
+				}
+<span class="fc" id="L58">				destination.getPrices().add(price);</span>
+<span class="fc bfc" id="L59" title="All 2 branches covered.">				for (Language lang : store.getLanguages()) {</span>
+<span class="fc" id="L60">					ProductPriceDescription ppd = new ProductPriceDescription();</span>
+<span class="fc" id="L61">					ppd.setProductPrice(price);</span>
+<span class="fc" id="L62">					ppd.setLanguage(lang);</span>
+<span class="fc" id="L63">					ppd.setName(ProductPriceDescription.DEFAULT_PRICE_DESCRIPTION);</span>
+
+					// price appender
+<span class="fc" id="L66">					Optional&lt;com.salesmanager.shop.model.catalog.product.ProductPriceDescription&gt; description = source</span>
+<span class="fc" id="L67">							.getPrice().getDescriptions().stream()</span>
+<span class="pc bnc" id="L68" title="All 4 branches missed.">							.filter(d -&gt; d.getLanguage() != null &amp;&amp; d.getLanguage().equals(lang.getCode())).findFirst();</span>
+<span class="pc bpc" id="L69" title="1 of 2 branches missed.">					if (description.isPresent()) {</span>
+<span class="nc" id="L70">						ppd.setPriceAppender(description.get().getPriceAppender());</span>
+					}
+<span class="fc" id="L72">					price.getDescriptions().add(ppd);</span>
+<span class="fc" id="L73">				}</span>
+
+			}
+
+			
+
+<span class="nc" id="L79">		} catch (Exception e) {</span>
+<span class="nc" id="L80">			throw new ServiceRuntimeException(&quot;An error occured while mapping product availability&quot;, e);</span>
+<span class="fc" id="L81">		}</span>
+		
+<span class="fc" id="L83">		return destination;</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

@@ -1,0 +1,499 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EmailTemplatesUtils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.utils</a> &gt; <span class="el_source">EmailTemplatesUtils.java</span></div><h1>EmailTemplatesUtils.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.utils;
+
+import com.salesmanager.core.business.modules.email.Email;
+import com.salesmanager.core.business.services.catalog.pricing.PricingService;
+import com.salesmanager.core.business.services.catalog.product.ProductService;
+import com.salesmanager.core.business.services.reference.country.CountryService;
+import com.salesmanager.core.business.services.reference.zone.ZoneService;
+import com.salesmanager.core.business.services.system.EmailService;
+import com.salesmanager.core.model.customer.Customer;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.order.Order;
+import com.salesmanager.core.model.order.OrderTotal;
+import com.salesmanager.core.model.order.orderproduct.OrderProduct;
+import com.salesmanager.core.model.order.orderstatus.OrderStatusHistory;
+import com.salesmanager.core.model.reference.country.Country;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.core.model.reference.zone.Zone;
+import com.salesmanager.shop.constants.ApplicationConstants;
+import com.salesmanager.shop.constants.EmailConstants;
+import com.salesmanager.shop.model.customer.PersistableCustomer;
+import com.salesmanager.shop.model.shop.ContactForm;
+import org.apache.commons.lang3.StringUtils;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Component;
+
+import javax.inject.Inject;
+import java.util.Date;
+import java.util.Locale;
+import java.util.Map;
+
+
+@Component
+<span class="fc" id="L37">public class EmailTemplatesUtils {</span>
+	
+<span class="fc" id="L39">	private static final Logger LOGGER = LoggerFactory.getLogger(EmailTemplatesUtils.class);</span>
+	
+	@Inject
+	private EmailService emailService;
+
+	@Inject
+	private LabelUtils messages;
+	
+	@Inject
+	private CountryService countryService;
+	
+	@Inject
+	private ProductService productService;
+	
+	@Inject
+	private ZoneService zoneService;
+	
+	@Inject
+	private PricingService pricingService;
+	
+	@Inject
+	@Qualifier(&quot;img&quot;)
+	private ImageFilePath imageUtils;
+	
+	@Inject
+	private EmailUtils emailUtils;
+	
+	@Inject
+	private FilePathUtils filePathUtils;
+	
+	private final static String LINE_BREAK = &quot;&lt;br/&gt;&quot;;
+	private final static String TABLE = &quot;&lt;table width=\&quot;100%\&quot;&gt;&quot;;
+	private final static String CLOSING_TABLE = &quot;&lt;/table&gt;&quot;;
+	private final static String TR = &quot;&lt;tr&gt;&quot;;
+	private final static String TR_BORDER = &quot;&lt;tr class=\&quot;border\&quot;&gt;&quot;;
+	private final static String CLOSING_TR = &quot;&lt;/tr&gt;&quot;;
+	private final static String TD = &quot;&lt;td valign=\&quot;top\&quot;&gt;&quot;;
+	private final static String CLOSING_TD = &quot;&lt;/td&gt;&quot;;
+	
+
+	/**
+	 * Sends an email to the customer after a completed order
+	 * @param customer
+	 * @param order
+	 * @param customerLocale
+	 * @param language
+	 * @param merchantStore
+	 * @param contextPath
+	 */
+	@Async
+	public void sendOrderEmail(String toEmail, Customer customer, Order order, Locale customerLocale, Language language, MerchantStore merchantStore, String contextPath) {
+			   /** issue with putting that elsewhere **/ 
+<span class="nc" id="L91">		       LOGGER.info( &quot;Sending welcome email to customer&quot; );</span>
+		       try {
+		    	   
+<span class="nc" id="L94">		    	   Map&lt;String,Zone&gt; zones = zoneService.getZones(language);</span>
+		    	   
+<span class="nc" id="L96">		    	   Map&lt;String,Country&gt; countries = countryService.getCountriesMap(language);</span>
+		    	   
+		    	   //format Billing address
+<span class="nc" id="L99">		    	   StringBuilder billing = new StringBuilder();</span>
+<span class="nc bnc" id="L100" title="All 2 branches missed.">		    	   if(StringUtils.isBlank(order.getBilling().getCompany())) {</span>
+<span class="nc" id="L101">		    		   billing.append(order.getBilling().getFirstName()).append(&quot; &quot;)</span>
+<span class="nc" id="L102">		    		   .append(order.getBilling().getLastName()).append(LINE_BREAK);</span>
+		    	   } else {
+<span class="nc" id="L104">		    		   billing.append(order.getBilling().getCompany()).append(LINE_BREAK);</span>
+		    	   }
+<span class="nc" id="L106">		    	   billing.append(order.getBilling().getAddress()).append(LINE_BREAK);</span>
+<span class="nc" id="L107">		    	   billing.append(order.getBilling().getCity()).append(&quot;, &quot;);</span>
+		    	   
+<span class="nc bnc" id="L109" title="All 2 branches missed.">		    	   if(order.getBilling().getZone()!=null) {</span>
+<span class="nc" id="L110">		    		   Zone zone = zones.get(order.getBilling().getZone().getCode());</span>
+<span class="nc bnc" id="L111" title="All 2 branches missed.">		    		   if(zone!=null) {</span>
+<span class="nc" id="L112">		    			   billing.append(zone.getName());</span>
+		    		   }
+<span class="nc" id="L114">		    		   billing.append(LINE_BREAK);</span>
+<span class="nc bnc" id="L115" title="All 2 branches missed.">		    	   } else if(!StringUtils.isBlank(order.getBilling().getState())) {</span>
+<span class="nc" id="L116">		    		   billing.append(order.getBilling().getState()).append(LINE_BREAK); </span>
+		    	   }
+<span class="nc" id="L118">		    	   Country country = countries.get(order.getBilling().getCountry().getIsoCode());</span>
+<span class="nc bnc" id="L119" title="All 2 branches missed.">		    	   if(country!=null) {</span>
+<span class="nc" id="L120">		    		   billing.append(country.getName()).append(&quot; &quot;);</span>
+		    	   }
+<span class="nc" id="L122">		    	   billing.append(order.getBilling().getPostalCode());</span>
+		    	   
+		    	   
+		    	   //format shipping address
+<span class="nc" id="L126">		    	   StringBuilder shipping = null;</span>
+<span class="nc bnc" id="L127" title="All 4 branches missed.">		    	   if(order.getDelivery()!=null &amp;&amp; !StringUtils.isBlank(order.getDelivery().getFirstName())) {</span>
+<span class="nc" id="L128">		    		   shipping = new StringBuilder();</span>
+<span class="nc bnc" id="L129" title="All 2 branches missed.">			    	   if(StringUtils.isBlank(order.getDelivery().getCompany())) {</span>
+<span class="nc" id="L130">			    		   shipping.append(order.getDelivery().getFirstName()).append(&quot; &quot;)</span>
+<span class="nc" id="L131">			    		   .append(order.getDelivery().getLastName()).append(LINE_BREAK);</span>
+			    	   } else {
+<span class="nc" id="L133">			    		   shipping.append(order.getDelivery().getCompany()).append(LINE_BREAK);</span>
+			    	   }
+<span class="nc" id="L135">			    	   shipping.append(order.getDelivery().getAddress()).append(LINE_BREAK);</span>
+<span class="nc" id="L136">			    	   shipping.append(order.getDelivery().getCity()).append(&quot;, &quot;);</span>
+			    	   
+<span class="nc bnc" id="L138" title="All 2 branches missed.">			    	   if(order.getDelivery().getZone()!=null) {</span>
+<span class="nc" id="L139">			    		   Zone zone = zones.get(order.getDelivery().getZone().getCode());</span>
+<span class="nc bnc" id="L140" title="All 2 branches missed.">			    		   if(zone!=null) {</span>
+<span class="nc" id="L141">			    			   shipping.append(zone.getName());</span>
+			    		   }
+<span class="nc" id="L143">			    		   shipping.append(LINE_BREAK);</span>
+<span class="nc bnc" id="L144" title="All 2 branches missed.">			    	   } else if(!StringUtils.isBlank(order.getDelivery().getState())) {</span>
+<span class="nc" id="L145">			    		   shipping.append(order.getDelivery().getState()).append(LINE_BREAK); </span>
+			    	   }
+<span class="nc" id="L147">			    	   Country deliveryCountry = countries.get(order.getDelivery().getCountry().getIsoCode());</span>
+<span class="nc bnc" id="L148" title="All 2 branches missed.">			    	   if(country!=null) {</span>
+<span class="nc" id="L149">			    		   shipping.append(deliveryCountry.getName()).append(&quot; &quot;);</span>
+			    	   }
+<span class="nc" id="L151">			    	   shipping.append(order.getDelivery().getPostalCode());</span>
+		    	   }
+		    	   
+<span class="nc bnc" id="L154" title="All 4 branches missed.">		    	   if(shipping==null &amp;&amp; StringUtils.isNotBlank(order.getShippingModuleCode())) {</span>
+		    		   //TODO IF HAS NO SHIPPING
+<span class="nc" id="L156">		    		   shipping = billing;</span>
+		    	   }
+		    	   
+		    	   //format order
+		    	   //String storeUri = FilePathUtils.buildStoreUri(merchantStore, contextPath);
+<span class="nc" id="L161">		    	   StringBuilder orderTable = new StringBuilder();</span>
+<span class="nc" id="L162">		    	   orderTable.append(TABLE);</span>
+<span class="nc bnc" id="L163" title="All 2 branches missed.">		    	   for(OrderProduct product : order.getOrderProducts()) {</span>
+		    		   //Product productModel = productService.getByCode(product.getSku(), language);
+<span class="nc" id="L165">		    		   orderTable.append(TR);</span>
+<span class="nc" id="L166">			    		   orderTable.append(TD).append(product.getProductName()).append(&quot; - &quot;).append(product.getSku()).append(CLOSING_TD);</span>
+<span class="nc" id="L167">		    		   	   orderTable.append(TD).append(messages.getMessage(&quot;label.quantity&quot;, customerLocale)).append(&quot;: &quot;).append(product.getProductQuantity()).append(CLOSING_TD);</span>
+<span class="nc" id="L168">	    		   		   orderTable.append(TD).append(pricingService.getDisplayAmount(product.getOneTimeCharge(), merchantStore)).append(CLOSING_TD);</span>
+<span class="nc" id="L169">    		   		   orderTable.append(CLOSING_TR);</span>
+<span class="nc" id="L170">		    	   }</span>
+
+		    	   //order totals
+<span class="nc bnc" id="L173" title="All 2 branches missed.">		    	   for(OrderTotal total : order.getOrderTotal()) {</span>
+<span class="nc" id="L174">		    		   orderTable.append(TR_BORDER);</span>
+		    		   		//orderTable.append(TD);
+		    		   		//orderTable.append(CLOSING_TD);
+<span class="nc" id="L177">		    		   		orderTable.append(TD);</span>
+<span class="nc" id="L178">		    		   		orderTable.append(CLOSING_TD);</span>
+<span class="nc" id="L179">		    		   		orderTable.append(TD);</span>
+<span class="nc" id="L180">		    		   		orderTable.append(&quot;&lt;strong&gt;&quot;);</span>
+<span class="nc bnc" id="L181" title="All 2 branches missed.">		    		   			if(total.getModule().equals(&quot;tax&quot;)) {</span>
+<span class="nc" id="L182">		    		   				orderTable.append(total.getText()).append(&quot;: &quot;);</span>
+
+		    		   			} else {
+		    		   				//if(total.getModule().equals(&quot;total&quot;) || total.getModule().equals(&quot;subtotal&quot;)) {
+		    		   				//}
+<span class="nc" id="L187">		    		   				orderTable.append(messages.getMessage(total.getOrderTotalCode(), customerLocale)).append(&quot;: &quot;);</span>
+		    		   				//if(total.getModule().equals(&quot;total&quot;) || total.getModule().equals(&quot;subtotal&quot;)) {
+		    		   					
+		    		   				//}
+		    		   			}
+<span class="nc" id="L192">		    		   		orderTable.append(&quot;&lt;/strong&gt;&quot;);</span>
+<span class="nc" id="L193">		    		   		orderTable.append(CLOSING_TD);</span>
+<span class="nc" id="L194">		    		   		orderTable.append(TD);</span>
+<span class="nc" id="L195">		    		   			orderTable.append(&quot;&lt;strong&gt;&quot;);</span>
+
+<span class="nc" id="L197">		    		   			orderTable.append(pricingService.getDisplayAmount(total.getValue(), merchantStore));</span>
+
+<span class="nc" id="L199">	    		   				orderTable.append(&quot;&lt;/strong&gt;&quot;);</span>
+<span class="nc" id="L200">		    		   		orderTable.append(CLOSING_TD);</span>
+<span class="nc" id="L201">		    		   orderTable.append(CLOSING_TR);</span>
+<span class="nc" id="L202">		    	   }</span>
+<span class="nc" id="L203">		    	   orderTable.append(CLOSING_TABLE);</span>
+
+<span class="nc" id="L205">		           Map&lt;String, String&gt; templateTokens = emailUtils.createEmailObjectsMap(contextPath, merchantStore, messages, customerLocale);</span>
+<span class="nc" id="L206">		           templateTokens.put(EmailConstants.LABEL_HI, messages.getMessage(&quot;label.generic.hi&quot;, customerLocale));</span>
+<span class="nc" id="L207">		           templateTokens.put(EmailConstants.EMAIL_CUSTOMER_FIRSTNAME, order.getBilling().getFirstName());</span>
+<span class="nc" id="L208">		           templateTokens.put(EmailConstants.EMAIL_CUSTOMER_LASTNAME, order.getBilling().getLastName());</span>
+		           
+<span class="nc" id="L210">		           String[] params = {String.valueOf(order.getId())};</span>
+<span class="nc" id="L211">		           String[] dt = {DateUtil.formatDate(order.getDatePurchased())};</span>
+<span class="nc" id="L212">		           templateTokens.put(EmailConstants.EMAIL_ORDER_NUMBER, messages.getMessage(&quot;email.order.confirmation&quot;, params, customerLocale));</span>
+<span class="nc" id="L213">		           templateTokens.put(EmailConstants.EMAIL_ORDER_DATE, messages.getMessage(&quot;email.order.ordered&quot;, dt, customerLocale));</span>
+<span class="nc" id="L214">		           templateTokens.put(EmailConstants.EMAIL_ORDER_THANKS, messages.getMessage(&quot;email.order.thanks&quot;,customerLocale));</span>
+<span class="nc" id="L215">		           templateTokens.put(EmailConstants.ADDRESS_BILLING, billing.toString());</span>
+		           
+<span class="nc" id="L217">		           templateTokens.put(EmailConstants.ORDER_PRODUCTS_DETAILS, orderTable.toString());</span>
+<span class="nc" id="L218">		           templateTokens.put(EmailConstants.EMAIL_ORDER_DETAILS_TITLE, messages.getMessage(&quot;label.order.details&quot;,customerLocale));</span>
+<span class="nc" id="L219">		           templateTokens.put(EmailConstants.ADDRESS_BILLING_TITLE, messages.getMessage(&quot;label.customer.billinginformation&quot;,customerLocale));</span>
+<span class="nc" id="L220">		           templateTokens.put(EmailConstants.PAYMENT_METHOD_TITLE, messages.getMessage(&quot;label.order.paymentmode&quot;,customerLocale));</span>
+<span class="nc" id="L221">		           templateTokens.put(EmailConstants.PAYMENT_METHOD_DETAILS, messages.getMessage(new StringBuilder().append(&quot;payment.type.&quot;).append(order.getPaymentType().name()).toString(),customerLocale,order.getPaymentType().name()));</span>
+		           
+<span class="nc bnc" id="L223" title="All 2 branches missed.">		           if(StringUtils.isNotBlank(order.getShippingModuleCode())) {</span>
+		        	   //templateTokens.put(EmailConstants.SHIPPING_METHOD_DETAILS, messages.getMessage(new StringBuilder().append(&quot;module.shipping.&quot;).append(order.getShippingModuleCode()).toString(),customerLocale,order.getShippingModuleCode()));
+<span class="nc" id="L225">		        	   templateTokens.put(EmailConstants.SHIPPING_METHOD_DETAILS, messages.getMessage(new StringBuilder().append(&quot;module.shipping.&quot;).append(order.getShippingModuleCode()).toString(),new String[]{merchantStore.getStorename()},customerLocale));</span>
+<span class="nc" id="L226">		        	   templateTokens.put(EmailConstants.ADDRESS_SHIPPING_TITLE, messages.getMessage(&quot;label.order.shippingmethod&quot;,customerLocale));</span>
+<span class="nc" id="L227">		        	   templateTokens.put(EmailConstants.ADDRESS_DELIVERY_TITLE, messages.getMessage(&quot;label.customer.shippinginformation&quot;,customerLocale));</span>
+<span class="nc" id="L228">		        	   templateTokens.put(EmailConstants.SHIPPING_METHOD_TITLE, messages.getMessage(&quot;label.customer.shippinginformation&quot;,customerLocale));</span>
+<span class="nc" id="L229">		        	   templateTokens.put(EmailConstants.ADDRESS_DELIVERY, shipping.toString());</span>
+		           } else {
+<span class="nc" id="L231">		        	   templateTokens.put(EmailConstants.SHIPPING_METHOD_DETAILS, &quot;&quot;);</span>
+<span class="nc" id="L232">		        	   templateTokens.put(EmailConstants.ADDRESS_SHIPPING_TITLE, &quot;&quot;);</span>
+<span class="nc" id="L233">		        	   templateTokens.put(EmailConstants.ADDRESS_DELIVERY_TITLE, &quot;&quot;);</span>
+<span class="nc" id="L234">		        	   templateTokens.put(EmailConstants.SHIPPING_METHOD_TITLE, &quot;&quot;);</span>
+<span class="nc" id="L235">		        	   templateTokens.put(EmailConstants.ADDRESS_DELIVERY, &quot;&quot;);</span>
+		           }
+		           
+<span class="nc" id="L238">			       String status = messages.getMessage(&quot;label.order.&quot; + order.getStatus().name(), customerLocale, order.getStatus().name());</span>
+<span class="nc" id="L239">			       String[] statusMessage = {DateUtil.formatDate(order.getDatePurchased()),status};</span>
+<span class="nc" id="L240">		           templateTokens.put(EmailConstants.ORDER_STATUS, messages.getMessage(&quot;email.order.status&quot;, statusMessage, customerLocale));</span>
+		           
+
+<span class="nc" id="L243">		           String[] title = {merchantStore.getStorename(), String.valueOf(order.getId())};</span>
+<span class="nc" id="L244">		           Email email = new Email();</span>
+<span class="nc" id="L245">		           email.setFrom(merchantStore.getStorename());</span>
+<span class="nc" id="L246">		           email.setFromEmail(merchantStore.getStoreEmailAddress());</span>
+<span class="nc" id="L247">		           email.setSubject(messages.getMessage(&quot;email.order.title&quot;, title, customerLocale));</span>
+<span class="nc" id="L248">		           email.setTo(toEmail);</span>
+<span class="nc" id="L249">		           email.setTemplateName(EmailConstants.EMAIL_ORDER_TPL);</span>
+<span class="nc" id="L250">		           email.setTemplateTokens(templateTokens);</span>
+
+<span class="nc" id="L252">		           LOGGER.debug( &quot;Sending email to {} for order id {} &quot;,customer.getEmailAddress(), order.getId() );</span>
+<span class="nc" id="L253">		           emailService.sendHtmlEmail(merchantStore, email);</span>
+
+<span class="nc" id="L255">		       } catch (Exception e) {</span>
+<span class="nc" id="L256">		           LOGGER.error(&quot;Error occured while sending order confirmation email &quot;,e);</span>
+<span class="nc" id="L257">		       }</span>
+			
+<span class="nc" id="L259">		}</span>
+	
+	/**
+	 * Sends an email to the customer after registration
+	 * @param request
+	 * @param customer
+	 * @param merchantStore
+	 * @param customerLocale
+	 */
+	@Async
+	public void sendRegistrationEmail(
+		PersistableCustomer customer, MerchantStore merchantStore,
+			Locale customerLocale, String contextPath) {
+		   /** issue with putting that elsewhere **/ 
+<span class="nc" id="L273">	       LOGGER.info( &quot;Sending welcome email to customer&quot; );</span>
+	       try {
+
+<span class="nc" id="L276">	           Map&lt;String, String&gt; templateTokens = emailUtils.createEmailObjectsMap(contextPath, merchantStore, messages, customerLocale);</span>
+<span class="nc" id="L277">	           templateTokens.put(EmailConstants.LABEL_HI, messages.getMessage(&quot;label.generic.hi&quot;, customerLocale));</span>
+<span class="nc" id="L278">	           templateTokens.put(EmailConstants.EMAIL_CUSTOMER_FIRSTNAME, customer.getBilling().getFirstName());</span>
+<span class="nc" id="L279">	           templateTokens.put(EmailConstants.EMAIL_CUSTOMER_LASTNAME, customer.getBilling().getLastName());</span>
+<span class="nc" id="L280">	           String[] greetingMessage = {merchantStore.getStorename(),filePathUtils.buildCustomerUri(merchantStore,contextPath),merchantStore.getStoreEmailAddress()};</span>
+<span class="nc" id="L281">	           templateTokens.put(EmailConstants.EMAIL_CUSTOMER_GREETING, messages.getMessage(&quot;email.customer.greeting&quot;, greetingMessage, customerLocale));</span>
+<span class="nc" id="L282">	           templateTokens.put(EmailConstants.EMAIL_USERNAME_LABEL, messages.getMessage(&quot;label.generic.username&quot;,customerLocale));</span>
+<span class="nc" id="L283">	           templateTokens.put(EmailConstants.EMAIL_PASSWORD_LABEL, messages.getMessage(&quot;label.generic.password&quot;,customerLocale));</span>
+<span class="nc" id="L284">	           templateTokens.put(EmailConstants.CUSTOMER_ACCESS_LABEL, messages.getMessage(&quot;label.customer.accessportal&quot;,customerLocale));</span>
+<span class="nc" id="L285">	           templateTokens.put(EmailConstants.ACCESS_NOW_LABEL, messages.getMessage(&quot;label.customer.accessnow&quot;,customerLocale));</span>
+<span class="nc" id="L286">	           templateTokens.put(EmailConstants.EMAIL_USER_NAME, customer.getUserName());</span>
+<span class="nc" id="L287">	           templateTokens.put(EmailConstants.EMAIL_CUSTOMER_PASSWORD, customer.getPassword());</span>
+
+	           //shop url
+<span class="nc" id="L290">	           String customerUrl = filePathUtils.buildStoreUri(merchantStore, contextPath);</span>
+<span class="nc" id="L291">	           templateTokens.put(EmailConstants.CUSTOMER_ACCESS_URL, customerUrl);</span>
+
+<span class="nc" id="L293">	           Email email = new Email();</span>
+<span class="nc" id="L294">	           email.setFrom(merchantStore.getStorename());</span>
+<span class="nc" id="L295">	           email.setFromEmail(merchantStore.getStoreEmailAddress());</span>
+<span class="nc" id="L296">	           email.setSubject(messages.getMessage(&quot;email.newuser.title&quot;,customerLocale));</span>
+<span class="nc" id="L297">	           email.setTo(customer.getEmailAddress());</span>
+<span class="nc" id="L298">	           email.setTemplateName(EmailConstants.EMAIL_CUSTOMER_TPL);</span>
+<span class="nc" id="L299">	           email.setTemplateTokens(templateTokens);</span>
+
+<span class="nc" id="L301">	           LOGGER.debug( &quot;Sending email to {} on their  registered email id {} &quot;,customer.getBilling().getFirstName(),customer.getEmailAddress() );</span>
+<span class="nc" id="L302">	           emailService.sendHtmlEmail(merchantStore, email);</span>
+
+<span class="nc" id="L304">	       } catch (Exception e) {</span>
+<span class="nc" id="L305">	           LOGGER.error(&quot;Error occured while sending welcome email &quot;,e);</span>
+<span class="nc" id="L306">	       }</span>
+		
+<span class="nc" id="L308">	}</span>
+	
+	@Async
+	public void sendContactEmail(
+			ContactForm contact, MerchantStore merchantStore,
+				Locale storeLocale, String contextPath) {
+			   /** issue with putting that elsewhere **/ 
+<span class="nc" id="L315">		       LOGGER.info( &quot;Sending email to store owner&quot; );</span>
+		       try {
+
+<span class="nc" id="L318">		           Map&lt;String, String&gt; templateTokens = emailUtils.createEmailObjectsMap(contextPath, merchantStore, messages, storeLocale);</span>
+		           
+<span class="nc" id="L320">		           templateTokens.put(EmailConstants.EMAIL_CONTACT_NAME, contact.getName());</span>
+<span class="nc" id="L321">		           templateTokens.put(EmailConstants.EMAIL_CONTACT_EMAIL, contact.getEmail());</span>
+<span class="nc" id="L322">		           templateTokens.put(EmailConstants.EMAIL_CONTACT_CONTENT, contact.getComment());</span>
+		           
+<span class="nc" id="L324">		           String[] contactSubject = {contact.getSubject()};</span>
+		           
+<span class="nc" id="L326">		           templateTokens.put(EmailConstants.EMAIL_CUSTOMER_CONTACT, messages.getMessage(&quot;email.contact&quot;,contactSubject, storeLocale));</span>
+<span class="nc" id="L327">		           templateTokens.put(EmailConstants.EMAIL_CONTACT_NAME_LABEL, messages.getMessage(&quot;label.entity.name&quot;,storeLocale));</span>
+<span class="nc" id="L328">		           templateTokens.put(EmailConstants.EMAIL_CONTACT_EMAIL_LABEL, messages.getMessage(&quot;label.generic.email&quot;,storeLocale));</span>
+
+
+
+<span class="nc" id="L332">		           Email email = new Email();</span>
+<span class="nc" id="L333">		           email.setFrom(contact.getName());</span>
+		           //since shopizer sends email to store email, sender is store email
+<span class="nc" id="L335">		           email.setFromEmail(merchantStore.getStoreEmailAddress());</span>
+<span class="nc" id="L336">		           email.setSubject(messages.getMessage(&quot;email.contact.title&quot;,storeLocale));</span>
+		           //contact has to be delivered to store owner, receiver is store email
+<span class="nc" id="L338">		           email.setTo(merchantStore.getStoreEmailAddress());</span>
+<span class="nc" id="L339">		           email.setTemplateName(EmailConstants.EMAIL_CONTACT_TMPL);</span>
+<span class="nc" id="L340">		           email.setTemplateTokens(templateTokens);</span>
+
+<span class="nc" id="L342">		           LOGGER.debug( &quot;Sending contact email&quot;);</span>
+<span class="nc" id="L343">		           emailService.sendHtmlEmail(merchantStore, email);</span>
+
+<span class="nc" id="L345">		       } catch (Exception e) {</span>
+<span class="nc" id="L346">		           LOGGER.error(&quot;Error occured while sending contact email &quot;,e);</span>
+<span class="nc" id="L347">		       }</span>
+			
+<span class="nc" id="L349">		}</span>
+	
+	/**
+	 * Send an email to the customer with last order status
+	 * @param request
+	 * @param customer
+	 * @param order
+	 * @param merchantStore
+	 * @param customerLocale
+	 */
+	@Async
+	public void sendUpdateOrderStatusEmail(
+			Customer customer, Order order, OrderStatusHistory lastHistory, MerchantStore merchantStore,
+			Locale customerLocale, String contextPath) {
+		   /** issue with putting that elsewhere **/ 
+<span class="nc" id="L364">	       LOGGER.info( &quot;Sending order status email to customer&quot; );</span>
+	       try {
+
+
+<span class="nc" id="L368">				Map&lt;String, String&gt; templateTokens = emailUtils.createEmailObjectsMap(contextPath, merchantStore, messages, customerLocale);</span>
+				
+<span class="nc" id="L370">		        templateTokens.put(EmailConstants.LABEL_HI, messages.getMessage(&quot;label.generic.hi&quot;, customerLocale));</span>
+<span class="nc" id="L371">		        templateTokens.put(EmailConstants.EMAIL_CUSTOMER_FIRSTNAME, customer.getBilling().getFirstName());</span>
+<span class="nc" id="L372">		        templateTokens.put(EmailConstants.EMAIL_CUSTOMER_LASTNAME, customer.getBilling().getLastName());</span>
+				
+<span class="nc" id="L374">		        String[] statusMessageText = {String.valueOf(order.getId()),DateUtil.formatDate(order.getDatePurchased())};</span>
+<span class="nc" id="L375">		        String status = messages.getMessage(&quot;label.order.&quot; + order.getStatus().name(), customerLocale, order.getStatus().name());</span>
+<span class="nc" id="L376">		        String[] statusMessage = {DateUtil.formatDate(lastHistory.getDateAdded()),status};</span>
+		        
+<span class="nc" id="L378">		        String comments = lastHistory.getComments();</span>
+<span class="nc bnc" id="L379" title="All 2 branches missed.">		        if(StringUtils.isBlank(comments)) {</span>
+<span class="nc" id="L380">		        	comments = messages.getMessage(&quot;label.order.&quot; + order.getStatus().name(), customerLocale, order.getStatus().name());</span>
+		        }
+		        
+<span class="nc" id="L383">				templateTokens.put(EmailConstants.EMAIL_ORDER_STATUS_TEXT, messages.getMessage(&quot;email.order.statustext&quot;, statusMessageText, customerLocale));</span>
+<span class="nc" id="L384">				templateTokens.put(EmailConstants.EMAIL_ORDER_STATUS, messages.getMessage(&quot;email.order.status&quot;, statusMessage, customerLocale));</span>
+<span class="nc" id="L385">				templateTokens.put(EmailConstants.EMAIL_TEXT_STATUS_COMMENTS, comments);</span>
+				
+				
+<span class="nc" id="L388">				Email email = new Email();</span>
+<span class="nc" id="L389">				email.setFrom(merchantStore.getStorename());</span>
+<span class="nc" id="L390">				email.setFromEmail(merchantStore.getStoreEmailAddress());</span>
+<span class="nc" id="L391">				email.setSubject(messages.getMessage(&quot;email.order.status.title&quot;,new String[]{String.valueOf(order.getId())},customerLocale));</span>
+<span class="nc" id="L392">				email.setTo(customer.getEmailAddress());</span>
+<span class="nc" id="L393">				email.setTemplateName(EmailConstants.ORDER_STATUS_TMPL);</span>
+<span class="nc" id="L394">				email.setTemplateTokens(templateTokens);</span>
+	
+	
+				
+<span class="nc" id="L398">				emailService.sendHtmlEmail(merchantStore, email);</span>
+
+<span class="nc" id="L400">	       } catch (Exception e) {</span>
+<span class="nc" id="L401">	           LOGGER.error(&quot;Error occured while sending order download email &quot;,e);</span>
+<span class="nc" id="L402">	       }</span>
+		
+<span class="nc" id="L404">	}</span>
+	
+	/**
+	 * Send download email instructions to customer
+	 * @param customer
+	 * @param order
+	 * @param merchantStore
+	 * @param customerLocale
+	 * @param contextPath
+	 */
+	@Async
+	public void sendOrderDownloadEmail(
+			Customer customer, Order order, MerchantStore merchantStore,
+			Locale customerLocale, String contextPath) {
+		   /** issue with putting that elsewhere **/ 
+<span class="nc" id="L419">	       LOGGER.info( &quot;Sending download email to customer&quot; );</span>
+	       try {
+
+<span class="nc" id="L422">	           Map&lt;String, String&gt; templateTokens = emailUtils.createEmailObjectsMap(contextPath, merchantStore, messages, customerLocale);</span>
+<span class="nc" id="L423">	           templateTokens.put(EmailConstants.LABEL_HI, messages.getMessage(&quot;label.generic.hi&quot;, customerLocale));</span>
+<span class="nc" id="L424">	           templateTokens.put(EmailConstants.EMAIL_CUSTOMER_FIRSTNAME, customer.getBilling().getFirstName());</span>
+<span class="nc" id="L425">	           templateTokens.put(EmailConstants.EMAIL_CUSTOMER_LASTNAME, customer.getBilling().getLastName());</span>
+<span class="nc" id="L426">	           String[] downloadMessage = {String.valueOf(ApplicationConstants.MAX_DOWNLOAD_DAYS), String.valueOf(order.getId()), filePathUtils.buildCustomerUri(merchantStore, contextPath), merchantStore.getStoreEmailAddress()};</span>
+<span class="nc" id="L427">	           templateTokens.put(EmailConstants.EMAIL_ORDER_DOWNLOAD, messages.getMessage(&quot;email.order.download.text&quot;, downloadMessage, customerLocale));</span>
+<span class="nc" id="L428">	           templateTokens.put(EmailConstants.CUSTOMER_ACCESS_LABEL, messages.getMessage(&quot;label.customer.accessportal&quot;,customerLocale));</span>
+<span class="nc" id="L429">	           templateTokens.put(EmailConstants.ACCESS_NOW_LABEL, messages.getMessage(&quot;label.customer.accessnow&quot;,customerLocale));</span>
+
+	           //shop url
+<span class="nc" id="L432">	           String customerUrl = filePathUtils.buildStoreUri(merchantStore, contextPath);</span>
+<span class="nc" id="L433">	           templateTokens.put(EmailConstants.CUSTOMER_ACCESS_URL, customerUrl);</span>
+
+<span class="nc" id="L435">	           String[] orderInfo = {String.valueOf(order.getId())};</span>
+	           
+<span class="nc" id="L437">	           Email email = new Email();</span>
+<span class="nc" id="L438">	           email.setFrom(merchantStore.getStorename());</span>
+<span class="nc" id="L439">	           email.setFromEmail(merchantStore.getStoreEmailAddress());</span>
+<span class="nc" id="L440">	           email.setSubject(messages.getMessage(&quot;email.order.download.title&quot;, orderInfo, customerLocale));</span>
+<span class="nc" id="L441">	           email.setTo(customer.getEmailAddress());</span>
+<span class="nc" id="L442">	           email.setTemplateName(EmailConstants.EMAIL_ORDER_DOWNLOAD_TPL);</span>
+<span class="nc" id="L443">	           email.setTemplateTokens(templateTokens);</span>
+
+<span class="nc" id="L445">	           LOGGER.debug( &quot;Sending email to {} with download info&quot;,customer.getEmailAddress() );</span>
+<span class="nc" id="L446">	           emailService.sendHtmlEmail(merchantStore, email);</span>
+
+<span class="nc" id="L448">	       } catch (Exception e) {</span>
+<span class="nc" id="L449">	           LOGGER.error(&quot;Error occured while sending order download email &quot;,e);</span>
+<span class="nc" id="L450">	       }</span>
+		
+<span class="nc" id="L452">	}</span>
+	
+	/**
+	 * Sends a change password notification email to the Customer
+	 * @param customer
+	 * @param merchantStore
+	 * @param customerLocale
+	 * @param contextPath
+	 */
+	@Async
+	public void changePasswordNotificationEmail(
+			Customer customer, MerchantStore merchantStore,
+			Locale customerLocale, String contextPath) {
+<span class="nc" id="L465">	       LOGGER.debug( &quot;Sending change password email&quot; );</span>
+	       try {
+
+
+<span class="nc" id="L469">				Map&lt;String, String&gt; templateTokens = emailUtils.createEmailObjectsMap(contextPath, merchantStore, messages, customerLocale);</span>
+				
+<span class="nc" id="L471">		        templateTokens.put(EmailConstants.LABEL_HI, messages.getMessage(&quot;label.generic.hi&quot;, customerLocale));</span>
+<span class="nc" id="L472">		        templateTokens.put(EmailConstants.EMAIL_CUSTOMER_FIRSTNAME, customer.getBilling().getFirstName());</span>
+<span class="nc" id="L473">		        templateTokens.put(EmailConstants.EMAIL_CUSTOMER_LASTNAME, customer.getBilling().getLastName());</span>
+				
+<span class="nc" id="L475">		        String[] date = {DateUtil.formatLongDate(new Date())};</span>
+		        
+<span class="nc" id="L477">		        templateTokens.put(EmailConstants.EMAIL_NOTIFICATION_MESSAGE, messages.getMessage(&quot;label.notification.message.passwordchanged&quot;, date, customerLocale));</span>
+		        
+
+<span class="nc" id="L480">				Email email = new Email();</span>
+<span class="nc" id="L481">				email.setFrom(merchantStore.getStorename());</span>
+<span class="nc" id="L482">				email.setFromEmail(merchantStore.getStoreEmailAddress());</span>
+<span class="nc" id="L483">				email.setSubject(messages.getMessage(&quot;label.notification.title.passwordchanged&quot;,customerLocale));</span>
+<span class="nc" id="L484">				email.setTo(customer.getEmailAddress());</span>
+<span class="nc" id="L485">				email.setTemplateName(EmailConstants.EMAIL_NOTIFICATION_TMPL);</span>
+<span class="nc" id="L486">				email.setTemplateTokens(templateTokens);</span>
+	
+	
+				
+<span class="nc" id="L490">				emailService.sendHtmlEmail(merchantStore, email);</span>
+
+<span class="nc" id="L492">	       } catch (Exception e) {</span>
+<span class="nc" id="L493">	           LOGGER.error(&quot;Error occured while sending change password email &quot;,e);</span>
+<span class="nc" id="L494">	       }</span>
+		
+<span class="nc" id="L496">	}</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

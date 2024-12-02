@@ -1,0 +1,931 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserFacadeImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.facade.user</a> &gt; <span class="el_source">UserFacadeImpl.java</span></div><h1>UserFacadeImpl.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.facade.user;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import javax.inject.Inject;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Validate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.domain.Page;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
+
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.modules.email.Email;
+import com.salesmanager.core.business.services.merchant.MerchantStoreService;
+import com.salesmanager.core.business.services.reference.language.LanguageService;
+import com.salesmanager.core.business.services.system.EmailService;
+import com.salesmanager.core.business.services.user.PermissionService;
+import com.salesmanager.core.business.services.user.UserService;
+import com.salesmanager.core.model.common.CredentialsReset;
+import com.salesmanager.core.model.common.Criteria;
+import com.salesmanager.core.model.common.GenericEntityList;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.core.model.user.Group;
+import com.salesmanager.core.model.user.Permission;
+import com.salesmanager.core.model.user.User;
+import com.salesmanager.core.model.user.UserCriteria;
+import com.salesmanager.shop.constants.Constants;
+import com.salesmanager.shop.constants.EmailConstants;
+import com.salesmanager.shop.model.security.PersistableGroup;
+import com.salesmanager.shop.model.security.ReadableGroup;
+import com.salesmanager.shop.model.security.ReadablePermission;
+import com.salesmanager.shop.model.user.PersistableUser;
+import com.salesmanager.shop.model.user.ReadableUser;
+import com.salesmanager.shop.model.user.ReadableUserList;
+import com.salesmanager.shop.model.user.UserPassword;
+import com.salesmanager.shop.populator.user.PersistableUserPopulator;
+import com.salesmanager.shop.populator.user.ReadableUserPopulator;
+import com.salesmanager.shop.store.api.exception.ConversionRuntimeException;
+import com.salesmanager.shop.store.api.exception.GenericRuntimeException;
+import com.salesmanager.shop.store.api.exception.OperationNotAllowedException;
+import com.salesmanager.shop.store.api.exception.ResourceNotFoundException;
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+import com.salesmanager.shop.store.api.exception.UnauthorizedException;
+import com.salesmanager.shop.store.controller.security.facade.SecurityFacade;
+import com.salesmanager.shop.store.controller.user.facade.UserFacade;
+import com.salesmanager.shop.utils.DateUtil;
+import com.salesmanager.shop.utils.EmailUtils;
+import com.salesmanager.shop.utils.FilePathUtils;
+import com.salesmanager.shop.utils.ImageFilePath;
+import com.salesmanager.shop.utils.LabelUtils;
+
+@Service(&quot;userFacade&quot;)
+<span class="fc" id="L73">public class UserFacadeImpl implements UserFacade {</span>
+
+	private static final String PRIVATE_PATH = &quot;/private/&quot;;
+
+	private static final String resetUserLink = &quot;user/%s/reset/%s&quot;; // front
+
+	private static final String ACCOUNT_PASSWORD_RESET_TPL = &quot;email_template_password_reset_request_user.ftl&quot;;
+
+	private static final String RESET_PASSWORD_LINK = &quot;RESET_PASSWORD_LINK&quot;;
+
+	private static final String RESET_PASSWORD_TEXT = &quot;RESET_PASSWORD_TEXT&quot;;
+
+	@Inject
+	private MerchantStoreService merchantStoreService;
+
+	@Inject
+	private UserService userService;
+
+	@Inject
+	private PermissionService permissionService;
+
+	@Inject
+	private LanguageService languageService;
+
+	@Inject
+	private PersistableUserPopulator persistableUserPopulator;
+
+	@Inject
+	private SecurityFacade securityFacade;
+
+	@Autowired
+	private FilePathUtils filePathUtils;
+
+	@Autowired
+	private LanguageService lamguageService;
+
+	@Autowired
+	private EmailUtils emailUtils;
+
+	@Autowired
+	private EmailService emailService;
+
+	@Autowired
+	@Qualifier(&quot;img&quot;)
+	private ImageFilePath imageUtils;
+
+	@Inject
+	private LabelUtils messages;
+
+	@Inject
+	private PasswordEncoder passwordEncoder;
+
+<span class="fc" id="L125">	private static final Logger LOGGER = LoggerFactory.getLogger(UserFacadeImpl.class);</span>
+
+	@Override
+	public ReadableUser findByUserName(String userName, String storeCode, Language lang) {
+<span class="nc" id="L129">		ReadableUser user = findByUserName(userName, lang);</span>
+<span class="nc bnc" id="L130" title="All 2 branches missed.">		if (user == null) {</span>
+<span class="nc" id="L131">			throw new ResourceNotFoundException(&quot;User [&quot; + userName + &quot;] not found&quot;);</span>
+		}
+
+<span class="nc" id="L134">		return user;</span>
+
+	}
+
+	private ReadableUser findByUserName(String userName, Language lang) {
+<span class="fc" id="L139">		User user = getByUserName(userName);</span>
+<span class="pc bpc" id="L140" title="1 of 2 branches missed.">		if (user == null) {</span>
+<span class="nc" id="L141">			throw new ResourceNotFoundException(&quot;User [&quot; + userName + &quot;] not found&quot;);</span>
+		}
+<span class="fc" id="L143">		return convertUserToReadableUser(lang, user);</span>
+	}
+
+	private ReadableUser convertUserToReadableUser(Language lang, User user) {
+<span class="fc" id="L147">		ReadableUserPopulator populator = new ReadableUserPopulator();</span>
+		try {
+<span class="fc" id="L149">			ReadableUser readableUser = new ReadableUser();</span>
+<span class="fc" id="L150">			readableUser = populator.populate(user, readableUser, user.getMerchantStore(), lang);</span>
+
+<span class="fc" id="L152">			List&lt;Integer&gt; groupIds = readableUser.getGroups().stream().map(ReadableGroup::getId).map(Long::intValue)</span>
+<span class="fc" id="L153">					.collect(Collectors.toList());</span>
+<span class="fc" id="L154">			List&lt;ReadablePermission&gt; permissions = findPermissionsByGroups(groupIds);</span>
+<span class="fc" id="L155">			readableUser.setPermissions(permissions);</span>
+
+<span class="fc" id="L157">			return readableUser;</span>
+<span class="nc" id="L158">		} catch (ConversionException e) {</span>
+<span class="nc" id="L159">			throw new ConversionRuntimeException(e);</span>
+		}
+	}
+
+	private User converPersistabletUserToUser(MerchantStore store, Language lang, User userModel,
+			PersistableUser user) {
+		try {
+<span class="fc" id="L166">			return persistableUserPopulator.populate(user, userModel, store, lang);</span>
+<span class="nc" id="L167">		} catch (ConversionException e) {</span>
+<span class="nc" id="L168">			throw new ConversionRuntimeException(e);</span>
+		}
+	}
+
+	private User getByUserName(String userName) {
+		try {
+<span class="fc" id="L174">			return userService.getByUserName(userName);</span>
+<span class="nc" id="L175">		} catch (ServiceException e) {</span>
+<span class="nc" id="L176">			throw new ServiceRuntimeException(e);</span>
+		}
+	}
+
+	private User getByUserName(String userName, String storeCode) {
+		try {
+<span class="nc" id="L182">			return userService.getByUserName(userName, storeCode);</span>
+<span class="nc" id="L183">		} catch (ServiceException e) {</span>
+<span class="nc" id="L184">			throw new ServiceRuntimeException(e);</span>
+		}
+	}
+
+	private User getByUserId(Long id, String storeCode) {
+		try {
+<span class="nc" id="L190">			return userService.findByStore(id, storeCode);</span>
+<span class="nc" id="L191">		} catch (ServiceException e) {</span>
+<span class="nc" id="L192">			throw new ServiceRuntimeException(e);</span>
+		}
+	}
+
+	private User getByUserId(Long id) {
+		try {
+<span class="nc" id="L198">			return userService.getById(id);</span>
+<span class="nc" id="L199">		} catch (Exception e) {</span>
+<span class="nc" id="L200">			throw new ServiceRuntimeException(e);</span>
+		}
+	}
+
+	@Override
+	public List&lt;ReadablePermission&gt; findPermissionsByGroups(List&lt;Integer&gt; ids) {
+<span class="fc" id="L206">		return getPermissionsByIds(ids).stream().map(permission -&gt; convertPermissionToReadablePermission(permission))</span>
+<span class="fc" id="L207">				.collect(Collectors.toList());</span>
+	}
+
+	private ReadablePermission convertPermissionToReadablePermission(Permission permission) {
+<span class="fc" id="L211">		ReadablePermission readablePermission = new ReadablePermission();</span>
+<span class="fc" id="L212">		readablePermission.setId(permission.getId());</span>
+<span class="fc" id="L213">		readablePermission.setName(permission.getPermissionName());</span>
+<span class="fc" id="L214">		return readablePermission;</span>
+	}
+
+	private List&lt;Permission&gt; getPermissionsByIds(List&lt;Integer&gt; ids) {
+		try {
+<span class="fc" id="L219">			return permissionService.getPermissions(ids);</span>
+<span class="nc" id="L220">		} catch (ServiceException e) {</span>
+<span class="nc" id="L221">			throw new ServiceRuntimeException(e);</span>
+		}
+	}
+
+	@Override
+	public boolean authorizedStore(String userName, String merchantStoreCode) {
+
+		try {
+
+<span class="fc" id="L230">			Authentication authentication = SecurityContextHolder.getContext().getAuthentication();</span>
+
+<span class="fc" id="L232">			Set&lt;String&gt; roles = authentication.getAuthorities().stream().map(r -&gt; r.getAuthority())</span>
+<span class="fc" id="L233">					.collect(Collectors.toSet());</span>
+
+<span class="fc" id="L235">			ReadableUser readableUser = findByUserName(userName, languageService.defaultLanguage());</span>
+
+			// unless superadmin
+<span class="pc bpc" id="L238" title="1 of 2 branches missed.">			for (ReadableGroup group : readableUser.getGroups()) {</span>
+<span class="pc bpc" id="L239" title="1 of 2 branches missed.">				if (Constants.GROUP_SUPERADMIN.equals(group.getName())) {</span>
+<span class="fc" id="L240">					return true;</span>
+				}
+<span class="nc" id="L242">			}</span>
+
+<span class="nc" id="L244">			boolean authorized = false;</span>
+<span class="nc" id="L245">			User user = userService.findByStore(readableUser.getId(), merchantStoreCode);</span>
+<span class="nc bnc" id="L246" title="All 2 branches missed.">			if (user != null) {</span>
+<span class="nc" id="L247">				authorized = true;</span>
+			} else {
+<span class="nc" id="L249">				user = userService.getByUserName(userName);</span>
+			}
+
+<span class="nc bnc" id="L252" title="All 4 branches missed.">			if (user != null &amp;&amp; !authorized) {</span>
+
+				// get parent
+<span class="nc" id="L255">				MerchantStore store = merchantStoreService.getParent(merchantStoreCode);</span>
+
+				// user can be in parent
+<span class="nc" id="L258">				MerchantStore st = user.getMerchantStore();</span>
+<span class="nc bnc" id="L259" title="All 4 branches missed.">				if (store != null &amp;&amp; st.getCode().equals(store.getCode())) {</span>
+<span class="nc" id="L260">					authorized = true;</span>
+				}
+			}
+
+<span class="nc" id="L264">			return authorized;</span>
+<span class="nc" id="L265">		} catch (Exception e) {</span>
+<span class="nc" id="L266">			throw new ServiceRuntimeException(&quot;Cannot authorize user &quot; + userName + &quot; for store &quot; + merchantStoreCode,</span>
+<span class="nc" id="L267">					e.getMessage());</span>
+		}
+	}
+
+	@Override
+	public void authorizedGroup(String userName, List&lt;String&gt; groupName) {
+
+<span class="fc" id="L274">		ReadableUser readableUser = findByUserName(userName, languageService.defaultLanguage());</span>
+
+		// unless superadmin
+<span class="pc bpc" id="L277" title="1 of 2 branches missed.">		for (ReadableGroup group : readableUser.getGroups()) {</span>
+<span class="pc bpc" id="L278" title="1 of 2 branches missed.">			if (groupName.contains(group.getName())) {</span>
+<span class="fc" id="L279">				return;</span>
+			}
+<span class="nc" id="L281">		}</span>
+
+<span class="nc" id="L283">		throw new UnauthorizedException(&quot;User &quot; + userName + &quot; not authorized&quot;);</span>
+
+	}
+
+	@Override
+	public String authenticatedUser() {
+<span class="fc" id="L289">		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();</span>
+
+<span class="pc bpc" id="L291" title="1 of 2 branches missed.">		if (authentication == null) {</span>
+<span class="nc" id="L292">			throw new UnauthorizedException(&quot;User Not authorized&quot;);</span>
+		}
+
+<span class="pc bpc" id="L295" title="1 of 2 branches missed.">		if (!(authentication instanceof AnonymousAuthenticationToken)) {</span>
+<span class="fc" id="L296">			String currentUserName = authentication.getName();</span>
+<span class="fc" id="L297">			return currentUserName;</span>
+		}
+<span class="nc" id="L299">		return null;</span>
+	}
+
+	@Override
+	public ReadableUser create(PersistableUser user, MerchantStore store) {
+
+<span class="fc" id="L305">		Validate.notNull(store, &quot;MerchantStore must not be null&quot;);</span>
+<span class="fc" id="L306">		Validate.notNull(user, &quot;User must not be null&quot;);</span>
+<span class="fc" id="L307">		Validate.notNull(user.getUserName(), &quot;Username must not be null&quot;);</span>
+
+		try {
+
+			// check if user exists
+<span class="fc" id="L312">			User tempUser = userService.getByUserName(user.getUserName(), store.getCode());</span>
+<span class="pc bpc" id="L313" title="1 of 2 branches missed.">			if (tempUser != null) {</span>
+<span class="nc" id="L314">				throw new ServiceRuntimeException(</span>
+<span class="nc" id="L315">						&quot;User [&quot; + user.getUserName() + &quot;] already exists for store [&quot; + store.getCode() + &quot;]&quot;);</span>
+			}
+			
+			/**
+			 * validate password
+			 */
+<span class="pc bpc" id="L321" title="1 of 2 branches missed.">			if (!securityFacade.matchRawPasswords(user.getPassword(), user.getRepeatPassword())) {</span>
+<span class="nc" id="L322">				throw new ServiceRuntimeException(&quot;Passwords dos not match, make sure password and repeat password are equals&quot;);</span>
+			}
+
+			/**
+			 * Validate new password
+			 */
+<span class="pc bpc" id="L328" title="1 of 2 branches missed.">			if (!securityFacade.validateUserPassword(user.getPassword())) {</span>
+<span class="nc" id="L329">				throw new ServiceRuntimeException(&quot;New password does not apply to format policy&quot;);</span>
+			}
+
+<span class="fc" id="L332">			String newPasswordEncoded = securityFacade.encodePassword(user.getPassword());</span>
+
+<span class="fc" id="L334">			User userModel = new User();</span>
+<span class="fc" id="L335">			userModel = converPersistabletUserToUser(store, languageService.defaultLanguage(), userModel, user);</span>
+<span class="pc bpc" id="L336" title="1 of 2 branches missed.">			if (CollectionUtils.isEmpty(userModel.getGroups())) {</span>
+<span class="nc" id="L337">				throw new ServiceRuntimeException(&quot;No valid group groups associated with user &quot; + user.getUserName());</span>
+			}
+<span class="fc" id="L339">			userModel.setAdminPassword(newPasswordEncoded);</span>
+<span class="fc" id="L340">			userService.saveOrUpdate(userModel);</span>
+			// now build returned object
+<span class="fc" id="L342">			User createdUser = userService.getById(userModel.getId());</span>
+<span class="fc" id="L343">			return convertUserToReadableUser(createdUser.getDefaultLanguage(), createdUser);</span>
+<span class="nc" id="L344">		} catch (ServiceException e) {</span>
+<span class="nc" id="L345">			throw new ServiceRuntimeException(</span>
+<span class="nc" id="L346">					&quot;Cannot create user &quot; + user.getUserName() + &quot; for store &quot; + store.getCode(), e);</span>
+		}
+	}
+
+	@Override
+	public ReadableUserList getByCriteria(Language language, String drawParam, Criteria criteria) {
+		try {
+<span class="nc" id="L353">			ReadableUserList readableUserList = new ReadableUserList();</span>
+<span class="nc" id="L354">			GenericEntityList&lt;User&gt; userList = userService.listByCriteria(criteria);</span>
+<span class="nc bnc" id="L355" title="All 2 branches missed.">			for (User user : userList.getList()) {</span>
+<span class="nc" id="L356">				ReadableUser readableUser = this.convertUserToReadableUser(language, user);</span>
+<span class="nc" id="L357">				readableUserList.getData().add(readableUser);</span>
+<span class="nc" id="L358">			}</span>
+<span class="nc" id="L359">			readableUserList.setRecordsTotal(userList.getTotalCount());</span>
+<span class="nc" id="L360">			readableUserList.setNumber(userList.getList().size());</span>
+<span class="nc" id="L361">			readableUserList.setTotalPages(userList.getTotalPages());</span>
+			// readableUserList.setTotalPages(readableUserList.getData().size());
+<span class="nc" id="L363">			readableUserList.setRecordsFiltered(Math.toIntExact(userList.getTotalCount()));</span>
+
+<span class="nc" id="L365">			return readableUserList;</span>
+<span class="nc" id="L366">		} catch (ServiceException e) {</span>
+<span class="nc" id="L367">			throw new ServiceRuntimeException(&quot;Cannot get users by criteria user&quot;, e);</span>
+		}
+	}
+
+	@Override
+	public void delete(Long id, String merchant) {
+<span class="nc" id="L373">		Validate.notNull(id, &quot;User id cannot be null&quot;);</span>
+
+		try {
+<span class="nc" id="L376">			User user = userService.findByStore(id, merchant);</span>
+<span class="nc bnc" id="L377" title="All 2 branches missed.">			if (user == null) {</span>
+<span class="nc" id="L378">				throw new ServiceRuntimeException(&quot;Cannot find user [&quot; + id + &quot;]&quot;);</span>
+			}
+
+			// cannot delete superadmin
+<span class="nc bnc" id="L382" title="All 2 branches missed.">			if (user.getGroups().contains(Constants.GROUP_SUPERADMIN)) {</span>
+<span class="nc" id="L383">				throw new ServiceRuntimeException(&quot;Cannot delete superadmin user [&quot; + id + &quot;]&quot;);</span>
+			}
+
+<span class="nc" id="L386">			userService.delete(user);</span>
+<span class="nc" id="L387">		} catch (ServiceException e) {</span>
+<span class="nc" id="L388">			throw new ServiceRuntimeException(&quot;Cannot find user [&quot; + id + &quot;]&quot;, e);</span>
+<span class="nc" id="L389">		}</span>
+
+<span class="nc" id="L391">	}</span>
+
+	@Override
+	public ReadableUser update(Long id, String authenticatedUser, MerchantStore store, PersistableUser user) {
+<span class="nc" id="L395">		Validate.notNull(user, &quot;User cannot be null&quot;);</span>
+<span class="nc" id="L396">		Validate.notNull(store, &quot;store cannot be null&quot;);</span>
+
+		try {
+<span class="nc" id="L399">			User userModel = userService.getById(id);</span>
+<span class="nc bnc" id="L400" title="All 2 branches missed.">			if (userModel == null) {</span>
+<span class="nc" id="L401">				throw new ServiceRuntimeException(&quot;Cannot find user [&quot; + user.getUserName() + &quot;]&quot;);</span>
+			}
+<span class="nc bnc" id="L403" title="All 2 branches missed.">			if (userModel.getId().longValue() != id.longValue()) {</span>
+<span class="nc" id="L404">				throw new ServiceRuntimeException(</span>
+<span class="nc" id="L405">						&quot;Cannot find user [&quot; + user.getUserName() + &quot;] id or name does not match&quot;);</span>
+			}
+<span class="nc" id="L407">			User auth = userService.getByUserName(authenticatedUser);</span>
+<span class="nc bnc" id="L408" title="All 2 branches missed.">			if (auth == null) {</span>
+<span class="nc" id="L409">				throw new ServiceRuntimeException(&quot;Cannot find user [&quot; + authenticatedUser + &quot;]&quot;);</span>
+			}
+<span class="nc" id="L411">			User adminName = getByUserName(user.getUserName());</span>
+<span class="nc bnc" id="L412" title="All 2 branches missed.">			if (adminName != null) {</span>
+<span class="nc bnc" id="L413" title="All 2 branches missed.">				if (adminName.getId().longValue() != userModel.getId().longValue()) {</span>
+<span class="nc" id="L414">					throw new ServiceRuntimeException(</span>
+<span class="nc" id="L415">							&quot;User id [&quot; + userModel.getId() + &quot;] does not match [&quot; + user.getUserName() + &quot;]&quot;);</span>
+				}
+			}
+<span class="nc" id="L418">			boolean isActive = userModel.isActive();</span>
+<span class="nc" id="L419">			List&lt;Group&gt; originalGroups = userModel.getGroups();</span>
+<span class="nc" id="L420">			Group superadmin = originalGroups.stream()</span>
+<span class="nc" id="L421">					.filter(group -&gt; Constants.GROUP_SUPERADMIN.equals(group.getGroupName())).findAny().orElse(null);</span>
+
+			// changing store ?
+			/**
+			 * Can't change self store Only admin and superadmin can change
+			 * another user store
+			 */
+
+			// i'm i editing my own profile ?
+<span class="nc bnc" id="L430" title="All 2 branches missed.">			if (authenticatedUser.equals(adminName)) {</span>
+
+<span class="nc bnc" id="L432" title="All 2 branches missed.">				if (!userModel.getMerchantStore().getCode().equals(store.getCode())) {</span>
+<span class="nc" id="L433">					throw new OperationNotAllowedException(&quot;User [&quot; + adminName + &quot;] cannot change owning store&quot;);</span>
+				}
+
+			} else {
+				// i am an admin or super admin
+<span class="nc" id="L438">				Group adminOrSuperadmin = originalGroups.stream()</span>
+<span class="nc bnc" id="L439" title="All 2 branches missed.">						.filter(group -&gt; (Constants.GROUP_SUPERADMIN.equals(group.getGroupName())</span>
+<span class="nc bnc" id="L440" title="All 2 branches missed.">								|| Constants.ADMIN_USER.equals(group.getGroupName())</span>
+<span class="nc bnc" id="L441" title="All 2 branches missed.">								|| Constants.ADMIN_STORE.equals(group.getGroupName())))</span>
+<span class="nc" id="L442">						.findAny().orElse(null);</span>
+
+<span class="nc bnc" id="L444" title="All 4 branches missed.">				if (!userModel.getMerchantStore().getCode().equals(store.getCode()) &amp;&amp; adminOrSuperadmin == null) {</span>
+<span class="nc" id="L445">					throw new OperationNotAllowedException(&quot;User [&quot; + adminName + &quot;] cannot change owning store&quot;);</span>
+				}
+
+			}
+
+<span class="nc" id="L450">			userModel = converPersistabletUserToUser(store, languageService.defaultLanguage(), userModel, user);</span>
+
+			// if superadmin set original permissions, prevent removing super
+			// admin
+<span class="nc bnc" id="L454" title="All 2 branches missed.">			if (superadmin != null) {</span>
+<span class="nc" id="L455">				userModel.setGroups(originalGroups);</span>
+			}
+
+<span class="nc" id="L458">			Group adminGroup = auth.getGroups().stream()</span>
+<span class="nc bnc" id="L459" title="All 2 branches missed.">					.filter((group) -&gt; Constants.GROUP_SUPERADMIN.equals(group.getGroupName())</span>
+<span class="nc bnc" id="L460" title="All 2 branches missed.">							|| Constants.GROUP_SUPERADMIN.equals(group.getGroupName()))</span>
+<span class="nc" id="L461">					.findAny().orElse(null);</span>
+
+<span class="nc bnc" id="L463" title="All 2 branches missed.">			if (adminGroup == null) {</span>
+<span class="nc" id="L464">				userModel.setGroups(originalGroups);</span>
+<span class="nc" id="L465">				userModel.setActive(isActive);</span>
+			}
+
+<span class="nc" id="L468">			user.setPassword(userModel.getAdminPassword());</span>
+<span class="nc" id="L469">			userService.update(userModel);</span>
+<span class="nc" id="L470">			return this.convertUserToReadableUser(languageService.defaultLanguage(), userModel);</span>
+<span class="nc" id="L471">		} catch (ServiceException e) {</span>
+<span class="nc" id="L472">			throw new ServiceRuntimeException(&quot;Cannot update user [&quot; + user.getUserName() + &quot;]&quot;, e);</span>
+		}
+
+	}
+
+	@Override
+	public void changePassword(Long userId, String authenticatedUser, UserPassword changePassword) {
+
+<span class="fc" id="L480">		Validate.notNull(changePassword, &quot;Change password request must not be null&quot;);</span>
+<span class="fc" id="L481">		Validate.notNull(changePassword.getPassword(), &quot;Original password request must not be null&quot;);</span>
+<span class="fc" id="L482">		Validate.notNull(changePassword.getChangePassword(), &quot;New password request must not be null&quot;);</span>
+
+		/**
+		 * Only admin and superadmin can change other user password
+		 */
+<span class="fc" id="L487">		User auth = null;</span>
+		try {
+<span class="fc" id="L489">			auth = userService.getByUserName(authenticatedUser);</span>
+
+<span class="pc bpc" id="L491" title="1 of 2 branches missed.">			if (auth == null) {</span>
+<span class="nc" id="L492">				throw new ServiceRuntimeException(&quot;Cannot find user [&quot; + authenticatedUser + &quot;]&quot;);</span>
+			}
+
+<span class="fc" id="L495">			User userModel = userService.getById(userId);</span>
+<span class="pc bpc" id="L496" title="1 of 2 branches missed.">			if (userModel == null) {</span>
+<span class="nc" id="L497">				throw new ServiceRuntimeException(&quot;Cannot find user [&quot; + userId + &quot;]&quot;);</span>
+			}
+
+			/**
+			 * need to validate if actual password match
+			 */
+
+<span class="pc bpc" id="L504" title="1 of 2 branches missed.">			if (!securityFacade.matchPassword(userModel.getAdminPassword(), changePassword.getPassword())) {</span>
+<span class="nc" id="L505">				throw new ServiceRuntimeException(&quot;Actual password does not match for user [&quot; + userId + &quot;]&quot;);</span>
+			}
+
+			/**
+			 * Validate new password
+			 */
+<span class="pc bpc" id="L511" title="1 of 2 branches missed.">			if (!securityFacade.validateUserPassword(changePassword.getChangePassword())) {</span>
+<span class="nc" id="L512">				throw new ServiceRuntimeException(&quot;New password does not apply to format policy&quot;);</span>
+			}
+
+<span class="fc" id="L515">			String newPasswordEncoded = securityFacade.encodePassword(changePassword.getChangePassword());</span>
+<span class="fc" id="L516">			userModel.setAdminPassword(newPasswordEncoded);</span>
+
+<span class="fc" id="L518">			userService.update(userModel);</span>
+
+<span class="nc" id="L520">		} catch (ServiceException e) {</span>
+<span class="nc" id="L521">			LOGGER.error(&quot;Error updating password&quot;);</span>
+<span class="nc" id="L522">			throw new ServiceRuntimeException(e);</span>
+<span class="fc" id="L523">		}</span>
+
+<span class="fc" id="L525">	}</span>
+
+	@Override
+	public ReadableUserList listByCriteria(UserCriteria criteria, int page, int count, Language language) {
+		try {
+<span class="nc" id="L530">			ReadableUserList readableUserList = new ReadableUserList();</span>
+			// filtering by userName is not in this implementation
+
+<span class="nc" id="L533">			Page&lt;User&gt; userList = null;</span>
+
+<span class="nc" id="L535">			Optional&lt;String&gt; storeCode = Optional.ofNullable(criteria.getStoreCode());</span>
+<span class="nc bnc" id="L536" title="All 2 branches missed.">			if (storeCode.isPresent()) {</span>
+				// get store
+<span class="nc" id="L538">				MerchantStore store = merchantStoreService.getByCode(storeCode.get());</span>
+<span class="nc bnc" id="L539" title="All 4 branches missed.">				if (store != null &amp;&amp; (store.isRetailer() != null)) {</span>
+<span class="nc bnc" id="L540" title="All 2 branches missed.">					if (store.isRetailer().booleanValue()) {</span>
+						// get group stores
+<span class="nc" id="L542">						List&lt;MerchantStore&gt; stores = merchantStoreService.findAllStoreNames(store.getCode());</span>
+<span class="nc" id="L543">						List&lt;Integer&gt; intList = stores.stream().map(s -&gt; s.getId()).collect(Collectors.toList());</span>
+<span class="nc" id="L544">						criteria.setStoreIds(intList);</span>
+						// search over store list
+<span class="nc" id="L546">						criteria.setStoreCode(null);</span>
+					}
+				}
+			}
+
+<span class="nc" id="L551">			userList = userService.listByCriteria(criteria, page, count);</span>
+<span class="nc" id="L552">			List&lt;ReadableUser&gt; readableUsers = new ArrayList&lt;ReadableUser&gt;();</span>
+<span class="nc bnc" id="L553" title="All 2 branches missed.">			if (userList != null) {</span>
+<span class="nc" id="L554">				readableUsers = userList.getContent().stream().map(user -&gt; convertUserToReadableUser(language, user))</span>
+<span class="nc" id="L555">						.collect(Collectors.toList());</span>
+
+<span class="nc" id="L557">				readableUserList.setRecordsTotal(userList.getTotalElements());</span>
+<span class="nc" id="L558">				readableUserList.setTotalPages(userList.getTotalPages());</span>
+<span class="nc" id="L559">				readableUserList.setNumber(userList.getSize());</span>
+<span class="nc" id="L560">				readableUserList.setRecordsFiltered(userList.getSize());</span>
+			}
+
+<span class="nc" id="L563">			readableUserList.setData(readableUsers);</span>
+
+			/*
+			 * System.out.println(userList.getNumber());
+			 * System.out.println(userList.getNumberOfElements());
+			 * System.out.println(userList.getSize());
+			 * System.out.println(userList.getTotalElements());
+			 * System.out.println(userList.getTotalPages());
+			 */
+
+<span class="nc" id="L573">			return readableUserList;</span>
+<span class="nc" id="L574">		} catch (ServiceException e) {</span>
+<span class="nc" id="L575">			throw new ServiceRuntimeException(&quot;Cannot get users by criteria user&quot;, e);</span>
+		}
+	}
+
+	@Override
+	public void authorizedGroups(String authenticatedUser, PersistableUser user) {
+<span class="nc" id="L581">		Validate.notNull(authenticatedUser, &quot;Required authenticated user&quot;);</span>
+<span class="nc" id="L582">		Validate.notNull(user, &quot;Required persistable user&quot;);</span>
+
+		try {
+<span class="nc" id="L585">			User currentUser = userService.getByUserName(authenticatedUser);</span>
+
+<span class="nc" id="L587">			boolean isSuperAdmin = false;</span>
+
+<span class="nc bnc" id="L589" title="All 2 branches missed.">			for (Group g : currentUser.getGroups()) {</span>
+<span class="nc bnc" id="L590" title="All 2 branches missed.">				if (g.getGroupName().equals(&quot;SUPERADMIN&quot;)) {</span>
+<span class="nc" id="L591">					isSuperAdmin = true;</span>
+<span class="nc" id="L592">					break;</span>
+				}
+
+<span class="nc" id="L595">			}</span>
+
+<span class="nc bnc" id="L597" title="All 2 branches missed.">			for (PersistableGroup g : user.getGroups()) {</span>
+<span class="nc bnc" id="L598" title="All 2 branches missed.">				if (g.getName().equals(&quot;SUPERADMIN&quot;)) {</span>
+<span class="nc bnc" id="L599" title="All 2 branches missed.">					if (!isSuperAdmin) {</span>
+<span class="nc" id="L600">						throw new UnauthorizedException(&quot;Superadmin group not allowed&quot;);</span>
+					}
+				}
+<span class="nc" id="L603">			}</span>
+
+<span class="nc" id="L605">		} catch (ServiceException e) {</span>
+<span class="nc" id="L606">			throw new ServiceRuntimeException(&quot;Error while looking for authorization&quot;, e);</span>
+<span class="nc" id="L607">		}</span>
+
+<span class="nc" id="L609">	}</span>
+
+	@Override
+	public boolean userInRoles(String userName, List&lt;String&gt; groupNames) {
+
+<span class="fc" id="L614">		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();</span>
+
+<span class="fc" id="L616">		List&lt;String&gt; roles = authentication.getAuthorities().stream().filter(x -&gt; groupNames.contains(x.getAuthority()))</span>
+<span class="fc" id="L617">				.map(r -&gt; r.getAuthority()).collect(Collectors.toList());</span>
+
+<span class="pc bpc" id="L619" title="1 of 2 branches missed.">		return roles.size() &gt; 0;</span>
+
+	}
+
+	@Override
+	public void updateEnabled(MerchantStore store, PersistableUser user) {
+<span class="nc" id="L625">		Validate.notNull(user, &quot;User cannot be null&quot;);</span>
+<span class="nc" id="L626">		Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);</span>
+<span class="nc" id="L627">		Validate.notNull(user.getId(), &quot;User.id cannot be null&quot;);</span>
+
+		try {
+<span class="nc" id="L630">			User modelUser = userService.findByStore(user.getId(), store.getCode());</span>
+
+<span class="nc bnc" id="L632" title="All 2 branches missed.">			if (modelUser == null) {</span>
+<span class="nc" id="L633">				throw new ResourceNotFoundException(</span>
+<span class="nc" id="L634">						&quot;User with id [&quot; + user.getId() + &quot;] not found for store [&quot; + store.getCode() + &quot;]&quot;);</span>
+			}
+
+<span class="nc" id="L637">			modelUser.setActive(user.isActive());</span>
+<span class="nc" id="L638">			userService.saveOrUpdate(modelUser);</span>
+
+<span class="nc" id="L640">		} catch (ServiceException e) {</span>
+<span class="nc" id="L641">			throw new ServiceRuntimeException(&quot;Error while updating user enable flag&quot;, e);</span>
+<span class="nc" id="L642">		}</span>
+
+<span class="nc" id="L644">	}</span>
+
+	@Override
+	public boolean authorizeStore(MerchantStore store, String path) {
+		
+<span class="pc bpc" id="L649" title="1 of 2 branches missed.">		if(store == null) {</span>
+<span class="nc" id="L650">			throw new ResourceNotFoundException(&quot;MerchantStore is not found&quot;);</span>
+		}
+
+
+<span class="fc" id="L654">		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();</span>
+		
+
+<span class="pc bpc" id="L657" title="1 of 4 branches missed.">		if (!StringUtils.isBlank(path) &amp;&amp; path.contains(PRIVATE_PATH)) {</span>
+			
+<span class="fc" id="L659">			Validate.notNull(authentication, &quot;Don't call ths method if a user is not authenticated&quot;);</span>
+
+			try {
+				
+
+<span class="fc" id="L664">				String currentPrincipalName = authentication.getName();</span>
+
+<span class="fc" id="L666">				LOGGER.info(&quot;Principal &quot; + currentPrincipalName);</span>
+
+<span class="fc" id="L668">				ReadableUser readableUser = findByUserName(currentPrincipalName, languageService.defaultLanguage());</span>
+				//ReadableUser readableUser =	  findByUserName(currentPrincipalName, store.getCode(), store.getDefaultLanguage());
+<span class="pc bpc" id="L670" title="1 of 2 branches missed.">				if (readableUser == null) {</span>
+<span class="nc" id="L671">					return false;</span>
+				}
+
+				// current user match;
+<span class="fc" id="L675">				String merchant = readableUser.getMerchant();</span>
+
+				//user store is store request param
+<span class="pc bpc" id="L678" title="1 of 2 branches missed.">				if (store.getCode().equalsIgnoreCase(merchant)) {</span>
+<span class="fc" id="L679">					return true;</span>
+				}
+
+				//Set&lt;String&gt; roles = authentication.getAuthorities().stream().map(r -&gt; r.getAuthority())
+				//		.collect(Collectors.toSet());
+
+				// is superadmin
+<span class="nc bnc" id="L686" title="All 2 branches missed.">				for (ReadableGroup group : readableUser.getGroups()) {</span>
+<span class="nc bnc" id="L687" title="All 2 branches missed.">					if (Constants.GROUP_SUPERADMIN.equals(group.getName())) {</span>
+<span class="nc" id="L688">						return true;</span>
+					}
+<span class="nc" id="L690">				}</span>
+
+<span class="nc" id="L692">				boolean authorized = false;</span>
+
+				// user store can be parent and requested store is child
+				// get parent
+				// TODO CACHE
+<span class="nc" id="L697">				MerchantStore parent = null;</span>
+						
+<span class="nc bnc" id="L699" title="All 2 branches missed.">				if(store.getParent()!=null) {</span>
+<span class="nc" id="L700">					parent=merchantStoreService.getParent(merchant);</span>
+				}
+
+				// user can be in parent
+<span class="nc bnc" id="L704" title="All 4 branches missed.">				if (parent != null &amp;&amp; parent.getCode().equals(store.getCode())) {</span>
+<span class="nc" id="L705">					authorized = true;</span>
+				}
+
+				// else false
+<span class="nc" id="L709">				return authorized;</span>
+<span class="nc" id="L710">			} catch (Exception e) {</span>
+<span class="nc" id="L711">				throw new UnauthorizedException(&quot;Cannot authorize user &quot; + authentication.getPrincipal().toString()</span>
+<span class="nc" id="L712">						+ &quot; for store &quot; + store.getCode(), e.getMessage());</span>
+			}
+
+		}
+
+<span class="fc" id="L717">		return true;</span>
+	}
+
+	@Override
+	public ReadableUser findById(Long id, MerchantStore store, Language lang) {
+<span class="fc" id="L722">		Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);</span>
+
+<span class="fc" id="L724">		User user = userService.getById(id, store);</span>
+<span class="pc bpc" id="L725" title="1 of 2 branches missed.">		if (user == null) {</span>
+<span class="nc" id="L726">			throw new ResourceNotFoundException(&quot;User [&quot; + id + &quot;] not found&quot;);</span>
+		}
+
+<span class="fc" id="L729">		return convertUserToReadableUser(lang, user);</span>
+
+	}
+
+	@Override
+	public ReadableUser findByUserName(String userName) {
+<span class="nc" id="L735">		Validate.notNull(userName, &quot;userName cannot be null&quot;);</span>
+		User user;
+		try {
+<span class="nc" id="L738">			user = userService.getByUserName(userName);</span>
+<span class="nc bnc" id="L739" title="All 2 branches missed.">			if (user == null) {</span>
+<span class="nc" id="L740">				throw new ResourceNotFoundException(&quot;User [&quot; + userName + &quot;] not found&quot;);</span>
+			}
+
+<span class="nc" id="L743">			return this.convertUserToReadableUser(user.getDefaultLanguage(), user);</span>
+
+<span class="nc" id="L745">		} catch (ServiceException e) {</span>
+<span class="nc" id="L746">			throw new ServiceRuntimeException(&quot;Error while getting user [&quot; + userName + &quot;]&quot;, e);</span>
+		}
+
+	}
+
+	@Override
+	public void sendResetPasswordEmail(ReadableUser user, MerchantStore store, Language language) {
+<span class="nc" id="L753">		Validate.notNull(user, &quot;ReadableUser is required&quot;);</span>
+<span class="nc" id="L754">		Validate.notNull(store, &quot;MerchantStore is required&quot;);</span>
+<span class="nc" id="L755">		Validate.notNull(language, &quot;Language is required&quot;);</span>
+
+		// user already exist ?
+
+		/**
+		 * User sends username (unique in the system)
+		 * 
+		 * UserNameEntity will be the following { userName: &quot;test@test.com&quot; }
+		 * 
+		 * The system retrieves user using userName (username is unique) if user
+		 * exists, system sends an email with reset password link
+		 * 
+		 * How to retrieve a User from userName
+		 * 
+		 * userFacade.findByUserName
+		 * 
+		 * How to send an email
+		 * 
+		 * 
+		 * How to generate a token
+		 * 
+		 * Generate random token
+		 * 
+		 * Calculate token expiration date
+		 * 
+		 * Now + 48 hours
+		 * 
+		 * How to update User in the database with token
+		 * 
+		 * user.setPasswordToken
+		 * 
+		 * Needs to use UserFacade to save to the database
+		 * 
+		 * All of this done in the facade
+		 */
+
+<span class="nc" id="L791">	}</span>
+
+	@Override
+	public void requestPasswordReset(String userName, String userContextPath, MerchantStore store, Language language) {
+		
+<span class="nc" id="L796">		Validate.notNull(userName, &quot;Username cannot be empty&quot;);</span>
+<span class="nc" id="L797">		Validate.notNull(userContextPath, &quot;Return url cannot be empty&quot;);</span>
+		
+		try {
+			// get user by user name
+<span class="nc" id="L801">			User user = userService.getByUserName(userName, store.getCode());</span>
+
+<span class="nc bnc" id="L803" title="All 2 branches missed.">			if (user == null) {</span>
+<span class="nc" id="L804">				throw new ResourceNotFoundException(</span>
+<span class="nc" id="L805">						&quot;User [&quot; + userName + &quot;] not found for store [&quot; + store.getCode() + &quot;]&quot;);</span>
+			}
+
+			// generates unique token
+<span class="nc" id="L809">			String token = UUID.randomUUID().toString();</span>
+
+<span class="nc" id="L811">			Date expiry = DateUtil.addDaysToCurrentDate(2);</span>
+
+<span class="nc" id="L813">			CredentialsReset credsRequest = new CredentialsReset();</span>
+<span class="nc" id="L814">			credsRequest.setCredentialsRequest(token);</span>
+<span class="nc" id="L815">			credsRequest.setCredentialsRequestExpiry(expiry);</span>
+<span class="nc" id="L816">			user.setCredentialsResetRequest(credsRequest);</span>
+
+<span class="nc" id="L818">			userService.saveOrUpdate(user);</span>
+
+			// reset password link
+			// this will build http | https ://domain/contextPath
+<span class="nc" id="L822">			String baseUrl = userContextPath; </span>
+<span class="nc bnc" id="L823" title="All 2 branches missed.">			if(!filePathUtils.isValidURL(baseUrl)) {</span>
+<span class="nc" id="L824">				throw new ServiceRuntimeException(&quot;Request url [&quot; + baseUrl + &quot;] is invalid&quot;);</span>
+			}
+
+			// need to add link to controller receiving user reset password
+			// request
+<span class="nc" id="L829">			String customerResetLink = new StringBuilder().append(baseUrl)</span>
+<span class="nc" id="L830">					.append(Constants.SLASH)</span>
+<span class="nc" id="L831">					.append(String.format(resetUserLink, store.getCode(), token)).toString();</span>
+
+<span class="nc" id="L833">			resetPasswordRequest(user, customerResetLink, store, lamguageService.toLocale(language, store));</span>
+
+<span class="nc" id="L835">		} catch (Exception e) {</span>
+<span class="nc" id="L836">			throw new ServiceRuntimeException(&quot;Error while executing resetPassword request&quot;, e);</span>
+<span class="nc" id="L837">		}</span>
+
+<span class="nc" id="L839">	}</span>
+
+	@Override
+	public void verifyPasswordRequestToken(String token, String store) {
+<span class="nc" id="L843">		Validate.notNull(token, &quot;ResetPassword token cannot be null&quot;);</span>
+<span class="nc" id="L844">		Validate.notNull(store, &quot;Store code cannot be null&quot;);</span>
+
+<span class="nc" id="L846">		verifyUserLink(token, store);</span>
+<span class="nc" id="L847">		return;</span>
+	}
+
+	@Override
+	public void resetPassword(String password, String token, String store) {
+<span class="nc" id="L852">		Validate.notNull(token, &quot;ResetPassword token cannot be null&quot;);</span>
+<span class="nc" id="L853">		Validate.notNull(store, &quot;Store code cannot be null&quot;);</span>
+<span class="nc" id="L854">		Validate.notNull(password, &quot;New password cannot be null&quot;);</span>
+
+<span class="nc" id="L856">		User user = verifyUserLink(token, store);// reverify</span>
+<span class="nc" id="L857">		user.setAdminPassword(passwordEncoder.encode(password));</span>
+		
+		try {
+<span class="nc" id="L860">			userService.save(user);</span>
+<span class="nc" id="L861">		} catch (ServiceException e) {</span>
+<span class="nc" id="L862">			throw new ServiceRuntimeException(&quot;Error while saving user&quot;,e);</span>
+<span class="nc" id="L863">		}</span>
+
+<span class="nc" id="L865">	}</span>
+	
+	private User verifyUserLink(String token, String store) {
+
+<span class="nc" id="L869">		User user = null;</span>
+		try {
+<span class="nc" id="L871">			user = userService.getByPasswordResetToken(store, token);</span>
+<span class="nc bnc" id="L872" title="All 2 branches missed.">			if (user == null) {</span>
+<span class="nc" id="L873">				throw new ResourceNotFoundException(</span>
+						&quot;Customer not fount for store [&quot; + store + &quot;] and token [&quot; + token + &quot;]&quot;);
+			}
+
+<span class="nc" id="L877">		} catch (Exception e) {</span>
+<span class="nc" id="L878">			throw new ServiceRuntimeException(&quot;Cannot verify customer token&quot;, e);</span>
+<span class="nc" id="L879">		}</span>
+
+<span class="nc" id="L881">		Date tokenExpiry = user.getCredentialsResetRequest().getCredentialsRequestExpiry();</span>
+
+<span class="nc bnc" id="L883" title="All 2 branches missed.">		if (tokenExpiry == null) {</span>
+<span class="nc" id="L884">			throw new GenericRuntimeException(&quot;No expiry date configured for token [&quot; + token + &quot;]&quot;);</span>
+		}
+
+<span class="nc bnc" id="L887" title="All 2 branches missed.">		if (!DateUtil.dateBeforeEqualsDate(new Date(), tokenExpiry)) {</span>
+<span class="nc" id="L888">			throw new GenericRuntimeException(&quot;Ttoken [&quot; + token + &quot;] has expired&quot;);</span>
+		}
+
+<span class="nc" id="L891">		return user;</span>
+
+	}
+	
+
+	@Async
+	private void resetPasswordRequest(User user, String resetLink, MerchantStore store, Locale locale)
+			throws Exception {
+		try {
+
+
+<span class="nc" id="L902">			Map&lt;String, String&gt; templateTokens = emailUtils.createEmailObjectsMap(imageUtils.getContextPath(), store,</span>
+					messages, locale);
+<span class="nc" id="L904">			templateTokens.put(EmailConstants.LABEL_HI, messages.getMessage(&quot;label.generic.hi&quot;, locale));</span>
+<span class="nc" id="L905">			templateTokens.put(EmailConstants.EMAIL_USER_FIRSTNAME, user.getFirstName());</span>
+<span class="nc" id="L906">			templateTokens.put(RESET_PASSWORD_LINK, resetLink);</span>
+<span class="nc" id="L907">			templateTokens.put(RESET_PASSWORD_TEXT,</span>
+<span class="nc" id="L908">					messages.getMessage(&quot;email.reset.password.text&quot;, new String[] { store.getStorename() }, locale));</span>
+<span class="nc" id="L909">			templateTokens.put(EmailConstants.LABEL_LINK_TITLE,</span>
+<span class="nc" id="L910">					messages.getMessage(&quot;email.link.reset.password.title&quot;, locale));</span>
+<span class="nc" id="L911">			templateTokens.put(EmailConstants.LABEL_LINK, messages.getMessage(&quot;email.link&quot;, locale));</span>
+
+
+<span class="nc" id="L914">			Email email = new Email();</span>
+<span class="nc" id="L915">			email.setFrom(store.getStorename());</span>
+<span class="nc" id="L916">			email.setFromEmail(store.getStoreEmailAddress());</span>
+<span class="nc" id="L917">			email.setSubject(messages.getMessage(&quot;email.link.reset.password.title&quot;, locale));</span>
+<span class="nc" id="L918">			email.setTo(user.getAdminEmail());</span>
+<span class="nc" id="L919">			email.setTemplateName(ACCOUNT_PASSWORD_RESET_TPL);</span>
+<span class="nc" id="L920">			email.setTemplateTokens(templateTokens);</span>
+
+<span class="nc" id="L922">			emailService.sendHtmlEmail(store, email);</span>
+
+<span class="nc" id="L924">		} catch (Exception e) {</span>
+<span class="nc" id="L925">			throw new Exception(&quot;Cannot send email to customer&quot;, e);</span>
+<span class="nc" id="L926">		}</span>
+<span class="nc" id="L927">	}</span>
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

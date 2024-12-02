@@ -1,0 +1,291 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OrderShippingApi.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.api.v1.order</a> &gt; <span class="el_source">OrderShippingApi.java</span></div><h1>OrderShippingApi.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.api.v1.order;
+
+import java.security.Principal;
+import java.util.List;
+import java.util.Locale;
+
+import javax.inject.Inject;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.salesmanager.core.business.services.catalog.pricing.PricingService;
+import com.salesmanager.core.business.services.customer.CustomerService;
+import com.salesmanager.core.business.services.reference.country.CountryService;
+import com.salesmanager.core.model.common.Delivery;
+import com.salesmanager.core.model.customer.Customer;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.country.Country;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.core.model.shipping.ShippingOption;
+import com.salesmanager.core.model.shipping.ShippingQuote;
+import com.salesmanager.core.model.shipping.ShippingSummary;
+import com.salesmanager.core.model.shoppingcart.ShoppingCart;
+import com.salesmanager.shop.model.customer.address.AddressLocation;
+import com.salesmanager.shop.model.order.shipping.ReadableShippingSummary;
+import com.salesmanager.shop.populator.order.ReadableShippingSummaryPopulator;
+import com.salesmanager.shop.store.controller.order.facade.OrderFacade;
+import com.salesmanager.shop.store.controller.shoppingCart.facade.ShoppingCartFacade;
+import com.salesmanager.shop.utils.LabelUtils;
+
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiImplicitParams;
+import io.swagger.annotations.SwaggerDefinition;
+import io.swagger.annotations.Tag;
+import springfox.documentation.annotations.ApiIgnore;
+
+@Controller
+@RequestMapping(&quot;/api/v1&quot;)
+@Api(tags = {&quot;Shipping Quotes and Calculation resource (Shipping Api)&quot;})
+@SwaggerDefinition(tags = {
+    @Tag(name = &quot;Shipping Quotes and Calculation resource&quot;, description = &quot;Get shipping quotes for public api and loged in customers&quot;)
+})
+<span class="fc" id="L54">public class OrderShippingApi {</span>
+
+<span class="fc" id="L56">  private static final Logger LOGGER = LoggerFactory.getLogger(OrderShippingApi.class);</span>
+
+  @Inject private CustomerService customerService;
+
+  @Inject private OrderFacade orderFacade;
+
+  @Inject private ShoppingCartFacade shoppingCartFacade;
+
+  @Inject private LabelUtils messages;
+
+  @Inject private PricingService pricingService;
+  
+  @Inject private CountryService countryService;
+
+  /**
+   * Get shipping quote for a given shopping cart
+   *
+   * @param id
+   * @param request
+   * @param response
+   * @return
+   * @throws Exception
+   */
+  @RequestMapping(
+      value = {&quot;/auth/cart/{code}/shipping&quot;},
+      method = RequestMethod.GET)
+  @ResponseBody
+  @ApiImplicitParams({
+      @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+      @ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;)
+  })
+  public ReadableShippingSummary shipping(
+      @PathVariable final String code,
+      @ApiIgnore MerchantStore merchantStore,
+      @ApiIgnore Language language,
+      HttpServletRequest request,
+      HttpServletResponse response) {
+
+    try {
+<span class="nc" id="L95">      Locale locale = request.getLocale();</span>
+<span class="nc" id="L96">      Principal principal = request.getUserPrincipal();</span>
+<span class="nc" id="L97">      String userName = principal.getName();</span>
+
+      // get customer id
+<span class="nc" id="L100">      Customer customer = customerService.getByNick(userName);</span>
+
+<span class="nc bnc" id="L102" title="All 2 branches missed.">      if (customer == null) {</span>
+<span class="nc" id="L103">        response.sendError(503, &quot;Error while getting user details to calculate shipping quote&quot;);</span>
+      }
+
+<span class="nc" id="L106">      ShoppingCart cart = shoppingCartFacade.getShoppingCartModel(code, merchantStore);</span>
+
+<span class="nc bnc" id="L108" title="All 2 branches missed.">      if (cart == null) {</span>
+<span class="nc" id="L109">        response.sendError(404, &quot;Cart code &quot; + code + &quot; does not exist&quot;);</span>
+      }
+
+<span class="nc bnc" id="L112" title="All 2 branches missed.">      if (cart.getCustomerId() == null) {</span>
+<span class="nc" id="L113">        response.sendError(404, &quot;Cart code &quot; + code + &quot; does not exist for exist for user &quot; + userName);</span>
+      }
+
+<span class="nc bnc" id="L116" title="All 2 branches missed.">      if (cart.getCustomerId().longValue() != customer.getId().longValue()) {</span>
+<span class="nc" id="L117">        response.sendError(404, &quot;Cart code &quot; + code + &quot; does not exist for exist for user &quot; + userName);</span>
+      }
+
+<span class="nc" id="L120">      ShippingQuote quote = orderFacade.getShippingQuote(customer, cart, merchantStore, language);</span>
+
+<span class="nc" id="L122">      ShippingSummary summary = orderFacade.getShippingSummary(quote, merchantStore, language);</span>
+
+<span class="nc" id="L124">      ReadableShippingSummary shippingSummary = new ReadableShippingSummary();</span>
+<span class="nc" id="L125">      ReadableShippingSummaryPopulator populator = new ReadableShippingSummaryPopulator();</span>
+<span class="nc" id="L126">      populator.setPricingService(pricingService);</span>
+<span class="nc" id="L127">      populator.populate(summary, shippingSummary, merchantStore, language);</span>
+
+<span class="nc" id="L129">      List&lt;ShippingOption&gt; options = quote.getShippingOptions();</span>
+
+<span class="nc bnc" id="L131" title="All 2 branches missed.">      if (!CollectionUtils.isEmpty(options)) {</span>
+
+<span class="nc bnc" id="L133" title="All 2 branches missed.">        for (ShippingOption shipOption : options) {</span>
+
+<span class="nc" id="L135">          StringBuilder moduleName = new StringBuilder();</span>
+<span class="nc" id="L136">          moduleName.append(&quot;module.shipping.&quot;).append(shipOption.getShippingModuleCode());</span>
+
+<span class="nc" id="L138">          String carrier =</span>
+<span class="nc" id="L139">              messages.getMessage(</span>
+<span class="nc" id="L140">                  moduleName.toString(), new String[] {merchantStore.getStorename()}, locale);</span>
+
+<span class="nc" id="L142">          String note = messages.getMessage(moduleName.append(&quot;.note&quot;).toString(), locale, &quot;&quot;);</span>
+
+<span class="nc" id="L144">          shipOption.setDescription(carrier);</span>
+<span class="nc" id="L145">          shipOption.setNote(note);</span>
+
+          // option name
+<span class="nc bnc" id="L148" title="All 2 branches missed.">          if (!StringUtils.isBlank(shipOption.getOptionCode())) {</span>
+            // try to get the translate
+<span class="nc" id="L150">            StringBuilder optionCodeBuilder = new StringBuilder();</span>
+            try {
+
+<span class="nc" id="L153">              optionCodeBuilder</span>
+<span class="nc" id="L154">                  .append(&quot;module.shipping.&quot;)</span>
+<span class="nc" id="L155">                  .append(shipOption.getShippingModuleCode());</span>
+<span class="nc" id="L156">              String optionName = messages.getMessage(optionCodeBuilder.toString(), locale);</span>
+<span class="nc" id="L157">              shipOption.setOptionName(optionName);</span>
+<span class="nc" id="L158">            } catch (Exception e) { // label not found</span>
+<span class="nc" id="L159">              LOGGER.warn(&quot;No shipping code found for &quot; + optionCodeBuilder.toString());</span>
+<span class="nc" id="L160">            }</span>
+          }
+<span class="nc" id="L162">        }</span>
+
+<span class="nc" id="L164">        shippingSummary.setShippingOptions(options);</span>
+      }
+
+<span class="nc" id="L167">      return shippingSummary;</span>
+
+<span class="nc" id="L169">    } catch (Exception e) {</span>
+<span class="nc" id="L170">      LOGGER.error(&quot;Error while getting shipping quote&quot;, e);</span>
+      try {
+<span class="nc" id="L172">        response.sendError(503, &quot;Error while getting shipping quote&quot; + e.getMessage());</span>
+<span class="nc" id="L173">      } catch (Exception ignore) {</span>
+<span class="nc" id="L174">      }</span>
+<span class="nc" id="L175">      return null;</span>
+    }
+  }
+
+  /**
+   * Get shipping quote based on postal code
+   * @param code
+   * @param address
+   * @param merchantStore
+   * @param language
+   * @param request
+   * @param response
+   * @return
+   * @throws Exception
+   */
+  @RequestMapping(
+      value = {&quot;/cart/{code}/shipping&quot;},
+      method = RequestMethod.POST)
+  @ResponseBody
+  @ApiImplicitParams({
+      @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+      @ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;)
+  })
+  public ReadableShippingSummary shipping(
+      @PathVariable final String code,
+      @RequestBody AddressLocation address,
+      @ApiIgnore MerchantStore merchantStore,
+      @ApiIgnore Language language,
+      HttpServletRequest request,
+      HttpServletResponse response)
+      throws Exception {
+
+    try {
+<span class="nc" id="L208">      Locale locale = request.getLocale();</span>
+
+<span class="nc" id="L210">      ShoppingCart cart = shoppingCartFacade.getShoppingCartModel(code, merchantStore);</span>
+
+<span class="nc bnc" id="L212" title="All 2 branches missed.">      if (cart == null) {</span>
+<span class="nc" id="L213">        response.sendError(404, &quot;Cart id &quot; + code + &quot; does not exist&quot;);</span>
+      }
+
+      
+<span class="nc" id="L217">      Delivery addr = new Delivery();</span>
+<span class="nc" id="L218">      addr.setPostalCode(address.getPostalCode());</span>
+
+<span class="nc" id="L220">      Country c = countryService.getByCode(address.getCountryCode());</span>
+      
+<span class="nc bnc" id="L222" title="All 2 branches missed.">      if(c==null) {</span>
+<span class="nc" id="L223">    	c = merchantStore.getCountry();</span>
+      }
+<span class="nc" id="L225">      addr.setCountry(c);</span>
+
+      
+<span class="nc" id="L228">      Customer temp = new Customer();</span>
+<span class="nc" id="L229">      temp.setAnonymous(true);</span>
+<span class="nc" id="L230">      temp.setDelivery(addr);</span>
+      
+<span class="nc" id="L232">      ShippingQuote quote = orderFacade.getShippingQuote(temp, cart, merchantStore, language);</span>
+
+<span class="nc" id="L234">      ShippingSummary summary = orderFacade.getShippingSummary(quote, merchantStore, language);</span>
+
+<span class="nc" id="L236">      ReadableShippingSummary shippingSummary = new ReadableShippingSummary();</span>
+<span class="nc" id="L237">      ReadableShippingSummaryPopulator populator = new ReadableShippingSummaryPopulator();</span>
+<span class="nc" id="L238">      populator.setPricingService(pricingService);</span>
+<span class="nc" id="L239">      populator.populate(summary, shippingSummary, merchantStore, language);</span>
+
+<span class="nc" id="L241">      List&lt;ShippingOption&gt; options = quote.getShippingOptions();</span>
+
+<span class="nc bnc" id="L243" title="All 2 branches missed.">      if (!CollectionUtils.isEmpty(options)) {</span>
+
+<span class="nc bnc" id="L245" title="All 2 branches missed.">        for (ShippingOption shipOption : options) {</span>
+
+<span class="nc" id="L247">          StringBuilder moduleName = new StringBuilder();</span>
+<span class="nc" id="L248">          moduleName.append(&quot;module.shipping.&quot;).append(shipOption.getShippingModuleCode());</span>
+
+<span class="nc" id="L250">          String carrier =</span>
+<span class="nc" id="L251">              messages.getMessage(</span>
+<span class="nc" id="L252">                  moduleName.toString(), new String[] {merchantStore.getStorename()}, locale);</span>
+
+<span class="nc" id="L254">          String note = messages.getMessage(moduleName.append(&quot;.note&quot;).toString(), locale, &quot;&quot;);</span>
+
+<span class="nc" id="L256">          shipOption.setDescription(carrier);</span>
+<span class="nc" id="L257">          shipOption.setNote(note);</span>
+
+          // option name
+<span class="nc bnc" id="L260" title="All 2 branches missed.">          if (!StringUtils.isBlank(shipOption.getOptionCode())) {</span>
+            // try to get the translate
+<span class="nc" id="L262">            StringBuilder optionCodeBuilder = new StringBuilder();</span>
+            try {
+
+<span class="nc" id="L265">              optionCodeBuilder</span>
+<span class="nc" id="L266">                  .append(&quot;module.shipping.&quot;)</span>
+<span class="nc" id="L267">                  .append(shipOption.getShippingModuleCode());</span>
+<span class="nc" id="L268">              String optionName = messages.getMessage(optionCodeBuilder.toString(), new String[]{merchantStore.getStorename()},locale);</span>
+<span class="nc" id="L269">              shipOption.setOptionName(optionName);</span>
+<span class="nc" id="L270">            } catch (Exception e) { // label not found</span>
+<span class="nc" id="L271">              LOGGER.warn(&quot;No shipping code found for &quot; + optionCodeBuilder.toString());</span>
+<span class="nc" id="L272">            }</span>
+          }
+<span class="nc" id="L274">        }</span>
+
+<span class="nc" id="L276">        shippingSummary.setShippingOptions(options);</span>
+      }
+
+<span class="nc" id="L279">      return shippingSummary;</span>
+
+<span class="nc" id="L281">    } catch (Exception e) {</span>
+<span class="nc" id="L282">      LOGGER.error(&quot;Error while getting shipping quote&quot;, e);</span>
+      try {
+<span class="nc" id="L284">        response.sendError(503, &quot;Error while getting shipping quote&quot; + e.getMessage());</span>
+<span class="nc" id="L285">      } catch (Exception ignore) {</span>
+<span class="nc" id="L286">      }</span>
+<span class="nc" id="L287">      return null;</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

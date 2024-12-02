@@ -1,0 +1,517 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ProductApi.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.api.v1.product</a> &gt; <span class="el_source">ProductApi.java</span></div><h1>ProductApi.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.api.v1.product;
+
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.inject.Inject;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.validation.Valid;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
+
+import com.salesmanager.core.business.services.catalog.category.CategoryService;
+import com.salesmanager.core.business.services.catalog.product.ProductService;
+import com.salesmanager.core.model.catalog.category.Category;
+import com.salesmanager.core.model.catalog.product.Product;
+import com.salesmanager.core.model.catalog.product.ProductCriteria;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.model.catalog.product.LightPersistableProduct;
+import com.salesmanager.shop.model.catalog.product.ReadableProduct;
+import com.salesmanager.shop.model.catalog.product.ReadableProductList;
+import com.salesmanager.shop.model.catalog.product.product.PersistableProduct;
+import com.salesmanager.shop.model.entity.Entity;
+import com.salesmanager.shop.model.entity.EntityExists;
+import com.salesmanager.shop.store.api.exception.ResourceNotFoundException;
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+import com.salesmanager.shop.store.api.exception.UnauthorizedException;
+import com.salesmanager.shop.store.controller.product.facade.ProductCommonFacade;
+import com.salesmanager.shop.store.controller.product.facade.ProductFacade;
+import com.salesmanager.shop.utils.ImageFilePath;
+
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiImplicitParams;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
+import io.swagger.annotations.SwaggerDefinition;
+import io.swagger.annotations.Tag;
+import springfox.documentation.annotations.ApiIgnore;
+
+/**
+ * API to create, read, update and delete a Product API.
+ *
+ * @author Carl Samson
+ */
+@Controller
+@RequestMapping(&quot;/api/v1&quot;)
+@Api(tags = {
+		&quot;Product definition resource (Create udtate and delete product definition. Serves api v1 and v2 with backward compatibility)&quot; })
+@SwaggerDefinition(tags = {
+		@Tag(name = &quot;Product definition  resource, add product to category&quot;, description = &quot;View product, Add product, edit product and delete product&quot;) })
+<span class="fc" id="L75">public class ProductApi {</span>
+
+	@Inject
+	private CategoryService categoryService;
+
+	@Inject
+	private ProductService productService;
+
+	@Autowired
+	private ProductFacade productFacade;
+
+	@Inject
+	private ProductCommonFacade productCommonFacade;
+
+	@Inject
+	@Qualifier(&quot;img&quot;)
+	private ImageFilePath imageUtils;
+
+<span class="fc" id="L93">	private static final Logger LOGGER = LoggerFactory.getLogger(ProductApi.class);</span>
+
+	/**
+	 * Create product
+	 * @param product
+	 * @param merchantStore
+	 * @param language
+	 * @return Entity
+	 */
+	@ResponseStatus(HttpStatus.CREATED)
+	@RequestMapping(value = { &quot;/private/product&quot;, &quot;/auth/products&quot; }, // private
+																			// for
+			// adding
+			// products
+			method = RequestMethod.POST)
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	public @ResponseBody Entity create(@Valid @RequestBody PersistableProduct product,
+			@ApiIgnore MerchantStore merchantStore, @ApiIgnore Language language) {
+	
+<span class="fc" id="L113">		Long id = productCommonFacade.saveProduct(merchantStore, product, language);</span>
+<span class="fc" id="L114">		Entity returnEntity = new Entity();</span>
+<span class="fc" id="L115">		returnEntity.setId(id);</span>
+<span class="fc" id="L116">		return returnEntity;</span>
+
+	}
+
+	@ResponseStatus(HttpStatus.OK)
+	@RequestMapping(value = { &quot;/private/product/{id}&quot;, &quot;/auth/product/{id}&quot; }, method = RequestMethod.PUT)
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	@ApiOperation(httpMethod = &quot;PUT&quot;, value = &quot;Update product&quot;, notes = &quot;&quot;, produces = &quot;application/json&quot;, response = PersistableProduct.class)
+	public void update(@PathVariable Long id,
+			@Valid @RequestBody PersistableProduct product, @ApiIgnore MerchantStore merchantStore,
+			HttpServletRequest request, HttpServletResponse response) {
+
+		try {
+			// Make sure we have consistency in this request
+<span class="nc bnc" id="L131" title="All 2 branches missed.">			if (!id.equals(product.getId())) {</span>
+<span class="nc" id="L132">				response.sendError(400, &quot;Error url id does not match object id&quot;);</span>
+			}
+
+<span class="nc" id="L135">			productCommonFacade.saveProduct(merchantStore, product,</span>
+<span class="nc" id="L136">					merchantStore.getDefaultLanguage());</span>
+<span class="nc" id="L137">		} catch (Exception e) {</span>
+<span class="nc" id="L138">			LOGGER.error(&quot;Error while updating product&quot;, e);</span>
+			try {
+<span class="nc" id="L140">				response.sendError(503, &quot;Error while updating product &quot; + e.getMessage());</span>
+<span class="nc" id="L141">			} catch (Exception ignore) {</span>
+<span class="nc" id="L142">			}</span>
+
+<span class="nc" id="L144">		}</span>
+<span class="nc" id="L145">	}</span>
+
+	/** updates price quantity **/
+	@ResponseStatus(HttpStatus.OK)
+	@PatchMapping(value = &quot;/private/product/{id}&quot;, produces = { APPLICATION_JSON_VALUE })
+	@ApiOperation(httpMethod = &quot;PATCH&quot;, value = &quot;Update product inventory&quot;, notes = &quot;Updates product inventory&quot;, produces = &quot;application/json&quot;, response = Void.class)
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;string&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;string&quot;, defaultValue = &quot;en&quot;) })
+	public void update(
+			@PathVariable Long id,
+			@Valid @RequestBody
+			LightPersistableProduct product,
+			@ApiIgnore MerchantStore merchantStore,
+			@ApiIgnore Language language) {
+<span class="nc" id="L159">		productCommonFacade.update(id, product, merchantStore, language);</span>
+<span class="nc" id="L160">		return;</span>
+
+	}
+
+	@ResponseStatus(HttpStatus.OK)
+	@RequestMapping(value = { &quot;/private/product/{id}&quot;, &quot;/auth/product/{id}&quot; }, method = RequestMethod.DELETE)
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	public void delete(@PathVariable Long id, @ApiIgnore MerchantStore merchantStore, @ApiIgnore Language language) {
+
+<span class="nc" id="L170">		productCommonFacade.deleteProduct(id, merchantStore);</span>
+<span class="nc" id="L171">	}</span>
+
+	/**
+	 * List products
+	 * Filtering product lists based on product option and option value ?category=1
+	 * &amp;manufacturer=2 &amp;type=... &amp;lang=en|fr NOT REQUIRED, will use request language
+	 * &amp;start=0 NOT REQUIRED, can be used for pagination &amp;count=10 NOT REQUIRED, can
+	 * be used to limit item count
+	 *
+	 * @param request
+	 * @param response
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value = &quot;/products&quot;, method = RequestMethod.GET)
+	@ResponseBody
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	public ReadableProductList list(
+			@RequestParam(value = &quot;lang&quot;, required = false) String lang,
+			@RequestParam(value = &quot;category&quot;, required = false) Long category,
+			@RequestParam(value = &quot;name&quot;, required = false) String name,
+			@RequestParam(value = &quot;sku&quot;, required = false) String sku,
+			@RequestParam(value = &quot;manufacturer&quot;, required = false) Long manufacturer,
+			@RequestParam(value = &quot;optionValues&quot;, required = false) List&lt;Long&gt; optionValueIds,
+			@RequestParam(value = &quot;status&quot;, required = false) String status,
+			@RequestParam(value = &quot;owner&quot;, required = false) Long owner,
+			@RequestParam(value = &quot;page&quot;, required = false, defaultValue = &quot;0&quot;) Integer page, // current
+			@RequestParam(value = &quot;origin&quot;, required = false, defaultValue = ProductCriteria.ORIGIN_SHOP) String origin,
+			// page
+			// 0
+			// ..
+			// n
+			// allowing
+			// navigation
+			@RequestParam(value = &quot;count&quot;, required = false, defaultValue = &quot;100&quot;) Integer count, // count
+			@RequestParam(value = &quot;slug&quot;, required = false) String slug, // category slug
+			@RequestParam(value = &quot;available&quot;, required = false) Boolean available,
+			// per
+			// page
+			@ApiIgnore MerchantStore merchantStore, @ApiIgnore Language language, HttpServletRequest request,
+			HttpServletResponse response) throws Exception {
+
+<span class="nc" id="L214">		ProductCriteria criteria = new ProductCriteria();</span>
+
+<span class="nc" id="L216">		criteria.setOrigin(origin);</span>
+
+		// do not use legacy pagination anymore
+<span class="nc bnc" id="L219" title="All 2 branches missed.">		if (lang != null) {</span>
+<span class="nc" id="L220">			criteria.setLanguage(lang);</span>
+		} else {
+<span class="nc" id="L222">			criteria.setLanguage(language.getCode());</span>
+		}
+<span class="nc bnc" id="L224" title="All 2 branches missed.">		if (!StringUtils.isBlank(status)) {</span>
+<span class="nc" id="L225">			criteria.setStatus(status);</span>
+		}
+		// Start Category handling
+<span class="nc" id="L228">		List&lt;Long&gt; categoryIds = new ArrayList&lt;Long&gt;();</span>
+<span class="nc bnc" id="L229" title="All 2 branches missed.">		if (slug != null) {</span>
+<span class="nc" id="L230">			Category categoryBySlug = categoryService.getBySeUrl(merchantStore, slug, language);</span>
+<span class="nc" id="L231">			categoryIds.add(categoryBySlug.getId());</span>
+		}
+<span class="nc bnc" id="L233" title="All 2 branches missed.">		if (category != null) {</span>
+<span class="nc" id="L234">			categoryIds.add(category);</span>
+		}
+<span class="nc bnc" id="L236" title="All 2 branches missed.">		if (categoryIds.size() &gt; 0) {</span>
+<span class="nc" id="L237">			criteria.setCategoryIds(categoryIds);</span>
+		}
+		// End Category handling
+
+<span class="nc bnc" id="L241" title="All 4 branches missed.">		if (available != null &amp;&amp; available) {</span>
+<span class="nc" id="L242">			criteria.setAvailable(available);</span>
+		}
+
+<span class="nc bnc" id="L245" title="All 2 branches missed.">		if (manufacturer != null) {</span>
+<span class="nc" id="L246">			criteria.setManufacturerId(manufacturer);</span>
+		}
+
+<span class="nc bnc" id="L249" title="All 2 branches missed.">		if (CollectionUtils.isNotEmpty(optionValueIds)) {</span>
+<span class="nc" id="L250">			criteria.setOptionValueIds(optionValueIds);</span>
+		}
+
+<span class="nc bnc" id="L253" title="All 2 branches missed.">		if (owner != null) {</span>
+<span class="nc" id="L254">			criteria.setOwnerId(owner);</span>
+		}
+
+<span class="nc bnc" id="L257" title="All 2 branches missed.">		if (page != null) {</span>
+<span class="nc" id="L258">			criteria.setStartPage(page);</span>
+		}
+
+<span class="nc bnc" id="L261" title="All 2 branches missed.">		if (count != null) {</span>
+<span class="nc" id="L262">			criteria.setMaxCount(count);</span>
+		}
+
+<span class="nc bnc" id="L265" title="All 2 branches missed.">		if (!StringUtils.isBlank(name)) {</span>
+<span class="nc" id="L266">			criteria.setProductName(name);</span>
+		}
+
+<span class="nc bnc" id="L269" title="All 2 branches missed.">		if (!StringUtils.isBlank(sku)) {</span>
+<span class="nc" id="L270">			criteria.setCode(sku);</span>
+		}
+
+		// TODO
+		// RENTAL add filter by owner
+		// REPOSITORY to use the new filters
+
+		try {
+<span class="nc" id="L278">			return productFacade.getProductListsByCriterias(merchantStore, language, criteria);</span>
+
+<span class="nc" id="L280">		} catch (Exception e) {</span>
+
+<span class="nc" id="L282">			LOGGER.error(&quot;Error while filtering products product&quot;, e);</span>
+			try {
+<span class="nc" id="L284">				response.sendError(503, &quot;Error while filtering products &quot; + e.getMessage());</span>
+<span class="nc" id="L285">			} catch (Exception ignore) {</span>
+<span class="nc" id="L286">			}</span>
+
+<span class="nc" id="L288">			return null;</span>
+		}
+	}
+
+	/**
+	 * API for getting a product
+	 * Removed in 3.2.5 in favor of /product/sku
+	 *
+	 * @param id
+	 * @param lang     ?lang=fr|en|...
+	 * @param response
+	 * @return ReadableProduct
+	 * @throws Exception
+	 *                   &lt;p&gt;
+	 *                   /api/product/123
+	 */
+    /**
+	@RequestMapping(value = {&quot;/product/{id}&quot;,&quot;/products/{id}&quot;}, method = RequestMethod.GET)
+	@ApiOperation(httpMethod = &quot;GET&quot;, value = &quot;Get a product by id&quot;, notes = &quot;For administration and shop purpose. Specifying ?merchant is required otherwise it falls back to DEFAULT&quot;)
+	@ApiResponses(value = {
+			@ApiResponse(code = 200, message = &quot;Single product found&quot;, response = ReadableProduct.class) })
+	@ResponseBody
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	public ReadableProduct get(@PathVariable final Long id, @RequestParam(value = &quot;lang&quot;, required = false) String lang,
+			@ApiIgnore MerchantStore merchantStore, @ApiIgnore Language language, HttpServletResponse response)
+			throws Exception {
+		ReadableProduct product = productCommonFacade.getProduct(merchantStore, id, language);
+
+		if (product == null) {
+			response.sendError(404, &quot;Product not fount for id &quot; + id);
+			return null;
+		}
+
+		return product;
+	}
+	**/
+
+	/**
+	 * Price calculation
+	 * @param id
+	 * @param variants
+	 * @param merchantStore
+	 * @param language
+	 * @return
+	 */
+	/**
+	@RequestMapping(value = &quot;/product/{id}/price&quot;, method = RequestMethod.POST)
+	@ApiOperation(httpMethod = &quot;POST&quot;, value = &quot;Calculate product price with variants&quot;, notes = &quot;Product price calculation from variants&quot;)
+	@ApiResponses(value = {
+			@ApiResponse(code = 200, message = &quot;Price calculated&quot;, response = ReadableProductPrice.class) })
+	@ResponseBody
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	public ReadableProductPrice price(@PathVariable final Long id,
+			@RequestBody ProductPriceRequest variants,
+			@ApiIgnore MerchantStore merchantStore, @ApiIgnore Language language) {
+
+		return productFacade.getProductPrice(id, variants, merchantStore, language);
+
+	}
+	**/
+
+	/**
+	 * API for getting a product
+	 *
+	 * @param friendlyUrl
+	 * @param lang        ?lang=fr|en
+	 * @param response
+	 * @return ReadableProduct
+	 * @throws Exception
+	 *                   &lt;p&gt;
+	 *                   /api/product/123
+	 */
+	@RequestMapping(value = { &quot;/product/{friendlyUrl}&quot;,
+			&quot;/product/friendly/{friendlyUrl}&quot; }, method = RequestMethod.GET)
+	@ApiOperation(httpMethod = &quot;GET&quot;, value = &quot;Get a product by friendlyUrl (slug)&quot;, notes = &quot;For administration and shop purpose. Specifying ?merchant is &quot;
+			+ &quot;required otherwise it falls back to DEFAULT&quot;)
+	@ApiResponses(value = {
+			@ApiResponse(code = 200, message = &quot;Single product found&quot;, response = ReadableProduct.class) })
+	@ResponseBody
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	public ReadableProduct getByfriendlyUrl(@PathVariable final String friendlyUrl,
+			@RequestParam(value = &quot;lang&quot;, required = false) String lang, @ApiIgnore MerchantStore merchantStore,
+			@ApiIgnore Language language, HttpServletResponse response) throws Exception {
+<span class="nc" id="L374">		ReadableProduct product = productFacade.getProductBySeUrl(merchantStore, friendlyUrl, language);</span>
+
+<span class="nc bnc" id="L376" title="All 2 branches missed.">		if (product == null) {</span>
+<span class="nc" id="L377">			response.sendError(404, &quot;Product not fount for id &quot; + friendlyUrl);</span>
+<span class="nc" id="L378">			return null;</span>
+		}
+
+<span class="nc" id="L381">		return product;</span>
+	}
+
+	@ResponseStatus(HttpStatus.OK)
+	@GetMapping(value = { &quot;/private/product/unique&quot; }, produces = MediaType.APPLICATION_JSON_VALUE)
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;string&quot;, defaultValue = &quot;DEFAULT&quot;) })
+	@ApiOperation(httpMethod = &quot;GET&quot;, value = &quot;Check if product code already exists&quot;, notes = &quot;&quot;, response = EntityExists.class)
+	public ResponseEntity&lt;EntityExists&gt; exists(@RequestParam(value = &quot;code&quot;) String code,
+			@ApiIgnore MerchantStore merchantStore, @ApiIgnore Language language) {
+
+<span class="nc" id="L391">		boolean exists = productCommonFacade.exists(code, merchantStore);</span>
+<span class="nc" id="L392">		return new ResponseEntity&lt;EntityExists&gt;(new EntityExists(exists), HttpStatus.OK);</span>
+
+	}
+
+	@ResponseStatus(HttpStatus.CREATED)
+	@RequestMapping(value = { &quot;/private/product/{productId}/category/{categoryId}&quot;}, method = RequestMethod.POST)
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	public void addProductToCategory(@PathVariable Long productId,
+			@PathVariable Long categoryId, @ApiIgnore MerchantStore merchantStore, @ApiIgnore Language language,
+			HttpServletResponse response) throws Exception {
+
+		try {
+			// get the product
+<span class="nc" id="L406">			Product product = productService.getById(productId);</span>
+
+<span class="nc bnc" id="L408" title="All 2 branches missed.">			if (product == null) {</span>
+<span class="nc" id="L409">				throw new ResourceNotFoundException(&quot;Product id [&quot; + productId + &quot;] is not found&quot;);</span>
+			}
+
+<span class="nc bnc" id="L412" title="All 2 branches missed.">			if (product.getMerchantStore().getId().intValue() != merchantStore.getId().intValue()) {</span>
+<span class="nc" id="L413">				throw new UnauthorizedException(</span>
+<span class="nc" id="L414">						&quot;Product id [&quot; + productId + &quot;] does not belong to store [&quot; + merchantStore.getCode() + &quot;]&quot;);</span>
+			}
+
+<span class="nc" id="L417">			Category category = categoryService.getById(categoryId);</span>
+
+<span class="nc bnc" id="L419" title="All 2 branches missed.">			if (category == null) {</span>
+<span class="nc" id="L420">				throw new ResourceNotFoundException(&quot;Category id [&quot; + categoryId + &quot;] is not found&quot;);</span>
+			}
+
+<span class="nc bnc" id="L423" title="All 2 branches missed.">			if (category.getMerchantStore().getId().intValue() != merchantStore.getId().intValue()) {</span>
+<span class="nc" id="L424">				throw new UnauthorizedException(</span>
+<span class="nc" id="L425">						&quot;Category id [&quot; + categoryId + &quot;] does not belong to store [&quot; + merchantStore.getCode() + &quot;]&quot;);</span>
+			}
+
+<span class="nc" id="L428">			productCommonFacade.addProductToCategory(category, product, language);</span>
+
+<span class="nc" id="L430">		} catch (Exception e) {</span>
+<span class="nc" id="L431">			throw new ServiceRuntimeException(e);</span>
+<span class="nc" id="L432">		}</span>
+<span class="nc" id="L433">	}</span>
+
+	@ResponseStatus(HttpStatus.OK)
+	@RequestMapping(value = { &quot;/private/product/{productId}/category/{categoryId}&quot; }, method = RequestMethod.DELETE)
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	public void removeProductFromCategory(@PathVariable Long productId,
+			@PathVariable Long categoryId, @ApiIgnore MerchantStore merchantStore, @ApiIgnore Language language) {
+
+		try {
+<span class="nc" id="L443">			Product product = productService.getById(productId);</span>
+
+<span class="nc bnc" id="L445" title="All 2 branches missed.">			if (product == null) {</span>
+<span class="nc" id="L446">				throw new ResourceNotFoundException(&quot;Product id [&quot; + productId + &quot;] is not found&quot;);</span>
+			}
+
+<span class="nc bnc" id="L449" title="All 2 branches missed.">			if (product.getMerchantStore().getId().intValue() != merchantStore.getId().intValue()) {</span>
+<span class="nc" id="L450">				throw new UnauthorizedException(</span>
+<span class="nc" id="L451">						&quot;Product id [&quot; + productId + &quot;] does not belong to store [&quot; + merchantStore.getCode() + &quot;]&quot;);</span>
+			}
+
+<span class="nc" id="L454">			Category category = categoryService.getById(categoryId);</span>
+
+<span class="nc bnc" id="L456" title="All 2 branches missed.">			if (category == null) {</span>
+<span class="nc" id="L457">				throw new ResourceNotFoundException(&quot;Category id [&quot; + categoryId + &quot;] is not found&quot;);</span>
+			}
+
+<span class="nc bnc" id="L460" title="All 2 branches missed.">			if (category.getMerchantStore().getId().intValue() != merchantStore.getId().intValue()) {</span>
+<span class="nc" id="L461">				throw new UnauthorizedException(</span>
+<span class="nc" id="L462">						&quot;Category id [&quot; + categoryId + &quot;] does not belong to store [&quot; + merchantStore.getCode() + &quot;]&quot;);</span>
+			}
+
+<span class="nc" id="L465">			productCommonFacade.removeProductFromCategory(category, product, language);</span>
+
+<span class="nc" id="L467">		} catch (Exception e) {</span>
+<span class="nc" id="L468">			throw new ServiceRuntimeException(e);</span>
+<span class="nc" id="L469">		}</span>
+<span class="nc" id="L470">	}</span>
+
+	/**
+	 * Change product sort order
+	 *
+	 * @param id
+	 * @param position
+	 * @param merchantStore
+	 * @param language
+	 * @throws IOException
+	 */
+
+	@ResponseStatus(HttpStatus.OK)
+	@RequestMapping(value = { &quot;/private/product/{id}&quot;, &quot;/auth/product/{id}&quot; }, method = RequestMethod.PATCH)
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	@ApiOperation(httpMethod = &quot;POST&quot;, value = &quot;Patch product sort order&quot;, notes = &quot;Change product sortOrder&quot;)
+	public void changeProductOrder(@PathVariable Long id,
+			@RequestParam(value = &quot;order&quot;, required = false, defaultValue = &quot;0&quot;) Integer position,
+			@ApiIgnore MerchantStore merchantStore, @ApiIgnore Language language) throws IOException {
+
+		try {
+
+<span class="nc" id="L493">			Product p = productService.getById(id);</span>
+
+<span class="nc bnc" id="L495" title="All 2 branches missed.">			if (p == null) {</span>
+<span class="nc" id="L496">				throw new ResourceNotFoundException(</span>
+<span class="nc" id="L497">						&quot;Product [&quot; + id + &quot;] not found for merchant [&quot; + merchantStore.getCode() + &quot;]&quot;);</span>
+			}
+
+<span class="nc bnc" id="L500" title="All 2 branches missed.">			if (p.getMerchantStore().getId() != merchantStore.getId()) {</span>
+<span class="nc" id="L501">				throw new ResourceNotFoundException(</span>
+<span class="nc" id="L502">						&quot;Product [&quot; + id + &quot;] not found for merchant [&quot; + merchantStore.getCode() + &quot;]&quot;);</span>
+			}
+
+			/**
+			 * Change order
+			 */
+<span class="nc" id="L508">			p.setSortOrder(position);</span>
+
+<span class="nc" id="L510">		} catch (Exception e) {</span>
+<span class="nc" id="L511">			LOGGER.error(&quot;Error while updating Product position&quot;, e);</span>
+<span class="nc" id="L512">			throw new ServiceRuntimeException(&quot;Product [&quot; + id + &quot;] cannot be edited&quot;);</span>
+<span class="nc" id="L513">		}</span>
+<span class="nc" id="L514">	}</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

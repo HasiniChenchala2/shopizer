@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PersistableUserPopulator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.populator.user</a> &gt; <span class="el_source">PersistableUserPopulator.java</span></div><h1>PersistableUserPopulator.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.populator.user;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Validate;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
+
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.merchant.MerchantStoreService;
+import com.salesmanager.core.business.services.reference.language.LanguageService;
+import com.salesmanager.core.business.services.user.GroupService;
+import com.salesmanager.core.business.utils.AbstractDataPopulator;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.core.model.user.Group;
+import com.salesmanager.core.model.user.User;
+import com.salesmanager.shop.model.security.PersistableGroup;
+import com.salesmanager.shop.model.user.PersistableUser;
+
+
+@Component
+<span class="fc" id="L29">public class PersistableUserPopulator extends AbstractDataPopulator&lt;PersistableUser, User&gt; {</span>
+
+  @Inject
+  private LanguageService languageService;
+  
+  @Inject
+  private GroupService groupService;
+  
+  @Inject
+  private MerchantStoreService merchantStoreService;
+  
+  @Inject
+  @Named(&quot;passwordEncoder&quot;)
+  private PasswordEncoder passwordEncoder;
+  
+  @Override
+  public User populate(PersistableUser source, User target, MerchantStore store, Language language)
+      throws ConversionException {
+<span class="fc" id="L47">    Validate.notNull(source, &quot;PersistableUser cannot be null&quot;);</span>
+<span class="fc" id="L48">    Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);</span>
+
+<span class="pc bpc" id="L50" title="1 of 2 branches missed.">    if (target == null) {</span>
+<span class="nc" id="L51">      target = new User();</span>
+    }
+
+<span class="fc" id="L54">    target.setFirstName(source.getFirstName());</span>
+<span class="fc" id="L55">    target.setLastName(source.getLastName());</span>
+<span class="fc" id="L56">    target.setAdminEmail(source.getEmailAddress());</span>
+<span class="fc" id="L57">    target.setAdminName(source.getUserName());</span>
+<span class="pc bpc" id="L58" title="1 of 2 branches missed.">    if(!StringUtils.isBlank(source.getPassword())) {</span>
+<span class="fc" id="L59">      target.setAdminPassword(passwordEncoder.encode(source.getPassword()));</span>
+    }
+    
+<span class="pc bpc" id="L62" title="1 of 2 branches missed.">    if(!StringUtils.isBlank(source.getStore())) {</span>
+        try {
+<span class="nc" id="L64">			MerchantStore userStore = merchantStoreService.getByCode(source.getStore());</span>
+<span class="nc" id="L65">			target.setMerchantStore(userStore);</span>
+<span class="nc" id="L66">		} catch (ServiceException e) {</span>
+<span class="nc" id="L67">			throw new ConversionException(&quot;Error while reading MerchantStore store [&quot; + source.getStore() + &quot;]&quot;,e);</span>
+<span class="nc" id="L68">		}</span>
+    } else {
+<span class="fc" id="L70">    	target.setMerchantStore(store);</span>
+    }
+    
+    
+<span class="fc" id="L74">    target.setActive(source.isActive());</span>
+    
+<span class="fc" id="L76">    Language lang = null;</span>
+    try {
+<span class="fc" id="L78">      lang = languageService.getByCode(source.getDefaultLanguage());</span>
+<span class="nc" id="L79">    } catch(Exception e) {</span>
+<span class="nc" id="L80">      throw new ConversionException(&quot;Cannot get language [&quot; + source.getDefaultLanguage() + &quot;]&quot;,e);</span>
+<span class="fc" id="L81">    }</span>
+
+    // set default language
+<span class="fc" id="L84">    target.setDefaultLanguage(lang);</span>
+
+<span class="fc" id="L86">    List&lt;Group&gt; userGroups = new ArrayList&lt;Group&gt;();</span>
+<span class="fc" id="L87">    List&lt;String&gt; names = new ArrayList&lt;String&gt;();</span>
+<span class="fc bfc" id="L88" title="All 2 branches covered.">    for (PersistableGroup group : source.getGroups()) {</span>
+<span class="fc" id="L89">      names.add(group.getName());</span>
+<span class="fc" id="L90">    }</span>
+    try {
+<span class="fc" id="L92">      List&lt;Group&gt; groups = groupService.listGroupByNames(names);</span>
+<span class="fc bfc" id="L93" title="All 2 branches covered.">      for(Group g: groups) {</span>
+<span class="fc" id="L94">        userGroups.add(g);</span>
+<span class="fc" id="L95">      }</span>
+<span class="nc" id="L96">    } catch (Exception e1) {</span>
+<span class="nc" id="L97">      throw new ConversionException(&quot;Error while getting user groups&quot;,e1);</span>
+<span class="fc" id="L98">    }</span>
+    
+<span class="fc" id="L100">    target.setGroups(userGroups);</span>
+
+<span class="fc" id="L102">    return target;</span>
+  }
+
+  @Override
+  protected User createTarget() {
+    // TODO Auto-generated method stub
+<span class="nc" id="L108">    return null;</span>
+  }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

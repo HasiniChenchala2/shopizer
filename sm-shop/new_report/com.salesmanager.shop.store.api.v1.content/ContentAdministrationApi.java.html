@@ -1,0 +1,364 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ContentAdministrationApi.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.api.v1.content</a> &gt; <span class="el_source">ContentAdministrationApi.java</span></div><h1>ContentAdministrationApi.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.api.v1.content;
+
+import java.io.IOException;
+import java.io.Serializable;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import javax.inject.Inject;
+
+import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.salesmanager.core.model.content.FileContentType;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.model.content.Content;
+import com.salesmanager.shop.model.content.ContentFile;
+import com.salesmanager.shop.model.content.ContentFolder;
+import com.salesmanager.shop.store.api.exception.RestApiException;
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+import com.salesmanager.shop.store.controller.content.facade.ContentFacade;
+import com.salesmanager.shop.utils.FileNameUtils;
+import com.salesmanager.shop.utils.ImageFilePath;
+
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiImplicitParams;
+import springfox.documentation.annotations.ApiIgnore;
+
+/**
+ * Administration tool dedicated api
+ * @author carlsamson
+ *
+ */
+@RestController
+@RequestMapping(value = &quot;/api/v1&quot;)
+@CrossOrigin(origins = &quot;*&quot;, maxAge = 3600)
+<span class="fc" id="L56">public class ContentAdministrationApi {</span>
+	
+	
+	private static final String DEFAULT_PATH = &quot;/&quot;;
+	
+<span class="fc" id="L61">	private static final Logger LOGGER = LoggerFactory.getLogger(ContentAdministrationApi.class);</span>
+
+	@Inject
+	private ContentFacade contentFacade;
+	
+	@Autowired
+	private FileNameUtils fileNameUtils;
+	
+	
+	@Inject
+	@Qualifier(&quot;img&quot;)
+	private ImageFilePath imageUtils;
+	
+	/**
+	 * Works with ng-file-man client
+	 * 
+	 * @param path
+	 * @param merchantStore
+	 * @param language
+	 * @return
+	 * @throws Exception
+	 */
+	@GetMapping(value = &quot;/private/content/list&quot;, produces = MediaType.APPLICATION_JSON_VALUE)
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	public List&lt;ImageFile&gt; list(@RequestParam(value = &quot;parentPath&quot;, required = false) String path,
+			@ApiIgnore MerchantStore merchantStore, @ApiIgnore Language language) throws Exception {
+
+<span class="nc" id="L89">		String decodedPath = decodeContentPath(path);</span>
+
+<span class="nc" id="L91">		ContentFolder folder = contentFacade.getContentFolder(decodedPath, merchantStore);</span>
+<span class="nc" id="L92">		List&lt;ImageFile&gt; files = folder.getContent().stream().map(x -&gt; convertToImageFile(merchantStore, x))</span>
+<span class="nc" id="L93">				.collect(Collectors.toList());</span>
+
+<span class="nc" id="L95">		return files;</span>
+	}
+	
+	/**
+	 * @param path
+	 * @param merchantStore
+	 * @param language
+	 * @return
+	 * @throws Exception
+	 */
+	@GetMapping(value = &quot;/private/content/folder&quot;, produces = MediaType.APPLICATION_JSON_VALUE)
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	public ContentFolder folder(
+			@RequestParam(value = &quot;path&quot;, required = false) String path,
+			@ApiIgnore MerchantStore merchantStore, 
+			@ApiIgnore Language language) throws Exception {
+<span class="nc" id="L112">		String decodedPath = decodeContentPath(path);</span>
+<span class="nc" id="L113">		return contentFacade.getContentFolder(decodedPath, merchantStore);</span>
+	}
+	
+	
+	/**
+	 * works with file manager (javascript client)
+	 * @param files
+	 * @param merchantStore
+	 * @param language
+	 */
+	@PostMapping(value = &quot;/private/content/images/add&quot;, consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
+	@ResponseStatus(HttpStatus.CREATED)
+	@ApiImplicitParams({
+			@ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	public FileStatus upload(
+			@RequestParam(value = &quot;qqfile&quot;, required = true) MultipartFile qqfile,
+			@RequestParam(value = &quot;qquuid&quot;, required = true) String qquuid,
+			@RequestParam(value = &quot;qqfilename&quot;, required = true) String qqfilename,
+			@RequestParam(value = &quot;qqtotalfilesize&quot;, required = false) Long qqtotalfilesize,
+			@RequestParam(value = &quot;parentPath&quot;, required = false) String parentPath,
+			@RequestParam(value = &quot;qqpartindex&quot;, required = false) Integer qqpartindex,
+			@RequestParam(value = &quot;qqtotalparts&quot;, required = false) Integer qqtotalparts,
+			@ApiIgnore MerchantStore merchantStore, 
+			@ApiIgnore Language language) {
+		
+<span class="nc bnc" id="L139" title="All 2 branches missed.">		    if(!fileNameUtils.validFileName(qqfilename)) {</span>
+<span class="nc" id="L140">				FileStatus fs = new FileStatus();</span>
+<span class="nc" id="L141">				fs.setError(&quot;Invalid filename&quot;);</span>
+<span class="nc" id="L142">				fs.setSuccess(false);</span>
+<span class="nc" id="L143">				return fs;</span>
+		    }
+
+<span class="nc" id="L146">			ContentFile cf = new ContentFile();</span>
+<span class="nc" id="L147">			cf.setContentType(qqfile.getContentType());</span>
+<span class="nc" id="L148">			cf.setName(qqfilename);</span>
+			try {
+<span class="nc" id="L150">				cf.setFile(qqfile.getBytes());</span>
+<span class="nc" id="L151">				contentFacade.addContentFile(cf, merchantStore.getCode());</span>
+<span class="nc" id="L152">				return new FileStatus();</span>
+<span class="nc" id="L153">			} catch (IOException e) {</span>
+				//throw new ServiceRuntimeException(&quot;Error while getting file bytes&quot;);
+<span class="nc" id="L155">				LOGGER.error(&quot;Error when uploadging file&quot;,e);</span>
+<span class="nc" id="L156">				FileStatus fs = new FileStatus();</span>
+<span class="nc" id="L157">				fs.setError(e.getMessage());</span>
+<span class="nc" id="L158">				fs.setSuccess(false);</span>
+<span class="nc" id="L159">				return fs;</span>
+			}
+
+	}
+	
+	@GetMapping(value = &quot;/content/images/download&quot;)
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	public @ResponseBody String download(
+			@RequestParam(value = &quot;path&quot;, required = true) String path,
+			@ApiIgnore MerchantStore merchantStore, 
+			@ApiIgnore Language language) {
+<span class="nc" id="L171">		String fileName = path.substring(path.lastIndexOf(&quot;/&quot;)+1, path.length());</span>
+		try {
+	    
+			//OutputContentFile file = contentFacade.download(merchantStore, FileContentType.IMAGE, fileName);
+			//return file.getFile().toByteArray();
+			//return &quot;https://s3.ca-central-1.amazonaws.com/shopizer-carl/files/DEFAULT/85.jpg&quot;;
+<span class="nc" id="L177">			return null;</span>
+<span class="nc" id="L178">		} catch (Exception e) {</span>
+			//throw new ServiceRuntimeException(&quot;Error while getting file bytes&quot;);
+<span class="nc" id="L180">			LOGGER.error(&quot;Error when renaming file&quot;,e);</span>
+<span class="nc" id="L181">			throw new ServiceRuntimeException(&quot;Error while downloading file [&quot; + fileName + &quot;]&quot;);</span>
+		}
+
+	}
+	
+	@PostMapping(value = &quot;/private/content/images/rename&quot;, produces = MediaType.APPLICATION_JSON_VALUE)
+	@ResponseStatus(HttpStatus.OK)
+	@ApiImplicitParams({
+			@ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	public FileStatus rename(
+			@RequestParam(value = &quot;path&quot;, required = true) String path,
+			@RequestParam(value = &quot;newName&quot;, required = true) String newName,
+			@ApiIgnore MerchantStore merchantStore, 
+			@ApiIgnore Language language) {
+
+		try {
+			
+<span class="nc" id="L199">			String fileName = path.substring(path.lastIndexOf(&quot;/&quot;)+1, path.length());</span>
+<span class="nc" id="L200">			contentFacade.renameFile(merchantStore, FileContentType.IMAGE, fileName, newName);</span>
+<span class="nc" id="L201">			return new FileStatus();</span>
+<span class="nc" id="L202">		} catch (Exception e) {</span>
+			//throw new ServiceRuntimeException(&quot;Error while getting file bytes&quot;);
+<span class="nc" id="L204">			LOGGER.error(&quot;Error when renaming file&quot;,e);</span>
+<span class="nc" id="L205">			FileStatus fs = new FileStatus();</span>
+<span class="nc" id="L206">			fs.setError(e.getMessage());</span>
+<span class="nc" id="L207">			fs.setSuccess(false);</span>
+<span class="nc" id="L208">			return fs;</span>
+		}
+
+	}
+	
+	@DeleteMapping(value = &quot;/private/content/images/remove&quot;, produces = MediaType.APPLICATION_JSON_VALUE)
+	@ResponseStatus(HttpStatus.OK)
+	@ApiImplicitParams({
+			@ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	public FileStatus remove(
+			@RequestParam(value = &quot;path&quot;, required = true) String path,
+			@ApiIgnore MerchantStore merchantStore, 
+			@ApiIgnore Language language) {
+
+		try {
+			
+<span class="nc" id="L225">			String fileName = path.substring(path.lastIndexOf(&quot;/&quot;)+1, path.length());</span>
+<span class="nc" id="L226">			contentFacade.delete(merchantStore, fileName, FileContentType.IMAGE.name());</span>
+<span class="nc" id="L227">			return new FileStatus();</span>
+<span class="nc" id="L228">		} catch (Exception e) {</span>
+			//throw new ServiceRuntimeException(&quot;Error while getting file bytes&quot;);
+<span class="nc" id="L230">			LOGGER.error(&quot;Error when renaming file&quot;,e);</span>
+<span class="nc" id="L231">			FileStatus fs = new FileStatus();</span>
+<span class="nc" id="L232">			fs.setError(e.getMessage());</span>
+<span class="nc" id="L233">			fs.setSuccess(false);</span>
+<span class="nc" id="L234">			return fs;</span>
+		}
+
+	}
+
+
+	private ImageFile convertToImageFile(MerchantStore store, Content content) {
+<span class="nc" id="L241">		ImageFile f = new ImageFile();</span>
+<span class="nc" id="L242">		f.setDir(false);</span>
+<span class="nc" id="L243">		f.setId(imageUtils.buildStaticImageUtils(store, content.getName()));</span>
+<span class="nc" id="L244">		f.setName(content.getName());</span>
+<span class="nc" id="L245">		f.setUrl(imageUtils.buildStaticImageUtils(store, content.getName()));</span>
+<span class="nc" id="L246">		f.setPath(&quot;image.png&quot;);</span>
+<span class="nc" id="L247">		f.setSize(null);</span>
+<span class="nc" id="L248">		return f;</span>
+	}
+
+	private ImageFile convertToFolder(String folder) {
+<span class="nc" id="L252">		ImageFile f = new ImageFile();</span>
+<span class="nc" id="L253">		f.setDir(true);</span>
+<span class="nc" id="L254">		f.setId(UUID.randomUUID().toString());</span>
+<span class="nc" id="L255">		f.setName(DEFAULT_PATH + &quot;images&quot;);</span>
+<span class="nc" id="L256">		f.setUrl(DEFAULT_PATH + &quot;images&quot;);</span>
+<span class="nc" id="L257">		f.setPath(DEFAULT_PATH + &quot;images&quot;);</span>
+<span class="nc" id="L258">		return f;</span>
+	}
+	
+	private String decodeContentPath(String path) throws UnsupportedEncodingException {
+		try {
+<span class="nc bnc" id="L263" title="All 4 branches missed.">			return StringUtils.isBlank(path) || path.contains(&quot;/images&quot;) ? &quot;/&quot; : URLDecoder.decode(path.replaceAll(&quot;,&quot;,&quot;&quot;), &quot;UTF-8&quot;);</span>
+<span class="nc" id="L264">		} catch (UnsupportedEncodingException e) {</span>
+<span class="nc" id="L265">			throw new RestApiException(e);</span>
+		}
+
+	}
+	
+<span class="nc" id="L270">	class FileStatus implements Serializable {</span>
+
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 1L;
+<span class="nc" id="L276">		private boolean success = true;</span>
+<span class="nc" id="L277">		private String error = null;</span>
+<span class="nc" id="L278">		private boolean preventRetry = true;</span>
+		public boolean isSuccess() {
+<span class="nc" id="L280">			return success;</span>
+		}
+		public void setSuccess(boolean success) {
+<span class="nc" id="L283">			this.success = success;</span>
+<span class="nc" id="L284">		}</span>
+		public String getError() {
+<span class="nc" id="L286">			return error;</span>
+		}
+		public void setError(String error) {
+<span class="nc" id="L289">			this.error = error;</span>
+<span class="nc" id="L290">		}</span>
+		public boolean isPreventRetry() {
+<span class="nc" id="L292">			return preventRetry;</span>
+		}
+		public void setPreventRetry(boolean preventRetry) {
+<span class="nc" id="L295">			this.preventRetry = preventRetry;</span>
+<span class="nc" id="L296">		}</span>
+		
+	}
+	
+	
+<span class="nc" id="L301">	class ImageFile implements Serializable {</span>
+
+		public String getUrl() {
+<span class="nc" id="L304">			return url;</span>
+		}
+
+		public void setUrl(String url) {
+<span class="nc" id="L308">			this.url = url;</span>
+<span class="nc" id="L309">		}</span>
+
+		public String getName() {
+<span class="nc" id="L312">			return name;</span>
+		}
+
+		public void setName(String name) {
+<span class="nc" id="L316">			this.name = name;</span>
+<span class="nc" id="L317">		}</span>
+
+		public String getSize() {
+<span class="nc" id="L320">			return size;</span>
+		}
+
+		public void setSize(String size) {
+<span class="nc" id="L324">			this.size = size;</span>
+<span class="nc" id="L325">		}</span>
+
+		public boolean isDir() {
+<span class="nc" id="L328">			return dir;</span>
+		}
+
+		public void setDir(boolean dir) {
+<span class="nc" id="L332">			this.dir = dir;</span>
+<span class="nc" id="L333">		}</span>
+
+		public String getPath() {
+<span class="nc" id="L336">			return path;</span>
+		}
+
+		public void setPath(String path) {
+<span class="nc" id="L340">			this.path = path;</span>
+<span class="nc" id="L341">		}</span>
+
+		public String getId() {
+<span class="nc" id="L344">			return id;</span>
+		}
+
+		public void setId(String id) {
+<span class="nc" id="L348">			this.id = id;</span>
+<span class="nc" id="L349">		}</span>
+
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 1L;
+		private String url;
+		private String name;
+		private String size;
+		private boolean dir;
+		private String path;
+		private String id;
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

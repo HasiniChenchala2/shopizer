@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>InitializationLoader.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.init.data</a> &gt; <span class="el_source">InitializationLoader.java</span></div><h1>InitializationLoader.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.init.data;
+
+import javax.annotation.PostConstruct;
+import javax.inject.Inject;
+
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import com.salesmanager.core.business.constants.SystemConstants;
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.merchant.MerchantStoreService;
+import com.salesmanager.core.business.services.reference.init.InitializationDatabase;
+import com.salesmanager.core.business.services.system.MerchantConfigurationService;
+import com.salesmanager.core.business.services.system.SystemConfigurationService;
+import com.salesmanager.core.business.services.user.GroupService;
+import com.salesmanager.core.business.services.user.PermissionService;
+import com.salesmanager.core.business.utils.CoreConfiguration;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.system.MerchantConfig;
+import com.salesmanager.core.model.system.SystemConfiguration;
+import com.salesmanager.shop.admin.security.WebUserServices;
+import com.salesmanager.shop.constants.ApplicationConstants;
+
+
+@Component
+<span class="fc" id="L29">public class InitializationLoader {</span>
+	
+<span class="fc" id="L31">	private static final Logger LOGGER = LoggerFactory.getLogger(InitializationLoader.class);</span>
+
+	@Value(&quot;${db.init.data:true}&quot;)
+    private boolean initDefaultData;
+
+	
+	@Inject
+	private MerchantConfigurationService merchantConfigurationService;
+	
+	@Inject
+	private InitializationDatabase initializationDatabase;
+	
+	//@Inject
+	//private InitData initData;
+	
+	@Inject
+	private SystemConfigurationService systemConfigurationService;
+	
+	@Inject
+	private WebUserServices userDetailsService;
+
+	@Inject
+	protected PermissionService  permissionService;
+	
+	@Inject
+	protected GroupService   groupService;
+	
+	@Inject
+	private CoreConfiguration configuration;
+	
+	@Inject
+	protected MerchantStoreService merchantService;
+
+	
+	@PostConstruct
+	public void init() {
+		
+		try {
+			
+			//Check flag to populate or not the database
+<span class="pc bpc" id="L71" title="1 of 2 branches missed.">			if(!this.initDefaultData) {</span>
+<span class="nc" id="L72">				return;</span>
+			}
+			
+<span class="pc bpc" id="L75" title="1 of 2 branches missed.">			if (initializationDatabase.isEmpty()) {</span>
+				
+
+				//All default data to be created
+				
+<span class="fc" id="L80">				LOGGER.info(String.format(&quot;%s : Shopizer database is empty, populate it....&quot;, &quot;sm-shop&quot;));</span>
+		
+<span class="fc" id="L82">				 initializationDatabase.populate(&quot;sm-shop&quot;);</span>
+				
+<span class="fc" id="L84">				 MerchantStore store = merchantService.getByCode(MerchantStore.DEFAULT_STORE);</span>
+
+<span class="fc" id="L86">                  userDetailsService.createDefaultAdmin();</span>
+<span class="fc" id="L87">                  MerchantConfig config = new MerchantConfig();</span>
+<span class="fc" id="L88">				  config.setAllowPurchaseItems(true);</span>
+<span class="fc" id="L89">				  config.setDisplayAddToCartOnFeaturedItems(true);</span>
+				  
+<span class="fc" id="L91">				  merchantConfigurationService.saveMerchantConfig(config, store);</span>
+
+
+			}
+			
+<span class="nc" id="L96">		} catch (Exception e) {</span>
+<span class="nc" id="L97">			LOGGER.error(&quot;Error in the init method&quot;,e);</span>
+<span class="fc" id="L98">		}</span>
+			
+<span class="fc" id="L100">	}</span>
+
+
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JWTAdminServicesImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.security.admin</a> &gt; <span class="el_source">JWTAdminServicesImpl.java</span></div><h1>JWTAdminServicesImpl.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.security.admin;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.List;
+
+import javax.inject.Inject;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
+
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.user.GroupService;
+import com.salesmanager.core.business.services.user.PermissionService;
+import com.salesmanager.core.business.services.user.UserService;
+import com.salesmanager.core.model.common.audit.AuditSection;
+import com.salesmanager.core.model.user.Group;
+import com.salesmanager.core.model.user.Permission;
+import com.salesmanager.core.model.user.User;
+import com.salesmanager.shop.admin.security.SecurityDataAccessException;
+import com.salesmanager.shop.constants.Constants;
+import com.salesmanager.shop.store.security.user.JWTUser;
+
+
+@Service(&quot;jwtAdminDetailsService&quot;)
+<span class="fc" id="L34">public class JWTAdminServicesImpl implements UserDetailsService{</span>
+	
+<span class="fc" id="L36">	private static final Logger LOGGER = LoggerFactory.getLogger(JWTAdminServicesImpl.class);</span>
+	
+	
+	@Inject
+	private UserService userService;
+	@Inject
+	private PermissionService  permissionService;
+	@Inject
+	private GroupService   groupService;
+	
+	public final static String ROLE_PREFIX = &quot;ROLE_&quot;;//Spring Security 4
+
+
+	private UserDetails userDetails(String userName, User user, Collection&lt;GrantedAuthority&gt; authorities) {
+        
+<span class="fc" id="L51">		AuditSection section = null;</span>
+<span class="fc" id="L52">		section = user.getAuditSection();</span>
+<span class="fc" id="L53">		Date lastModified = null;</span>
+		//if(section != null) {//does not represent password change
+		//	lastModified = section.getDateModified();
+		//}
+		
+<span class="fc" id="L58">		return new JWTUser(</span>
+<span class="fc" id="L59">        		user.getId(),</span>
+        		userName,
+<span class="fc" id="L61">        		user.getFirstName(),</span>
+<span class="fc" id="L62">        		user.getLastName(),</span>
+<span class="fc" id="L63">                user.getAdminEmail(),</span>
+<span class="fc" id="L64">                user.getAdminPassword(),</span>
+                authorities,
+                true,
+                lastModified
+        );
+	}
+
+	@Override
+	public UserDetails loadUserByUsername(String userName) throws UsernameNotFoundException {
+<span class="fc" id="L73">		User user = null;</span>
+<span class="fc" id="L74">		Collection&lt;GrantedAuthority&gt; authorities = new ArrayList&lt;GrantedAuthority&gt;();</span>
+
+		try {
+			
+<span class="fc" id="L78">				LOGGER.debug(&quot;Loading user by user id: {}&quot;, userName);</span>
+
+<span class="fc" id="L80">				user = userService.getByUserName(userName);</span>
+			
+<span class="pc bpc" id="L82" title="1 of 2 branches missed.">				if(user==null) {</span>
+					//return null;
+<span class="nc" id="L84">					throw new UsernameNotFoundException(&quot;User &quot; + userName + &quot; not found&quot;);</span>
+				}
+
+<span class="fc" id="L87">			GrantedAuthority role = new SimpleGrantedAuthority(ROLE_PREFIX + Constants.PERMISSION_AUTHENTICATED);//required to login</span>
+<span class="fc" id="L88">			authorities.add(role); </span>
+			
+<span class="fc" id="L90">			List&lt;Integer&gt; groupsId = new ArrayList&lt;Integer&gt;();</span>
+<span class="fc" id="L91">			List&lt;Group&gt; groups = user.getGroups();</span>
+<span class="fc bfc" id="L92" title="All 2 branches covered.">			for(Group group : groups) {</span>
+<span class="fc" id="L93">				groupsId.add(group.getId());</span>
+<span class="fc" id="L94">			}</span>
+			
+	
+<span class="pc bpc" id="L97" title="1 of 2 branches missed.">			if(CollectionUtils.isNotEmpty(groupsId)) {</span>
+<span class="fc" id="L98">		    	List&lt;Permission&gt; permissions = permissionService.getPermissions(groupsId);</span>
+<span class="fc bfc" id="L99" title="All 2 branches covered.">		    	for(Permission permission : permissions) {</span>
+<span class="fc" id="L100">		    		GrantedAuthority auth = new SimpleGrantedAuthority(permission.getPermissionName());</span>
+<span class="fc" id="L101">		    		authorities.add(auth);</span>
+<span class="fc" id="L102">		    	}</span>
+			}
+
+		
+<span class="nc" id="L106">		} catch (ServiceException e) {</span>
+<span class="nc" id="L107">			LOGGER.error(&quot;Exception while querrying customer&quot;,e);</span>
+<span class="nc" id="L108">			throw new SecurityDataAccessException(&quot;Cannot authenticate customer&quot;,e);</span>
+<span class="fc" id="L109">		}</span>
+
+<span class="fc" id="L111">		return userDetails(userName, user, authorities);</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PersistableManufacturerPopulator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.populator.manufacturer</a> &gt; <span class="el_source">PersistableManufacturerPopulator.java</span></div><h1>PersistableManufacturerPopulator.java</h1><pre class="source lang-java linenums">
+package com.salesmanager.shop.populator.manufacturer;
+
+import java.util.HashSet;
+import java.util.Set;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.Validate;
+
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.services.reference.language.LanguageService;
+import com.salesmanager.core.business.utils.AbstractDataPopulator;
+import com.salesmanager.core.model.catalog.product.manufacturer.Manufacturer;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.model.catalog.manufacturer.ManufacturerDescription;
+import com.salesmanager.shop.model.catalog.manufacturer.PersistableManufacturer;
+
+
+/**
+ * @author Carl Samson
+ *
+ */
+
+
+<span class="fc" id="L26">public class PersistableManufacturerPopulator extends AbstractDataPopulator&lt;PersistableManufacturer, Manufacturer&gt;</span>
+{
+	
+	
+	private LanguageService languageService;
+
+	@Override
+	public Manufacturer populate(PersistableManufacturer source,
+			Manufacturer target, MerchantStore store, Language language)
+			throws ConversionException {
+		
+<span class="fc" id="L37">		Validate.notNull(languageService, &quot;Requires to set LanguageService&quot;);</span>
+		
+		try {
+			
+<span class="fc" id="L41">			target.setMerchantStore(store);</span>
+<span class="fc" id="L42">			target.setCode(source.getCode());</span>
+			
+
+<span class="pc bpc" id="L45" title="1 of 2 branches missed.">			if(!CollectionUtils.isEmpty(source.getDescriptions())) {</span>
+<span class="fc" id="L46">				Set&lt;com.salesmanager.core.model.catalog.product.manufacturer.ManufacturerDescription&gt; descriptions = new HashSet&lt;com.salesmanager.core.model.catalog.product.manufacturer.ManufacturerDescription&gt;();</span>
+<span class="fc bfc" id="L47" title="All 2 branches covered.">				for(ManufacturerDescription description : source.getDescriptions()) {</span>
+<span class="fc" id="L48">					com.salesmanager.core.model.catalog.product.manufacturer.ManufacturerDescription desc = new com.salesmanager.core.model.catalog.product.manufacturer.ManufacturerDescription();</span>
+<span class="pc bpc" id="L49" title="3 of 4 branches missed.">					if(desc.getId() != null &amp;&amp; desc.getId().longValue()&gt;0) {</span>
+<span class="nc" id="L50">						desc.setId(description.getId());</span>
+					}
+<span class="pc bpc" id="L52" title="1 of 2 branches missed.">					if(target.getDescriptions() != null) {</span>
+<span class="pc bpc" id="L53" title="1 of 2 branches missed.">						for(com.salesmanager.core.model.catalog.product.manufacturer.ManufacturerDescription d : target.getDescriptions()) {</span>
+<span class="nc bnc" id="L54" title="All 6 branches missed.">							if(d.getLanguage().getCode().equals(description.getLanguage()) || desc.getId() != null &amp;&amp; d.getId().longValue() == desc.getId().longValue()) {</span>
+<span class="nc" id="L55">								desc = d;</span>
+							}
+<span class="nc" id="L57">						}</span>
+					}
+					
+<span class="fc" id="L60">					desc.setManufacturer(target);</span>
+<span class="fc" id="L61">					desc.setDescription(description.getDescription());</span>
+<span class="fc" id="L62">					desc.setName(description.getName());</span>
+<span class="fc" id="L63">					Language lang = languageService.getByCode(description.getLanguage());</span>
+<span class="pc bpc" id="L64" title="1 of 2 branches missed.">					if(lang==null) {</span>
+<span class="nc" id="L65">						throw new ConversionException(&quot;Language is null for code &quot; + description.getLanguage() + &quot; use language ISO code [en, fr ...]&quot;);</span>
+					}
+<span class="fc" id="L67">					desc.setLanguage(lang);</span>
+<span class="fc" id="L68">					descriptions.add(desc);</span>
+<span class="fc" id="L69">				}</span>
+<span class="fc" id="L70">				target.setDescriptions(descriptions);</span>
+			}
+		
+<span class="nc" id="L73">		} catch (Exception e) {</span>
+<span class="nc" id="L74">			throw new ConversionException(e);</span>
+<span class="fc" id="L75">		}</span>
+	
+		
+<span class="fc" id="L78">		return target;</span>
+	}
+
+	@Override
+	protected Manufacturer createTarget() {
+		// TODO Auto-generated method stub
+<span class="nc" id="L84">		return null;</span>
+	}
+
+	public void setLanguageService(LanguageService languageService) {
+<span class="fc" id="L88">		this.languageService = languageService;</span>
+<span class="fc" id="L89">	}</span>
+
+	public LanguageService getLanguageService() {
+<span class="nc" id="L92">		return languageService;</span>
+	}
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

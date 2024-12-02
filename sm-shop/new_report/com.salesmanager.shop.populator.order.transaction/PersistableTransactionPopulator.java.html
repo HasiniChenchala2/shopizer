@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PersistableTransactionPopulator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.populator.order.transaction</a> &gt; <span class="el_source">PersistableTransactionPopulator.java</span></div><h1>PersistableTransactionPopulator.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.populator.order.transaction;
+
+import org.apache.commons.lang3.Validate;
+
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.services.catalog.pricing.PricingService;
+import com.salesmanager.core.business.services.order.OrderService;
+import com.salesmanager.core.business.utils.AbstractDataPopulator;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.order.Order;
+import com.salesmanager.core.model.payments.PaymentType;
+import com.salesmanager.core.model.payments.Transaction;
+import com.salesmanager.core.model.payments.TransactionType;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.model.order.transaction.PersistableTransaction;
+import com.salesmanager.shop.utils.DateUtil;
+
+<span class="nc" id="L18">public class PersistableTransactionPopulator extends AbstractDataPopulator&lt;PersistableTransaction, Transaction&gt; {</span>
+
+	private OrderService orderService;
+	private PricingService pricingService;
+	
+	@Override
+	public Transaction populate(PersistableTransaction source, Transaction target, MerchantStore store,
+			Language language) throws ConversionException {
+		
+<span class="nc" id="L27">		Validate.notNull(source,&quot;PersistableTransaction must not be null&quot;);</span>
+<span class="nc" id="L28">		Validate.notNull(orderService,&quot;OrderService must not be null&quot;);</span>
+<span class="nc" id="L29">		Validate.notNull(pricingService,&quot;OrderService must not be null&quot;);</span>
+		
+<span class="nc bnc" id="L31" title="All 2 branches missed.">		if(target == null) {</span>
+<span class="nc" id="L32">			target = new Transaction();</span>
+		}
+		
+		
+		try {
+			
+
+<span class="nc" id="L39">			target.setAmount(pricingService.getAmount(source.getAmount()));</span>
+<span class="nc" id="L40">			target.setDetails(source.getDetails());</span>
+<span class="nc" id="L41">			target.setPaymentType(PaymentType.valueOf(source.getPaymentType()));</span>
+<span class="nc" id="L42">			target.setTransactionType(TransactionType.valueOf(source.getTransactionType()));</span>
+<span class="nc" id="L43">			target.setTransactionDate(DateUtil.getDate(source.getTransactionDate()));</span>
+			
+<span class="nc bnc" id="L45" title="All 4 branches missed.">			if(source.getOrderId()!=null &amp;&amp; source.getOrderId().longValue() &gt; 0) {</span>
+<span class="nc" id="L46">				Order order = orderService.getById(source.getOrderId());</span>
+/*				if(source.getCustomerId() == null) {
+					throw new ConversionException(&quot;Cannot add a transaction for an Order without specyfing the customer&quot;);
+				}*/
+				
+<span class="nc bnc" id="L51" title="All 2 branches missed.">				if(order == null) {</span>
+<span class="nc" id="L52">					throw new ConversionException(&quot;Order with id &quot; + source.getOrderId() + &quot;does not exist&quot;);</span>
+				}
+<span class="nc" id="L54">				target.setOrder(order);</span>
+			}
+			
+<span class="nc" id="L57">			return target;</span>
+			
+			
+		
+<span class="nc" id="L61">		} catch(Exception e) {</span>
+<span class="nc" id="L62">			throw new ConversionException(e);</span>
+		}
+
+	}
+
+	@Override
+	protected Transaction createTarget() {
+		// TODO Auto-generated method stub
+<span class="nc" id="L70">		return null;</span>
+	}
+	
+	public OrderService getOrderService() {
+<span class="nc" id="L74">		return orderService;</span>
+	}
+
+	public void setOrderService(OrderService orderService) {
+<span class="nc" id="L78">		this.orderService = orderService;</span>
+<span class="nc" id="L79">	}</span>
+
+	public PricingService getPricingService() {
+<span class="nc" id="L82">		return pricingService;</span>
+	}
+
+	public void setPricingService(PricingService pricingService) {
+<span class="nc" id="L86">		this.pricingService = pricingService;</span>
+<span class="nc" id="L87">	}</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

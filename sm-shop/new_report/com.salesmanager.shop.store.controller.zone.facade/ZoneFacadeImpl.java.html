@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ZoneFacadeImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.controller.zone.facade</a> &gt; <span class="el_source">ZoneFacadeImpl.java</span></div><h1>ZoneFacadeImpl.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.controller.zone.facade;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import javax.inject.Inject;
+
+import org.springframework.stereotype.Service;
+
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.reference.zone.ZoneService;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.core.model.reference.zone.Zone;
+import com.salesmanager.shop.model.references.ReadableZone;
+import com.salesmanager.shop.populator.references.ReadableZonePopulator;
+import com.salesmanager.shop.store.api.exception.ConversionRuntimeException;
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+
+@Service
+<span class="fc" id="L23">public class ZoneFacadeImpl implements ZoneFacade {</span>
+
+  @Inject
+  private ZoneService zoneService;
+
+  @Override
+  public List&lt;ReadableZone&gt; getZones(String countryCode, Language language, MerchantStore merchantStore) {
+<span class="nc" id="L30">    List&lt;Zone&gt; listZones = getListZones(countryCode, language);</span>
+<span class="nc bnc" id="L31" title="All 2 branches missed.">    if (listZones.isEmpty()){</span>
+<span class="nc" id="L32">    	return Collections.emptyList();   </span>
+      //throw new ResourceNotFoundException(&quot;No zones found&quot;);
+    }
+<span class="nc" id="L35">    return listZones.stream()</span>
+<span class="nc" id="L36">        .map(zone -&gt; convertToReadableZone(zone, language, merchantStore))</span>
+<span class="nc" id="L37">        .collect(Collectors.toList());</span>
+  }
+
+  private ReadableZone convertToReadableZone(Zone zone, Language language, MerchantStore merchantStore) {
+    try{
+<span class="nc" id="L42">      ReadableZonePopulator populator = new ReadableZonePopulator();</span>
+<span class="nc" id="L43">      return populator.populate(zone, new ReadableZone(), merchantStore, language);</span>
+<span class="nc" id="L44">    } catch (ConversionException e){</span>
+<span class="nc" id="L45">      throw new ConversionRuntimeException(e);</span>
+    }
+  }
+
+  private List&lt;Zone&gt; getListZones(String countryCode, Language language) {
+    try{
+<span class="nc" id="L51">      return zoneService.getZones(countryCode, language);</span>
+<span class="nc" id="L52">    } catch (ServiceException e){</span>
+<span class="nc" id="L53">      throw new ServiceRuntimeException(e);</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

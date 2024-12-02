@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OptinFacadeImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.controller.optin</a> &gt; <span class="el_source">OptinFacadeImpl.java</span></div><h1>OptinFacadeImpl.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.controller.optin;
+
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.system.optin.OptinService;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.core.model.system.optin.Optin;
+import com.salesmanager.shop.mapper.optin.PersistableOptinMapper;
+import com.salesmanager.shop.mapper.optin.ReadableOptinMapper;
+import com.salesmanager.shop.model.system.PersistableOptin;
+import com.salesmanager.shop.model.system.ReadableOptin;
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+import javax.inject.Inject;
+import org.springframework.stereotype.Service;
+
+@Service
+<span class="fc" id="L17">public class OptinFacadeImpl implements OptinFacade {</span>
+
+  @Inject
+  private OptinService optinService;
+
+  @Inject
+  private ReadableOptinMapper readableOptinConverter;
+  @Inject
+  private PersistableOptinMapper persistableOptinConverter;
+
+  @Override
+  public ReadableOptin create(
+      PersistableOptin persistableOptin, MerchantStore merchantStore, Language language) {
+<span class="fc" id="L30">    Optin optinEntity = persistableOptinConverter.convert(persistableOptin, merchantStore, language);</span>
+<span class="fc" id="L31">    Optin savedOptinEntity = createOptin(optinEntity);</span>
+<span class="fc" id="L32">    return readableOptinConverter.convert(savedOptinEntity, merchantStore, language);</span>
+  }
+
+  private Optin createOptin(Optin optinEntity) {
+    try{
+<span class="fc" id="L37">      optinService.create(optinEntity);</span>
+<span class="fc" id="L38">      return optinEntity;</span>
+<span class="nc" id="L39">    } catch (ServiceException e){</span>
+<span class="nc" id="L40">      throw new ServiceRuntimeException(e);</span>
+    }
+
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

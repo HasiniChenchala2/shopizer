@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReadableProductPricePopulator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.populator.catalog</a> &gt; <span class="el_source">ReadableProductPricePopulator.java</span></div><h1>ReadableProductPricePopulator.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.populator.catalog;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+
+import org.apache.commons.lang3.Validate;
+
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.services.catalog.pricing.PricingService;
+import com.salesmanager.core.business.utils.AbstractDataPopulator;
+import com.salesmanager.core.model.catalog.product.price.FinalPrice;
+import com.salesmanager.core.model.catalog.product.price.ProductPrice;
+import com.salesmanager.core.model.catalog.product.price.ProductPriceDescription;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.model.catalog.product.ReadableProductPrice;
+import com.salesmanager.shop.model.catalog.product.ReadableProductPriceFull;
+
+
+
+<span class="nc" id="L22">public class ReadableProductPricePopulator extends</span>
+		AbstractDataPopulator&lt;ProductPrice, ReadableProductPrice&gt; {
+	
+	
+	private PricingService pricingService;
+
+	public PricingService getPricingService() {
+<span class="nc" id="L29">		return pricingService;</span>
+	}
+
+	public void setPricingService(PricingService pricingService) {
+<span class="nc" id="L33">		this.pricingService = pricingService;</span>
+<span class="nc" id="L34">	}</span>
+
+	@Override
+	public ReadableProductPrice populate(ProductPrice source,
+			ReadableProductPrice target, MerchantStore store, Language language)
+			throws ConversionException {
+<span class="nc" id="L40">		Validate.notNull(pricingService,&quot;pricingService must be set&quot;);</span>
+<span class="nc" id="L41">		Validate.notNull(source.getProductAvailability(),&quot;productPrice.availability cannot be null&quot;);</span>
+<span class="nc" id="L42">		Validate.notNull(source.getProductAvailability().getProduct(),&quot;productPrice.availability.product cannot be null&quot;);</span>
+		
+		try {
+		  
+<span class="nc bnc" id="L46" title="All 2 branches missed.">		    if(language == null) {</span>
+<span class="nc" id="L47">		      target = new ReadableProductPriceFull();</span>
+		    }
+		    
+<span class="nc bnc" id="L50" title="All 4 branches missed.">		    if(source.getId() != null &amp;&amp; source.getId() &gt; 0) {</span>
+<span class="nc" id="L51">		      target.setId(source.getId());</span>
+		    }
+		    
+<span class="nc" id="L54">		    target.setDefaultPrice(source.isDefaultPrice());</span>
+			
+<span class="nc" id="L56">			FinalPrice finalPrice = pricingService.calculateProductPrice(source.getProductAvailability().getProduct());</span>
+			
+<span class="nc" id="L58">			target.setOriginalPrice(pricingService.getDisplayAmount(source.getProductPriceAmount(), store));</span>
+<span class="nc bnc" id="L59" title="All 2 branches missed.">			if(finalPrice.isDiscounted()) {</span>
+<span class="nc" id="L60">				target.setDiscounted(true);</span>
+<span class="nc" id="L61">				target.setFinalPrice(pricingService.getDisplayAmount(source.getProductPriceSpecialAmount(), store));</span>
+			} else {
+<span class="nc" id="L63">				target.setFinalPrice(pricingService.getDisplayAmount(finalPrice.getOriginalPrice(), store));</span>
+			}
+			
+<span class="nc bnc" id="L66" title="All 4 branches missed.">		    if(source.getDescriptions()!=null &amp;&amp; source.getDescriptions().size()&gt;0) {</span>
+<span class="nc" id="L67">		       List&lt;com.salesmanager.shop.model.catalog.product.ProductPriceDescription&gt; fulldescriptions = new ArrayList&lt;com.salesmanager.shop.model.catalog.product.ProductPriceDescription&gt;();</span>
+	            
+<span class="nc" id="L69">               Set&lt;ProductPriceDescription&gt; descriptions = source.getDescriptions();</span>
+<span class="nc" id="L70">               ProductPriceDescription description = null;</span>
+<span class="nc bnc" id="L71" title="All 2 branches missed.">               for(ProductPriceDescription desc : descriptions) {</span>
+<span class="nc bnc" id="L72" title="All 4 branches missed.">                   if(language != null &amp;&amp; desc.getLanguage().getCode().equals(language.getCode())) {</span>
+<span class="nc" id="L73">                       description = desc;</span>
+<span class="nc" id="L74">                       break;</span>
+                   } else {
+<span class="nc" id="L76">                     fulldescriptions.add(populateDescription(desc));</span>
+                   }
+<span class="nc" id="L78">               }</span>
+
+               
+<span class="nc bnc" id="L81" title="All 2 branches missed.">               if (description != null) {</span>
+<span class="nc" id="L82">                   com.salesmanager.shop.model.catalog.product.ProductPriceDescription d = populateDescription(description);</span>
+<span class="nc" id="L83">                   target.setDescription(d);</span>
+               }
+               
+<span class="nc bnc" id="L86" title="All 2 branches missed.">               if(target instanceof ReadableProductPriceFull) {</span>
+<span class="nc" id="L87">                 ((ReadableProductPriceFull)target).setDescriptions(fulldescriptions);</span>
+               }
+		    }
+
+
+<span class="nc" id="L92">		} catch(Exception e) {</span>
+<span class="nc" id="L93">			throw new ConversionException(&quot;Exception while converting to ReadableProductPrice&quot;,e);</span>
+<span class="nc" id="L94">		}</span>
+		
+		
+		
+<span class="nc" id="L98">		return target;</span>
+	}
+
+	@Override
+	protected ReadableProductPrice createTarget() {
+		// TODO Auto-generated method stub
+<span class="nc" id="L104">		return null;</span>
+	}
+	
+	com.salesmanager.shop.model.catalog.product.ProductPriceDescription populateDescription(
+	      ProductPriceDescription description) {
+<span class="nc bnc" id="L109" title="All 2 branches missed.">	    if (description == null) {</span>
+<span class="nc" id="L110">	      return null;</span>
+	    }
+<span class="nc" id="L112">	    com.salesmanager.shop.model.catalog.product.ProductPriceDescription d =</span>
+	        new com.salesmanager.shop.model.catalog.product.ProductPriceDescription();
+<span class="nc" id="L114">	    d.setName(description.getName());</span>
+<span class="nc" id="L115">	    d.setDescription(description.getDescription());</span>
+<span class="nc" id="L116">	    d.setId(description.getId());</span>
+<span class="nc" id="L117">	    d.setTitle(description.getTitle());</span>
+<span class="nc bnc" id="L118" title="All 2 branches missed.">	    if (description.getLanguage() != null) {</span>
+<span class="nc" id="L119">	      d.setLanguage(description.getLanguage().getCode());</span>
+	    }
+<span class="nc" id="L121">	    return d;</span>
+	 }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ProductVariantFacadeImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.facade.product</a> &gt; <span class="el_source">ProductVariantFacadeImpl.java</span></div><h1>ProductVariantFacadeImpl.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.facade.product;
+
+import static com.salesmanager.shop.util.ReadableEntityUtil.createReadableList;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.apache.commons.lang3.Validate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.stereotype.Component;
+
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.catalog.product.variant.ProductVariantService;
+import com.salesmanager.core.business.services.catalog.product.variation.ProductVariationService;
+import com.salesmanager.core.model.catalog.product.Product;
+import com.salesmanager.core.model.catalog.product.variant.ProductVariant;
+import com.salesmanager.core.model.catalog.product.variation.ProductVariation;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.mapper.catalog.product.PersistableProductVariantMapper;
+import com.salesmanager.shop.mapper.catalog.product.ReadableProductVariantMapper;
+import com.salesmanager.shop.model.catalog.product.ReadableProduct;
+import com.salesmanager.shop.model.catalog.product.product.variant.PersistableProductVariant;
+import com.salesmanager.shop.model.catalog.product.product.variant.ReadableProductVariant;
+import com.salesmanager.shop.model.entity.ReadableEntityList;
+import com.salesmanager.shop.store.api.exception.ConstraintException;
+import com.salesmanager.shop.store.api.exception.ResourceNotFoundException;
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+import com.salesmanager.shop.store.controller.product.facade.ProductCommonFacade;
+import com.salesmanager.shop.store.controller.product.facade.ProductFacade;
+import com.salesmanager.shop.store.controller.product.facade.ProductVariantFacade;
+
+
+/**
+ * Product instance management facade
+ * @author carlsamson
+ *
+ */
+@Component
+<span class="fc" id="L43">public class ProductVariantFacadeImpl implements ProductVariantFacade {</span>
+	
+	
+	@Autowired
+	private ReadableProductVariantMapper readableProductVariantMapper; 
+	
+	@Autowired
+	private PersistableProductVariantMapper persistableProductVariantMapper; 
+	
+	@Autowired
+	private ProductVariantService productVariantService;
+	
+	
+	@Autowired
+	private ProductVariationService productVariationService;
+	
+	@Autowired
+	private ProductFacade productFacade;
+	
+	@Autowired
+	private ProductCommonFacade productCommonFacade;
+
+	@Override
+	public ReadableProductVariant get(Long instanceId, Long productId, MerchantStore store, Language language) {
+<span class="nc" id="L67">		Optional&lt;ProductVariant&gt; productVariant =  this.getproductVariant(instanceId, productId, store);</span>
+		
+<span class="nc bnc" id="L69" title="All 2 branches missed.">		if(productVariant.isEmpty()) {</span>
+<span class="nc" id="L70">			throw new ResourceNotFoundException(&quot;Product instance + [&quot; + instanceId + &quot;] not found for store [&quot; + store.getCode() + &quot;]&quot;);</span>
+		}
+		
+		
+<span class="nc" id="L74">		ProductVariant model =  productVariant.get();</span>
+<span class="nc" id="L75">		return readableProductVariantMapper.convert(model, store, language);</span>
+		
+		
+	}
+
+	@Override
+	public boolean exists(String sku, MerchantStore store, Long productId, Language language) {
+<span class="nc" id="L82">		ReadableProduct product = null;</span>
+		try {
+<span class="nc" id="L84">			product = productCommonFacade.getProduct(store, productId, language);</span>
+<span class="nc" id="L85">		} catch (Exception e) {</span>
+<span class="nc" id="L86">			throw new ServiceRuntimeException(&quot;Error while getting product [&quot; + productId + &quot;]&quot;,e);</span>
+<span class="nc" id="L87">		}</span>
+
+<span class="nc" id="L89">		return productVariantService.exist(sku,product.getId());</span>
+	}
+
+	@Override
+	public Long create(PersistableProductVariant productVariant, Long productId, MerchantStore store,
+			Language language) {
+<span class="nc" id="L95">		Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);</span>
+<span class="nc" id="L96">		Validate.notNull(productVariant, &quot;productVariant cannot be null&quot;);</span>
+<span class="nc" id="L97">		Validate.notNull(productId, &quot;Product id cannot be null&quot;);</span>
+
+		//variation and variation value should not be of same product option code
+<span class="nc" id="L100">		if(</span>
+<span class="nc bnc" id="L101" title="All 4 branches missed.">			productVariant.getVariation() != null &amp;&amp; productVariant.getVariation().longValue() &gt; 0 &amp;&amp;</span>
+<span class="nc bnc" id="L102" title="All 4 branches missed.">			productVariant.getVariationValue() != null &amp;&amp;  productVariant.getVariationValue().longValue() &gt; 0) </span>
+		{
+
+<span class="nc" id="L105">			List&lt;ProductVariation&gt; variations = productVariationService.getByIds(Arrays.asList(productVariant.getVariation(),productVariant.getVariationValue()), store);</span>
+			
+<span class="nc bnc" id="L107" title="All 2 branches missed.">			boolean differentOption = variations.stream().map(i -&gt; i.getProductOption().getCode()).distinct().count() &gt; 1;</span>
+
+<span class="nc bnc" id="L109" title="All 2 branches missed.">			if(!differentOption) {</span>
+<span class="nc" id="L110">				throw new ConstraintException(&quot;Product option of instance.variant and instance.variantValue must be different&quot;);</span>
+			}
+
+		}
+		
+		
+<span class="nc" id="L116">		productVariant.setProductId(productId);</span>
+<span class="nc" id="L117">		productVariant.setId(null);</span>
+<span class="nc" id="L118">		ProductVariant variant = persistableProductVariantMapper.convert(productVariant, store, language);</span>
+		
+		try {
+<span class="nc" id="L121">			productVariantService.saveProductVariant(variant);</span>
+<span class="nc" id="L122">		} catch (ServiceException e) {</span>
+<span class="nc" id="L123">			throw new ServiceRuntimeException(&quot;Cannot save product instance for store [&quot; + store.getCode() + &quot;] and productId [&quot; + productId + &quot;]&quot;, e);</span>
+<span class="nc" id="L124">		}</span>
+		
+<span class="nc" id="L126">		return variant.getId();</span>
+	}
+
+	@Override
+	public void update(Long instanceId, PersistableProductVariant productVariant, Long productId, MerchantStore store, Language language) {
+<span class="nc" id="L131">		Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);</span>
+<span class="nc" id="L132">		Validate.notNull(productVariant, &quot;productVariant cannot be null&quot;);</span>
+<span class="nc" id="L133">		Validate.notNull(productId, &quot;Product id cannot be null&quot;);</span>
+<span class="nc" id="L134">		Validate.notNull(instanceId, &quot;Product instance id cannot be null&quot;);</span>
+		
+<span class="nc" id="L136">		Optional&lt;ProductVariant&gt; instanceModel = this.getproductVariant(instanceId, productId, store);</span>
+<span class="nc bnc" id="L137" title="All 2 branches missed.">		if(instanceModel.isEmpty()) {</span>
+<span class="nc" id="L138">			throw new ResourceNotFoundException(&quot;productVariant with id [&quot; + instanceId + &quot;] not found for store [&quot; + store.getCode() + &quot;] and productId [&quot; + productId + &quot;]&quot;);</span>
+		}
+		
+<span class="nc" id="L141">		productVariant.setProductId(productId);</span>
+		
+<span class="nc" id="L143">		ProductVariant mergedModel = persistableProductVariantMapper.merge(productVariant, instanceModel.get(), store, language);</span>
+		try {
+<span class="nc" id="L145">			productVariantService.saveProductVariant(mergedModel);</span>
+<span class="nc" id="L146">		} catch (ServiceException e) {</span>
+<span class="nc" id="L147">			throw new ServiceRuntimeException(&quot;Cannot save product instance for store [&quot; + store.getCode() + &quot;] and productId [&quot; + productId + &quot;]&quot;, e);</span>
+<span class="nc" id="L148">		}</span>
+		
+<span class="nc" id="L150">	}</span>
+	
+	private Optional&lt;ProductVariant&gt; getproductVariant(Long id, Long productId, MerchantStore store) {
+<span class="nc" id="L153">		return productVariantService.getById(id, productId, store);</span>
+	}
+
+
+	@Override
+	public void delete(Long productVariant, Long productId, MerchantStore store) {
+<span class="nc" id="L159">		Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);</span>
+<span class="nc" id="L160">		Validate.notNull(productVariant, &quot;productVariant id cannot be null&quot;);</span>
+<span class="nc" id="L161">		Validate.notNull(productId, &quot;Product id cannot be null&quot;);</span>
+
+		
+<span class="nc" id="L164">		Optional&lt;ProductVariant&gt; instanceModel = this.getproductVariant(productVariant, productId, store);</span>
+<span class="nc bnc" id="L165" title="All 2 branches missed.">		if(instanceModel.isEmpty()) {</span>
+<span class="nc" id="L166">			throw new ResourceNotFoundException(&quot;productVariant with id [&quot; + productVariant + &quot;] not found for store [&quot; + store.getCode() + &quot;] and productId [&quot; + productId + &quot;]&quot;);</span>
+		}
+		
+		try {
+<span class="nc" id="L170">			productVariantService.delete(instanceModel.get());</span>
+<span class="nc" id="L171">		} catch (ServiceException e) {</span>
+<span class="nc" id="L172">			throw new ServiceRuntimeException(&quot;Cannot delete product instance [&quot; + productVariant + &quot;]  for store [&quot; + store.getCode() + &quot;] and productId [&quot; + productId + &quot;]&quot;, e);</span>
+<span class="nc" id="L173">		}</span>
+
+<span class="nc" id="L175">	}</span>
+
+	@Override
+	public ReadableEntityList&lt;ReadableProductVariant&gt; list(Long productId, MerchantStore store, Language language,
+			int page, int count) {
+<span class="nc" id="L180">		Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);</span>
+<span class="nc" id="L181">		Validate.notNull(productId, &quot;Product id cannot be null&quot;);</span>
+		
+<span class="nc" id="L183">		Product product = productFacade.getProduct(productId, store);</span>
+		
+<span class="nc bnc" id="L185" title="All 2 branches missed.">		if(product == null) {</span>
+<span class="nc" id="L186">			throw new ResourceNotFoundException(&quot;Product with id [&quot; + productId + &quot;] not found for store [&quot; + store.getCode() + &quot;]&quot;);</span>
+		}
+		
+<span class="nc" id="L189">		Page&lt;ProductVariant&gt; instances = productVariantService.getByProductId(store, product, language, page, count);</span>
+		
+		
+<span class="nc" id="L192">		List&lt;ReadableProductVariant&gt; readableInstances = instances.stream()</span>
+<span class="nc" id="L193">				.map(rp -&gt; this.readableProductVariantMapper.convert(rp, store, language)).collect(Collectors.toList());</span>
+
+	    
+<span class="nc" id="L196">	    return createReadableList(instances, readableInstances);</span>
+
+	}
+	
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

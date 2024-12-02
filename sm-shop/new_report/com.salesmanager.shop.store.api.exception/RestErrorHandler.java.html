@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RestErrorHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.api.exception</a> &gt; <span class="el_source">RestErrorHandler.java</span></div><h1>RestErrorHandler.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.api.exception;
+
+import java.util.Objects;
+import java.util.Optional;
+
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
+
+@Order(Ordered.HIGHEST_PRECEDENCE)
+@ControllerAdvice({&quot;com.salesmanager.shop.store.api&quot;})
+<span class="fc" id="L20">public class RestErrorHandler {</span>
+  
+<span class="fc" id="L22">    private static final Logger log = LoggerFactory.getLogger(RestErrorHandler.class);</span>
+
+    @RequestMapping(produces = &quot;application/json&quot;)
+    @ExceptionHandler(Exception.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public @ResponseBody ErrorEntity handleServiceException(Exception exception) {
+<span class="nc" id="L28">        log.error(exception.getMessage(), exception);</span>
+<span class="nc" id="L29">        Objects.requireNonNull(exception.getCause());</span>
+<span class="nc" id="L30">        Throwable rootCause = exception.getCause();</span>
+<span class="nc bnc" id="L31" title="All 4 branches missed.">        while (rootCause.getCause() != null &amp;&amp; rootCause.getCause() != rootCause) {</span>
+<span class="nc" id="L32">            rootCause = rootCause.getCause();</span>
+        }
+<span class="nc" id="L34">        ErrorEntity errorEntity = createErrorEntity(&quot;500&quot;, exception.getMessage(),</span>
+<span class="nc" id="L35">        		rootCause.getMessage());</span>
+<span class="nc" id="L36">        return errorEntity;</span>
+    }
+
+
+    /**
+     * Generic exception serviceException handler
+     */
+    @RequestMapping(produces = &quot;application/json&quot;)
+    @ExceptionHandler(ServiceRuntimeException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public @ResponseBody ErrorEntity handleServiceException(ServiceRuntimeException exception) {
+<span class="nc" id="L47">        log.error(exception.getErrorMessage(), exception);</span>
+<span class="nc" id="L48">        Throwable rootCause = exception.getCause();</span>
+<span class="nc bnc" id="L49" title="All 4 branches missed.">        while (rootCause.getCause() != null &amp;&amp; rootCause.getCause() != rootCause) {</span>
+<span class="nc" id="L50">            rootCause = rootCause.getCause();</span>
+        }
+<span class="nc bnc" id="L52" title="All 2 branches missed.">        ErrorEntity errorEntity = createErrorEntity(exception.getErrorCode()!=null?exception.getErrorCode():&quot;500&quot;, exception.getErrorMessage(),</span>
+<span class="nc" id="L53">        		rootCause.getMessage());</span>
+<span class="nc" id="L54">        return errorEntity;</span>
+    }
+
+    @RequestMapping(produces = &quot;application/json&quot;)
+    @ExceptionHandler(ConversionRuntimeException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public @ResponseBody ErrorEntity handleServiceException(ConversionRuntimeException exception) {
+<span class="nc" id="L61">        log.error(exception.getErrorMessage(), exception);</span>
+<span class="nc" id="L62">        ErrorEntity errorEntity = createErrorEntity(exception.getErrorCode(), exception.getErrorMessage(),</span>
+<span class="nc" id="L63">            exception.getLocalizedMessage());</span>
+<span class="nc" id="L64">        return errorEntity;</span>
+    }
+
+    @RequestMapping(produces = &quot;application/json&quot;)
+    @ExceptionHandler(ResourceNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public @ResponseBody ErrorEntity handleServiceException(ResourceNotFoundException exception) {
+<span class="fc" id="L71">        log.error(exception.getErrorMessage(), exception);</span>
+
+<span class="fc" id="L73">        ErrorEntity errorEntity = createErrorEntity(exception.getErrorCode(), exception.getErrorMessage(),</span>
+<span class="fc" id="L74">                exception.getLocalizedMessage());</span>
+<span class="fc" id="L75">        return errorEntity;</span>
+    }
+    
+    @RequestMapping(produces = &quot;application/json&quot;)
+    @ExceptionHandler(UnauthorizedException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public @ResponseBody ErrorEntity handleServiceException(UnauthorizedException exception) {
+<span class="nc" id="L82">        log.error(exception.getErrorMessage(), exception);</span>
+
+<span class="nc" id="L84">        ErrorEntity errorEntity = createErrorEntity(exception.getErrorCode(), exception.getErrorMessage(),</span>
+<span class="nc" id="L85">                exception.getLocalizedMessage());</span>
+<span class="nc" id="L86">        return errorEntity;</span>
+    }
+
+    @RequestMapping(produces = &quot;application/json&quot;)
+    @ExceptionHandler(RestApiException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public @ResponseBody ErrorEntity handleRestApiException(RestApiException exception) {
+<span class="nc" id="L93">        log.error(exception.getErrorMessage(), exception);</span>
+
+<span class="nc" id="L95">        ErrorEntity errorEntity = createErrorEntity(exception.getErrorCode(), exception.getErrorMessage(),</span>
+<span class="nc" id="L96">                exception.getLocalizedMessage());</span>
+<span class="nc" id="L97">        return errorEntity;</span>
+    }
+
+    private ErrorEntity createErrorEntity(String errorCode, String message, String detailMessage) {
+<span class="fc" id="L101">        ErrorEntity errorEntity = new ErrorEntity();</span>
+<span class="fc" id="L102">        Optional.ofNullable(errorCode)</span>
+<span class="fc" id="L103">                .ifPresent(errorEntity::setErrorCode);</span>
+
+<span class="pc bpc" id="L105" title="2 of 4 branches missed.">        String resultMessage = (message != null &amp;&amp; detailMessage !=null)  ? new StringBuilder().append(message).append(&quot;, &quot;).append(detailMessage).toString() : detailMessage;</span>
+<span class="pc bpc" id="L106" title="1 of 2 branches missed.">        if(StringUtils.isBlank(resultMessage)) {</span>
+<span class="fc" id="L107">        	resultMessage = message;</span>
+        }
+<span class="fc" id="L109">        Optional.ofNullable(resultMessage)</span>
+<span class="fc" id="L110">                .ifPresent(errorEntity::setMessage);</span>
+<span class="fc" id="L111">        return errorEntity;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

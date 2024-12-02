@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReferencesApi.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.api.v1.references</a> &gt; <span class="el_source">ReferencesApi.java</span></div><h1>ReferencesApi.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.api.v1.references;
+
+import java.util.Arrays;
+import java.util.List;
+
+import javax.inject.Inject;
+import javax.servlet.http.HttpServletRequest;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.currency.Currency;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.model.references.MeasureUnit;
+import com.salesmanager.shop.model.references.ReadableCountry;
+import com.salesmanager.shop.model.references.ReadableZone;
+import com.salesmanager.shop.model.references.SizeReferences;
+import com.salesmanager.shop.model.references.WeightUnit;
+import com.salesmanager.shop.store.controller.country.facade.CountryFacade;
+import com.salesmanager.shop.store.controller.currency.facade.CurrencyFacade;
+import com.salesmanager.shop.store.controller.language.facade.LanguageFacade;
+import com.salesmanager.shop.store.controller.store.facade.StoreFacade;
+import com.salesmanager.shop.store.controller.zone.facade.ZoneFacade;
+import com.salesmanager.shop.utils.LanguageUtils;
+
+import springfox.documentation.annotations.ApiIgnore;
+
+/**
+ * Get system Language, Country and Currency objects
+ *
+ * @author c.samson
+ */
+@RestController
+@RequestMapping(&quot;/api/v1&quot;)
+<span class="fc" id="L40">public class ReferencesApi {</span>
+
+<span class="fc" id="L42">  private static final Logger LOGGER = LoggerFactory.getLogger(ReferencesApi.class);</span>
+
+
+  @Inject private StoreFacade storeFacade;
+
+  @Inject private LanguageUtils languageUtils;
+
+  @Inject private LanguageFacade languageFacade;
+
+  @Inject private CountryFacade countryFacade;
+
+  @Inject private ZoneFacade zoneFacade;
+
+  @Inject private CurrencyFacade currencyFacade;
+
+  /**
+   * Search languages by language code private/languages returns everything
+   *
+   * @return
+   */
+  @GetMapping(&quot;/languages&quot;)
+  public List&lt;Language&gt; getLanguages() {
+<span class="nc" id="L64">    return languageFacade.getLanguages();</span>
+  }
+
+  /**
+   * Returns a country with zones (provinces, states) supports language set in parameter
+   * ?lang=en|fr|ru...
+   *
+   * @param request
+   * @return
+   */
+  @GetMapping(&quot;/country&quot;)
+  public List&lt;ReadableCountry&gt; getCountry(@ApiIgnore Language language, HttpServletRequest request) {
+<span class="nc" id="L76">    MerchantStore merchantStore = storeFacade.getByCode(request);</span>
+<span class="nc" id="L77">    return countryFacade.getListCountryZones(language, merchantStore);</span>
+  }
+
+  @GetMapping(&quot;/zones&quot;)
+  public List&lt;ReadableZone&gt; getZones(
+      @RequestParam(&quot;code&quot;) String code, @ApiIgnore Language language, HttpServletRequest request) {
+<span class="nc" id="L83">    MerchantStore merchantStore = storeFacade.getByCode(request);</span>
+<span class="nc" id="L84">    return zoneFacade.getZones(code, language, merchantStore);</span>
+  }
+
+  /**
+   * Currency
+   *
+   * @return
+   */
+  @GetMapping(&quot;/currency&quot;)
+  public List&lt;Currency&gt; getCurrency() {
+<span class="nc" id="L94">    return currencyFacade.getList();</span>
+  }
+
+  @GetMapping(&quot;/measures&quot;)
+  public SizeReferences measures() {
+<span class="nc" id="L99">    SizeReferences sizeReferences = new SizeReferences();</span>
+<span class="nc" id="L100">    sizeReferences.setMeasures(Arrays.asList(MeasureUnit.values()));</span>
+<span class="nc" id="L101">    sizeReferences.setWeights(Arrays.asList(WeightUnit.values()));</span>
+<span class="nc" id="L102">    return sizeReferences;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

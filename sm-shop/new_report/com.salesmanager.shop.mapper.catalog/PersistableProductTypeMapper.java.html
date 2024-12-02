@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PersistableProductTypeMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.mapper.catalog</a> &gt; <span class="el_source">PersistableProductTypeMapper.java</span></div><h1>PersistableProductTypeMapper.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.mapper.catalog;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.Validate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.reference.language.LanguageService;
+import com.salesmanager.core.model.catalog.product.type.ProductType;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.mapper.Mapper;
+import com.salesmanager.shop.model.catalog.product.type.PersistableProductType;
+import com.salesmanager.shop.model.catalog.product.type.ProductTypeDescription;
+import com.salesmanager.shop.store.api.exception.ConversionRuntimeException;
+
+
+@Component
+<span class="fc" id="L24">public class PersistableProductTypeMapper implements Mapper&lt;PersistableProductType, ProductType&gt; {</span>
+	
+	@Autowired
+	private LanguageService languageService;
+
+	@Override
+	public ProductType convert(PersistableProductType source, MerchantStore store, Language language) {
+<span class="nc" id="L31">		ProductType type = new ProductType();</span>
+<span class="nc" id="L32">		return this.merge(source, type, store, language);</span>
+	}
+
+	@Override
+	public ProductType merge(PersistableProductType source, ProductType destination, MerchantStore store,
+							 Language language) {
+<span class="nc" id="L38">		Validate.notNull(destination, &quot;ReadableProductType cannot be null&quot;);</span>
+		try {
+<span class="nc" id="L40">			return type(source, destination);</span>
+<span class="nc" id="L41">		} catch (ServiceException e) {</span>
+<span class="nc" id="L42">			throw new ConversionRuntimeException(e);</span>
+		}
+	}
+	
+	private ProductType type (PersistableProductType type, ProductType destination) throws ServiceException {
+<span class="nc bnc" id="L47" title="All 2 branches missed.">		if(destination == null) {</span>
+<span class="nc" id="L48">			destination = new ProductType();</span>
+		}
+<span class="nc" id="L50">		destination.setCode(type.getCode());</span>
+<span class="nc" id="L51">		destination.setId(type.getId());</span>
+<span class="nc" id="L52">		destination.setAllowAddToCart(type.isAllowAddToCart());</span>
+<span class="nc" id="L53">		destination.setVisible(type.isVisible());</span>
+		//destination.set
+
+<span class="nc" id="L56">		List&lt;com.salesmanager.core.model.catalog.product.type.ProductTypeDescription&gt; descriptions = new ArrayList&lt;com.salesmanager.core.model.catalog.product.type.ProductTypeDescription&gt;();</span>
+<span class="nc bnc" id="L57" title="All 2 branches missed.">		if(!CollectionUtils.isEmpty(type.getDescriptions())) {</span>
+			
+<span class="nc bnc" id="L59" title="All 2 branches missed.">			for(ProductTypeDescription d : type.getDescriptions()) {</span>
+<span class="nc" id="L60">				com.salesmanager.core.model.catalog.product.type.ProductTypeDescription desc = typeDescription(d, destination, d.getLanguage());</span>
+<span class="nc" id="L61">				descriptions.add(desc);</span>
+				
+				
+<span class="nc" id="L64">			}</span>
+			
+<span class="nc" id="L66">			destination.setDescriptions(new HashSet&lt;com.salesmanager.core.model.catalog.product.type.ProductTypeDescription&gt;(descriptions));</span>
+			
+		}	
+
+<span class="nc" id="L70">		return destination;</span>
+	}
+	
+	private com.salesmanager.core.model.catalog.product.type.ProductTypeDescription typeDescription(ProductTypeDescription description, ProductType typeModel, String lang) throws ServiceException {
+		
+<span class="nc" id="L75">		com.salesmanager.core.model.catalog.product.type.ProductTypeDescription desc = null;</span>
+<span class="nc bnc" id="L76" title="All 2 branches missed.">		if(!CollectionUtils.isEmpty(typeModel.getDescriptions()) ){</span>
+<span class="nc" id="L77">			desc = this.findAppropriateDescription(typeModel, lang);</span>
+		}
+		
+<span class="nc bnc" id="L80" title="All 2 branches missed.">		if(desc == null) {</span>
+<span class="nc" id="L81">			desc = new com.salesmanager.core.model.catalog.product.type.ProductTypeDescription();</span>
+		}
+		
+<span class="nc" id="L84">		desc.setName(description.getName());</span>
+<span class="nc" id="L85">		desc.setDescription(description.getDescription());</span>
+<span class="nc" id="L86">		desc.setLanguage(languageService.getByCode(description.getLanguage()));</span>
+<span class="nc" id="L87">		desc.setProductType(typeModel);</span>
+<span class="nc" id="L88">		return desc;</span>
+	}
+	
+	private com.salesmanager.core.model.catalog.product.type.ProductTypeDescription findAppropriateDescription(ProductType typeModel, String lang) {
+<span class="nc" id="L92">		java.util.Optional&lt;com.salesmanager.core.model.catalog.product.type.ProductTypeDescription&gt; d = typeModel.getDescriptions().stream().filter(t -&gt; t.getLanguage().getCode().equals(lang)).findFirst();</span>
+<span class="nc bnc" id="L93" title="All 2 branches missed.">		if(d.isPresent()) {</span>
+<span class="nc" id="L94">			return d.get();</span>
+		} else {
+<span class="nc" id="L96">			return null;</span>
+		}
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>
