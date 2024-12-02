@@ -55,12 +55,6 @@ Demo:
 
 From the command line:
 
-
-
-```
-docker build -t shopizerecomm/shopizer:latest
-```
-
 ```
 docker run -p 8080:8080 shopizerecomm/shopizer:latest
 ```
@@ -200,11 +194,11 @@ Check the coverage for following catalog APIs:
 3. deleteCatalog(Long, MerchantStore, Language)
 4. updateCatalog(Long, PersistableCatalog, MerchantStore, Language)
 
-Old Report Coverage-Catalog:
+**Old Report Coverage-Catalog:**
 
 ![Old Report Coverage Catalog](image-1.png)
 
-New Report Coverage-Catalog:
+**New Report Coverage-Catalog:**
 
 ![New Report Coverage Catalog](image.png)
 
@@ -212,11 +206,11 @@ Navigate to **/sm-shop/old_report/com.salesmanager.shop.store.api.v1.product/ind
 
 5. get(Long, MerchantStore, Language, HttpServletResponse)
 
-Old Report Coverage-Manufacturer:
+**Old Report Coverage-Manufacturer:**
 
 ![Old Report Coverage Manufacturer](image-2.png)
 
-New Report Coverage-Manufacturer:
+**New Report Coverage-Manufacturer:**
 ![New Report Coverage Manufacturer](image-3.png)
 
 
