@@ -1,15 +1,3 @@
-# Shopizer 3.X (for java 1.11 +) (tested with Java 11, 16 and 17)
-
-> [!NOTE]
-> The team is working on an upcoming efficient microservices version. Stay tuned !
-
-[![last_version](https://img.shields.io/badge/last_version-v3.2.5-blue.svg?style=flat)](https://github.com/shopizer-ecommerce/shopizer/tree/3.2.5)
-[![Official site](https://img.shields.io/website-up-down-green-red/https/shields.io.svg?label=official%20site)](http://www.shopizer.com/)
-[![Docker Pulls](https://img.shields.io/docker/pulls/shopizerecomm/shopizer.svg)](https://hub.docker.com/r/shopizerecomm/shopizer)
-[![stackoverflow](https://img.shields.io/badge/shopizer-stackoverflow-orange.svg?style=flat)](http://stackoverflow.com/questions/tagged/shopizer)
-[![CircleCI](https://circleci.com/gh/shopizer-ecommerce/shopizer.svg?style=svg)](https://circleci.com/gh/shopizer-ecommerce/shopizer)
-
-
 # Shopizer
 
 Shopizer is enterprise open source e-commerce software for retailers who want flexibility, speed and control of their commerce platform. Shopizer is a software solution that gives organizations the ultimate flexibility to take an experience-first approach to commerce, with simple powerful APIs and built in stores models.
@@ -211,14 +199,24 @@ Check the coverage for following catalog APIs:
 2. getCatalog(Long, MerchantStore, Language)
 3. deleteCatalog(Long, MerchantStore, Language)
 4. updateCatalog(Long, PersistableCatalog, MerchantStore, Language)
+
+Old Report Coverage-Catalog:
+
 ![Old Report Coverage Catalog](image-1.png)
+
+New Report Coverage-Catalog:
+
 ![New Report Coverage Catalog](image.png)
 
 Navigate to **/sm-shop/old_report/com.salesmanager.shop.store.api.v1.product/index.html** in old report and **/sm-shop/new_report/com.salesmanager.shop.store.api.v1.product/index.html** in new report.
 
 5. get(Long, MerchantStore, Language, HttpServletResponse)
 
+Old Report Coverage-Manufacturer:
+
 ![Old Report Coverage Manufacturer](image-2.png)
+
+New Report Coverage-Manufacturer:
 ![New Report Coverage Manufacturer](image-3.png)
 
 
