@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PaginationData.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.model.paging</a> &gt; <span class="el_source">PaginationData.java</span></div><h1>PaginationData.java</h1><pre class="source lang-java linenums">/**
+ * 
+ */
+package com.salesmanager.shop.store.model.paging;
+
+import java.io.Serializable;
+
+/**
+ *  POJO representation of pagination
+ * @author Umesh Awasthi
+ *
+ */
+public class PaginationData implements Serializable
+{
+    
+    
+    private static final long serialVersionUID = 1L;
+
+    /** The number of results per page.*/
+    private int pageSize;
+    private int currentPage;
+    private int offset ;
+    private int totalCount;
+    private int totalPages;
+    private int countByPage;
+
+    
+<span class="nc" id="L28">    public PaginationData(int pageSize,int currentPage) {</span>
+<span class="nc bnc" id="L29" title="All 2 branches missed.">        if (pageSize == 0)</span>
+<span class="nc" id="L30">            throw new IllegalArgumentException(&quot;limit cannot be 0 for pagination.&quot;);</span>
+
+       
+<span class="nc" id="L33">        this.pageSize = pageSize;</span>
+<span class="nc" id="L34">        this.currentPage=currentPage;</span>
+<span class="nc" id="L35">    }</span>
+    
+    
+    public int getPageSize()
+    {
+<span class="nc" id="L40">        return pageSize;</span>
+    }
+
+    
+    /**
+    * The current page number this pagination object represents
+    *
+    * @return the page number
+    */
+    public int getPageNumber() {
+<span class="nc bnc" id="L50" title="All 4 branches missed.">        if (offset &lt; pageSize || pageSize == 0)</span>
+<span class="nc" id="L51">            return 1;</span>
+
+<span class="nc" id="L53">        return (offset / pageSize) + 1;</span>
+    }
+    
+    
+    /**
+    * The offset for this pagination object. The offset determines what index (0 index) to start retrieving results from.
+    *
+    * @return the offset
+    */
+        public int getOffset() {
+<span class="nc" id="L63">            return (currentPage - 1) * pageSize + 1;</span>
+        }
+        
+     
+    /**
+     * Creates a new pagination object representing the next page
+     * 
+     * @return new pagination object with offset shifted by offset+limit
+     */
+    public PaginationData getNext()
+    {
+<span class="nc" id="L74">        return new PaginationData( offset + pageSize, pageSize );</span>
+    }
+    
+    
+    /**
+    * Creates a new pagination object representing the previous page
+    *
+    * @return new pagination object with offset shifted by offset-limit
+    */
+        public PaginationData getPrevious() {
+<span class="nc bnc" id="L84" title="All 2 branches missed.">            if (pageSize &gt;= offset) {</span>
+<span class="nc" id="L85">                return new PaginationData(0, pageSize);</span>
+            } else {
+<span class="nc" id="L87">                return new PaginationData(offset - pageSize, pageSize);</span>
+            }
+        }
+
+
+    public int getCurrentPage()
+    {
+<span class="nc" id="L94">        return currentPage;</span>
+    }
+
+
+    public void setCurrentPage( int currentPage )
+    {
+<span class="nc" id="L100">        this.currentPage = currentPage;</span>
+<span class="nc" id="L101">    }</span>
+
+
+    public int getTotalCount()
+    {
+<span class="nc" id="L106">        return totalCount;</span>
+    }
+
+
+    public void setTotalCount( int totalCount )
+    {
+<span class="nc" id="L112">        this.totalCount = totalCount;</span>
+<span class="nc" id="L113">    }</span>
+
+
+    public int getTotalPages()
+    {
+        
+<span class="nc" id="L119">        Integer totalPages= Integer.valueOf((int) (Math.ceil(Integer.valueOf(totalCount).doubleValue() / pageSize)));</span>
+<span class="nc" id="L120">        return totalPages;</span>
+    }
+
+
+	public int getCountByPage() {
+<span class="nc" id="L125">		return countByPage;</span>
+	}
+
+
+	public void setCountByPage(int countByPage) {
+<span class="nc" id="L130">		this.countByPage = countByPage;</span>
+<span class="nc" id="L131">	}</span>
+
+
+	public void setTotalPages(int totalPages) {
+<span class="nc" id="L135">		this.totalPages = totalPages;</span>
+<span class="nc" id="L136">	}</span>
+
+   
+    
+        
+    
+    
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

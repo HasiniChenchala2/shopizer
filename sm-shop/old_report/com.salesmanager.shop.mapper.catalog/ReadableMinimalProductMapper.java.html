@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReadableMinimalProductMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.mapper.catalog</a> &gt; <span class="el_source">ReadableMinimalProductMapper.java</span></div><h1>ReadableMinimalProductMapper.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.mapper.catalog;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+
+import org.jsoup.helper.Validate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Component;
+
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.catalog.pricing.PricingService;
+import com.salesmanager.core.model.catalog.product.Product;
+import com.salesmanager.core.model.catalog.product.description.ProductDescription;
+import com.salesmanager.core.model.catalog.product.image.ProductImage;
+import com.salesmanager.core.model.catalog.product.price.FinalPrice;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.mapper.Mapper;
+import com.salesmanager.shop.model.catalog.product.ReadableImage;
+import com.salesmanager.shop.model.catalog.product.ReadableMinimalProduct;
+import com.salesmanager.shop.model.catalog.product.product.ProductSpecification;
+import com.salesmanager.shop.model.entity.ReadableDescription;
+import com.salesmanager.shop.store.api.exception.ConversionRuntimeException;
+import com.salesmanager.shop.utils.DateUtil;
+import com.salesmanager.shop.utils.ImageFilePath;
+
+@Component
+<span class="fc" id="L30">public class ReadableMinimalProductMapper implements Mapper&lt;Product, ReadableMinimalProduct&gt; {</span>
+
+	@Autowired
+	private PricingService pricingService;
+
+	
+	@Autowired
+	@Qualifier(&quot;img&quot;)
+	private ImageFilePath imageUtils;
+
+	@Override
+	public ReadableMinimalProduct convert(Product source, MerchantStore store, Language language) {
+		// TODO Auto-generated method stub
+<span class="nc" id="L43">		ReadableMinimalProduct minimal = new ReadableMinimalProduct();</span>
+<span class="nc" id="L44">		return this.merge(source, minimal, store, language);</span>
+	}
+
+	@Override
+	public ReadableMinimalProduct merge(Product source, ReadableMinimalProduct destination, MerchantStore store,
+			Language language) {
+<span class="fc" id="L50">		Validate.notNull(source, &quot;Product cannot be null&quot;);</span>
+<span class="fc" id="L51">		Validate.notNull(destination, &quot;ReadableMinimalProduct cannot be null&quot;);</span>
+
+
+<span class="pc bpc" id="L54" title="1 of 2 branches missed.">		for (ProductDescription desc : source.getDescriptions()) {</span>
+<span class="pc bpc" id="L55" title="2 of 4 branches missed.">			if (language != null &amp;&amp; desc.getLanguage() != null</span>
+<span class="pc bpc" id="L56" title="1 of 2 branches missed.">					&amp;&amp; desc.getLanguage().getId().intValue() == language.getId().intValue()) {</span>
+<span class="fc" id="L57">				destination.setDescription(this.description(desc));</span>
+<span class="fc" id="L58">				break;</span>
+			}
+<span class="nc" id="L60">		}</span>
+		
+<span class="fc" id="L62">		destination.setId(source.getId());</span>
+<span class="fc" id="L63">		destination.setAvailable(source.isAvailable());</span>
+<span class="fc" id="L64">		destination.setProductShipeable(source.isProductShipeable());</span>
+		
+<span class="fc" id="L66">		ProductSpecification specifications = new ProductSpecification();</span>
+<span class="fc" id="L67">		specifications.setHeight(source.getProductHeight());</span>
+<span class="fc" id="L68">		specifications.setLength(source.getProductLength());</span>
+<span class="fc" id="L69">		specifications.setWeight(source.getProductWeight());</span>
+<span class="fc" id="L70">		specifications.setWidth(source.getProductWidth());</span>
+<span class="fc" id="L71">		destination.setProductSpecifications(specifications);</span>
+		
+<span class="fc" id="L73">		destination.setPreOrder(source.isPreOrder());</span>
+<span class="fc" id="L74">		destination.setRefSku(source.getRefSku());</span>
+<span class="fc" id="L75">		destination.setSortOrder(source.getSortOrder());</span>
+<span class="fc" id="L76">		destination.setSku(source.getSku());</span>
+		
+<span class="pc bpc" id="L78" title="1 of 2 branches missed.">		if(source.getDateAvailable() != null) {</span>
+<span class="fc" id="L79">			destination.setDateAvailable(DateUtil.formatDate(source.getDateAvailable()));</span>
+		}
+		
+<span class="pc bpc" id="L82" title="1 of 2 branches missed.">		if(source.getProductReviewAvg()!=null) {</span>
+<span class="fc" id="L83">			double avg = source.getProductReviewAvg().doubleValue();</span>
+<span class="fc" id="L84">			double rating = Math.round(avg * 2) / 2.0f;</span>
+<span class="fc" id="L85">			destination.setRating(rating);</span>
+		}
+		
+<span class="fc" id="L88">		destination.setProductVirtual(source.getProductVirtual());</span>
+<span class="pc bpc" id="L89" title="1 of 2 branches missed.">		if(source.getProductReviewCount()!=null) {</span>
+<span class="fc" id="L90">			destination.setRatingCount(source.getProductReviewCount().intValue());</span>
+		}
+
+		//price
+
+		try {
+<span class="fc" id="L96">			FinalPrice price = pricingService.calculateProductPrice(source);</span>
+<span class="pc bpc" id="L97" title="1 of 2 branches missed.">			if(price != null) {</span>
+
+<span class="fc" id="L99">				destination.setFinalPrice(pricingService.getDisplayAmount(price.getFinalPrice(), store));</span>
+<span class="fc" id="L100">				destination.setPrice(price.getFinalPrice());</span>
+<span class="fc" id="L101">				destination.setOriginalPrice(pricingService.getDisplayAmount(price.getOriginalPrice(), store));</span>
+						
+			}
+<span class="nc" id="L104">		} catch (ServiceException e) {</span>
+<span class="nc" id="L105">			throw new ConversionRuntimeException(&quot;An error occured during price calculation&quot;, e);</span>
+<span class="fc" id="L106">		}</span>
+		
+
+		
+		//image
+<span class="fc" id="L111">		Set&lt;ProductImage&gt; images = source.getImages();</span>
+<span class="pc bpc" id="L112" title="2 of 4 branches missed.">		if(images!=null &amp;&amp; images.size()&gt;0) {</span>
+<span class="nc" id="L113">			List&lt;ReadableImage&gt; imageList = new ArrayList&lt;ReadableImage&gt;();</span>
+			
+<span class="nc" id="L115">			String contextPath = imageUtils.getContextPath();</span>
+			
+<span class="nc bnc" id="L117" title="All 2 branches missed.">			for(ProductImage img : images) {</span>
+<span class="nc" id="L118">				ReadableImage prdImage = new ReadableImage();</span>
+<span class="nc" id="L119">				prdImage.setImageName(img.getProductImage());</span>
+<span class="nc" id="L120">				prdImage.setDefaultImage(img.isDefaultImage());</span>
+
+<span class="nc" id="L122">				StringBuilder imgPath = new StringBuilder();</span>
+<span class="nc" id="L123">				imgPath.append(contextPath).append(imageUtils.buildProductImageUtils(store, source.getSku(), img.getProductImage()));</span>
+
+<span class="nc" id="L125">				prdImage.setImageUrl(imgPath.toString());</span>
+<span class="nc" id="L126">				prdImage.setId(img.getId());</span>
+<span class="nc" id="L127">				prdImage.setImageType(img.getImageType());</span>
+<span class="nc bnc" id="L128" title="All 2 branches missed.">				if(img.getProductImageUrl()!=null){</span>
+<span class="nc" id="L129">					prdImage.setExternalUrl(img.getProductImageUrl());</span>
+				}
+<span class="nc bnc" id="L131" title="All 4 branches missed.">				if(img.getImageType()==1 &amp;&amp; img.getProductImageUrl()!=null) {//video</span>
+<span class="nc" id="L132">					prdImage.setVideoUrl(img.getProductImageUrl());</span>
+				}
+				
+<span class="nc bnc" id="L135" title="All 2 branches missed.">				if(prdImage.isDefaultImage()) {</span>
+<span class="nc" id="L136">					destination.setImage(prdImage);</span>
+				}
+				
+<span class="nc" id="L139">				imageList.add(prdImage);</span>
+<span class="nc" id="L140">			}</span>
+<span class="nc" id="L141">			destination</span>
+<span class="nc" id="L142">			.setImages(imageList);</span>
+		}
+		
+
+<span class="fc" id="L146">		return null;</span>
+	}
+
+	private ReadableDescription description(ProductDescription description) {
+<span class="fc" id="L150">		ReadableDescription desc = new ReadableDescription();</span>
+<span class="fc" id="L151">		desc.setDescription(description.getDescription());</span>
+<span class="fc" id="L152">		desc.setName(description.getName());</span>
+<span class="fc" id="L153">		desc.setId(description.getId());</span>
+<span class="fc" id="L154">		desc.setLanguage(description.getLanguage().getCode());</span>
+<span class="fc" id="L155">		return desc;</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

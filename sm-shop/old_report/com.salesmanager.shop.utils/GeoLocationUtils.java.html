@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GeoLocationUtils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.utils</a> &gt; <span class="el_source">GeoLocationUtils.java</span></div><h1>GeoLocationUtils.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.utils;
+
+import javax.servlet.http.HttpServletRequest;
+
+<span class="nc" id="L5">public class GeoLocationUtils {</span>
+	
+	
+<span class="fc" id="L8">	private static final String[] HEADERS_TO_TRY = { </span>
+	    &quot;X-Forwarded-For&quot;,
+	    &quot;Proxy-Client-IP&quot;,
+	    &quot;WL-Proxy-Client-IP&quot;,
+	    &quot;HTTP_X_FORWARDED_FOR&quot;,
+	    &quot;HTTP_X_FORWARDED&quot;,
+	    &quot;HTTP_X_CLUSTER_CLIENT_IP&quot;,
+	    &quot;HTTP_CLIENT_IP&quot;,
+	    &quot;HTTP_FORWARDED_FOR&quot;,
+	    &quot;HTTP_FORWARDED&quot;,
+	    &quot;HTTP_VIA&quot;,
+	    &quot;REMOTE_ADDR&quot; };
+
+	public static String getClientIpAddress(HttpServletRequest request) {
+<span class="fc bfc" id="L22" title="All 2 branches covered.">	    for (String header : HEADERS_TO_TRY) {</span>
+<span class="fc" id="L23">	        String ip = request.getHeader(header);</span>
+<span class="pc bpc" id="L24" title="5 of 6 branches missed.">	        if (ip != null &amp;&amp; ip.length() != 0 &amp;&amp; !&quot;unknown&quot;.equalsIgnoreCase(ip)) {</span>
+<span class="nc" id="L25">	            return ip;</span>
+	        }
+	    }
+<span class="fc" id="L28">	    return request.getRemoteAddr();</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

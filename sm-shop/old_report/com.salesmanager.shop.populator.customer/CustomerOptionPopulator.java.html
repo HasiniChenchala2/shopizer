@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CustomerOptionPopulator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.populator.customer</a> &gt; <span class="el_source">CustomerOptionPopulator.java</span></div><h1>CustomerOptionPopulator.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.populator.customer;
+
+/**
+ * Used in the admin section
+ * @author c.samson
+ *
+ */
+
+<span class="nc" id="L9">public class CustomerOptionPopulator {</span>
+	
+	/**
+	extends
+}
+		AbstractDataPopulator&lt;com.salesmanager.core.model.customer.attribute.CustomerOption, com.salesmanager.shop.admin.model.customer.attribute.CustomerOption&gt; {
+
+	
+	private CustomerOptionSet optionSet;
+	
+	public CustomerOptionSet getOptionSet() {
+		return optionSet;
+	}
+
+	public void setOptionSet(CustomerOptionSet optionSet) {
+		this.optionSet = optionSet;
+	}
+
+	@Override
+	public CustomerOption populate(
+			com.salesmanager.core.model.customer.attribute.CustomerOption source,
+			CustomerOption target, MerchantStore store, Language language) throws ConversionException {
+		
+		
+		CustomerOption customerOption = target;
+		if(customerOption==null) {
+			customerOption = new CustomerOption();
+		} 
+		
+		customerOption.setId(source.getId());
+		customerOption.setType(source.getCustomerOptionType());
+		customerOption.setName(source.getDescriptionsSettoList().get(0).getName());
+
+		List&lt;CustomerOptionValue&gt; values = customerOption.getAvailableValues();
+		if(values==null) {
+			values = new ArrayList&lt;CustomerOptionValue&gt;();
+			customerOption.setAvailableValues(values);
+		}
+		
+		com.salesmanager.core.model.customer.attribute.CustomerOptionValue optionValue = optionSet.getCustomerOptionValue();
+		CustomerOptionValue custOptValue = new CustomerOptionValue();
+		custOptValue.setId(optionValue.getId());
+		custOptValue.setLanguage(language.getCode());
+		custOptValue.setName(optionValue.getDescriptionsSettoList().get(0).getName());
+		values.add(custOptValue);
+		
+		return customerOption;
+
+	}
+
+    @Override
+    protected CustomerOption createTarget()
+    {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+	@Override
+	public CustomerOption populate(com.salesmanager.core.model.customer.attribute.CustomerOption source,
+			CustomerOption target, MerchantStore store, Language language) throws ConversionException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	**/
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

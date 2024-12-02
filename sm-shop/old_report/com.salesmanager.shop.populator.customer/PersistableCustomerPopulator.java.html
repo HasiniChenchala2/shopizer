@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PersistableCustomerPopulator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.populator.customer</a> &gt; <span class="el_source">PersistableCustomerPopulator.java</span></div><h1>PersistableCustomerPopulator.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.populator.customer;
+
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.utils.AbstractDataPopulator;
+import com.salesmanager.core.model.customer.Customer;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.model.customer.PersistableCustomer;
+import com.salesmanager.shop.model.customer.address.Address;
+
+<span class="nc" id="L11">public class PersistableCustomerPopulator extends</span>
+		AbstractDataPopulator&lt;Customer, PersistableCustomer&gt; {
+
+	@Override
+	public PersistableCustomer populate(Customer source,
+			PersistableCustomer target, MerchantStore store, Language language)
+			throws ConversionException {
+
+		
+		try {
+			
+
+<span class="nc bnc" id="L23" title="All 2 branches missed.">			if(source.getBilling()!=null) {</span>
+<span class="nc" id="L24">				Address address = new Address();</span>
+<span class="nc" id="L25">				address.setCity(source.getBilling().getCity());</span>
+<span class="nc" id="L26">				address.setCompany(source.getBilling().getCompany());</span>
+<span class="nc" id="L27">				address.setFirstName(source.getBilling().getFirstName());</span>
+<span class="nc" id="L28">				address.setLastName(source.getBilling().getLastName());</span>
+<span class="nc" id="L29">				address.setPostalCode(source.getBilling().getPostalCode());</span>
+<span class="nc" id="L30">				address.setPhone(source.getBilling().getTelephone());</span>
+<span class="nc bnc" id="L31" title="All 2 branches missed.">				if(source.getBilling().getTelephone()==null) {</span>
+<span class="nc" id="L32">					address.setPhone(source.getBilling().getTelephone());</span>
+				}
+<span class="nc" id="L34">				address.setAddress(source.getBilling().getAddress());</span>
+<span class="nc bnc" id="L35" title="All 2 branches missed.">				if(source.getBilling().getCountry()!=null) {</span>
+<span class="nc" id="L36">					address.setCountry(source.getBilling().getCountry().getIsoCode());</span>
+				}
+<span class="nc bnc" id="L38" title="All 2 branches missed.">				if(source.getBilling().getZone()!=null) {</span>
+<span class="nc" id="L39">					address.setZone(source.getBilling().getZone().getCode());</span>
+				}
+<span class="nc bnc" id="L41" title="All 2 branches missed.">				if(source.getBilling().getState()!=null) {</span>
+<span class="nc" id="L42">					address.setStateProvince(source.getBilling().getState());</span>
+				}
+				
+<span class="nc" id="L45">				target.setBilling(address);</span>
+			}
+			
+<span class="nc" id="L48">			target.setProvider(source.getProvider());</span>
+			
+<span class="nc bnc" id="L50" title="All 2 branches missed.">			if(source.getCustomerReviewAvg() != null) {</span>
+<span class="nc" id="L51">				target.setRating(source.getCustomerReviewAvg().doubleValue());</span>
+			}
+			
+<span class="nc bnc" id="L54" title="All 2 branches missed.">			if(source.getCustomerReviewCount() != null) {</span>
+<span class="nc" id="L55">				target.setRatingCount(source.getCustomerReviewCount().intValue());</span>
+			}
+			
+<span class="nc bnc" id="L58" title="All 2 branches missed.">			if(source.getDelivery()!=null) {</span>
+<span class="nc" id="L59">				Address address = new Address();</span>
+<span class="nc" id="L60">				address.setAddress(source.getDelivery().getAddress());</span>
+<span class="nc" id="L61">				address.setCity(source.getDelivery().getCity());</span>
+<span class="nc" id="L62">				address.setCompany(source.getDelivery().getCompany());</span>
+<span class="nc" id="L63">				address.setFirstName(source.getDelivery().getFirstName());</span>
+<span class="nc" id="L64">				address.setLastName(source.getDelivery().getLastName());</span>
+<span class="nc" id="L65">				address.setPostalCode(source.getDelivery().getPostalCode());</span>
+<span class="nc" id="L66">				address.setPhone(source.getDelivery().getTelephone());</span>
+<span class="nc bnc" id="L67" title="All 2 branches missed.">				if(source.getDelivery().getCountry()!=null) {</span>
+<span class="nc" id="L68">					address.setCountry(source.getDelivery().getCountry().getIsoCode());</span>
+				}
+<span class="nc bnc" id="L70" title="All 2 branches missed.">				if(source.getDelivery().getZone()!=null) {</span>
+<span class="nc" id="L71">					address.setZone(source.getDelivery().getZone().getCode());</span>
+				}
+<span class="nc bnc" id="L73" title="All 2 branches missed.">				if(source.getDelivery().getState()!=null) {</span>
+<span class="nc" id="L74">					address.setStateProvince(source.getDelivery().getState());</span>
+				}
+				
+<span class="nc" id="L77">				target.setDelivery(address);</span>
+			}
+			
+<span class="nc" id="L80">			target.setId(source.getId());</span>
+<span class="nc" id="L81">			target.setEmailAddress(source.getEmailAddress());</span>
+<span class="nc bnc" id="L82" title="All 2 branches missed.">			if(source.getGender()!=null) {</span>
+<span class="nc" id="L83">				target.setGender(source.getGender().name());</span>
+			}
+<span class="nc bnc" id="L85" title="All 2 branches missed.">			if(source.getDefaultLanguage()!=null) {</span>
+<span class="nc" id="L86">				target.setLanguage(source.getDefaultLanguage().getCode());</span>
+			}
+<span class="nc" id="L88">			target.setUserName(source.getNick());</span>
+<span class="nc" id="L89">			target.setStoreCode(store.getCode());</span>
+<span class="nc bnc" id="L90" title="All 2 branches missed.">			if(source.getDefaultLanguage()!=null) {</span>
+<span class="nc" id="L91">				target.setLanguage(source.getDefaultLanguage().getCode());</span>
+			} else {
+<span class="nc" id="L93">				target.setLanguage(store.getDefaultLanguage().getCode());</span>
+			}
+			
+			
+			
+<span class="nc" id="L98">		} catch (Exception e) {</span>
+<span class="nc" id="L99">			throw new ConversionException(e);</span>
+<span class="nc" id="L100">		}</span>
+			
+<span class="nc" id="L102">		return target;</span>
+		
+	}
+
+	@Override
+	protected PersistableCustomer createTarget() {
+		// TODO Auto-generated method stub
+<span class="nc" id="L109">		return null;</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DateUtil.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.utils</a> &gt; <span class="el_source">DateUtil.java</span></div><h1>DateUtil.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to csti consulting 
+ * You may obtain a copy of the License at
+ *
+ * http://www.csticonsulting.com
+ * Copyright (c) 2006-Aug 24, 2010 Consultation CS-TI inc. 
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+package com.salesmanager.shop.utils;
+
+import com.salesmanager.core.business.constants.Constants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.servlet.http.HttpServletRequest;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+
+
+
+<span class="nc" id="L29">public class DateUtil {</span>
+
+<span class="nc" id="L31">	private Date startDate = new Date(new Date().getTime());</span>
+<span class="nc" id="L32">	private Date endDate = new Date(new Date().getTime());</span>
+<span class="pc" id="L33">	private static final Logger LOGGER = LoggerFactory.getLogger(DateUtil.class);</span>
+	private final static String LONGDATE_FORMAT = &quot;EEE, d MMM yyyy HH:mm:ss Z&quot;;
+
+	
+	
+	/**
+	 * Generates a time stamp
+	 * yyyymmddhhmmss
+	 * @return
+	 */
+	public static String generateTimeStamp() {
+<span class="nc" id="L44">		SimpleDateFormat format = new SimpleDateFormat(&quot;yyyyMMddHHmmSS&quot;);</span>
+<span class="nc" id="L45">		return format.format(new Date());</span>
+	}
+	
+	/**
+	 * yyyy-MM-dd
+	 * 
+	 * @param dt
+	 * @return
+	 */
+	public static String formatDate(Date dt) {
+
+<span class="pc bpc" id="L56" title="1 of 2 branches missed.">		if (dt == null)</span>
+<span class="nc" id="L57">			dt = new Date();</span>
+<span class="fc" id="L58">		SimpleDateFormat format = new SimpleDateFormat(Constants.DEFAULT_DATE_FORMAT);</span>
+<span class="fc" id="L59">		return format.format(dt);</span>
+
+	}
+	
+	public static String formatYear(Date dt) {
+
+<span class="nc bnc" id="L65" title="All 2 branches missed.">		if (dt == null)</span>
+<span class="nc" id="L66">			return null;</span>
+<span class="nc" id="L67">		SimpleDateFormat format = new SimpleDateFormat(Constants.DEFAULT_DATE_FORMAT_YEAR);</span>
+<span class="nc" id="L68">		return format.format(dt);</span>
+
+	}
+	
+	public static String formatLongDate(Date date) {
+		
+<span class="nc bnc" id="L74" title="All 2 branches missed.">		if (date == null)</span>
+<span class="nc" id="L75">			return null;</span>
+<span class="nc" id="L76">		SimpleDateFormat format = new SimpleDateFormat(LONGDATE_FORMAT);</span>
+<span class="nc" id="L77">		return format.format(date);</span>
+		
+	}
+
+	/**
+	 * yy-MMM-dd
+	 * 
+	 * @param dt
+	 * @return
+	 */
+	public static String formatDateMonthString(Date dt) {
+
+<span class="nc bnc" id="L89" title="All 2 branches missed.">		if (dt == null)</span>
+<span class="nc" id="L90">			return null;</span>
+<span class="nc" id="L91">		SimpleDateFormat format = new SimpleDateFormat(Constants.DEFAULT_DATE_FORMAT);</span>
+<span class="nc" id="L92">		return format.format(dt);</span>
+
+	}
+
+	public static Date getDate(String date) throws Exception {
+<span class="nc" id="L97">		DateFormat myDateFormat = new SimpleDateFormat(Constants.DEFAULT_DATE_FORMAT);</span>
+<span class="nc" id="L98">		return myDateFormat.parse(date);</span>
+	}
+
+	public static Date addDaysToCurrentDate(int days) {
+<span class="nc" id="L102">		Calendar c = Calendar.getInstance();</span>
+<span class="nc" id="L103">		c.setTime(new Date());</span>
+<span class="nc" id="L104">		c.add(Calendar.DATE, days);</span>
+<span class="nc" id="L105">		return c.getTime();</span>
+
+	}
+
+	public static Date getDate() {
+
+<span class="fc" id="L111">		return new Date(new Date().getTime());</span>
+
+	}
+
+	public static String getPresentDate() {
+
+<span class="nc" id="L117">		Date dt = new Date();</span>
+
+<span class="nc" id="L119">		SimpleDateFormat format = new SimpleDateFormat(Constants.DEFAULT_DATE_FORMAT);</span>
+<span class="nc" id="L120">		return format.format(new Date(dt.getTime()));</span>
+	}
+
+	public static String getPresentYear() {
+
+<span class="nc" id="L125">		Date dt = new Date();</span>
+
+<span class="nc" id="L127">		SimpleDateFormat format = new SimpleDateFormat(&quot;yyyy&quot;);</span>
+<span class="nc" id="L128">		return format.format(new Date(dt.getTime()));</span>
+	}
+	
+	public static boolean dateBeforeEqualsDate(Date firstDate, Date compareDate) {
+		
+        
+<span class="pc bpc" id="L134" title="2 of 4 branches missed.">		if(firstDate==null || compareDate==null) {</span>
+<span class="nc" id="L135">			return true;</span>
+		}
+		
+<span class="pc bpc" id="L138" title="1 of 2 branches missed.">		if (firstDate.compareTo(compareDate) &gt; 0) {</span>
+<span class="nc" id="L139">            return false;</span>
+<span class="pc bpc" id="L140" title="1 of 2 branches missed.">        } else if (firstDate.compareTo(compareDate) &lt; 0) {</span>
+<span class="fc" id="L141">            return true;</span>
+<span class="nc bnc" id="L142" title="All 2 branches missed.">        } else if (firstDate.compareTo(compareDate) == 0) {</span>
+<span class="nc" id="L143">            return true;</span>
+        } else {
+<span class="nc" id="L145">            return false;</span>
+        }
+		
+	}
+
+	public void processPostedDates(HttpServletRequest request) {
+<span class="nc" id="L151">		Date dt = new Date();</span>
+<span class="nc" id="L152">		DateFormat myDateFormat = new SimpleDateFormat(Constants.DEFAULT_DATE_FORMAT);</span>
+<span class="nc" id="L153">		Date sDate = null;</span>
+<span class="nc" id="L154">		Date eDate = null;</span>
+		try {
+<span class="nc bnc" id="L156" title="All 2 branches missed.">			if (request.getParameter(&quot;startdate&quot;) != null) {</span>
+<span class="nc" id="L157">				sDate = myDateFormat.parse(request.getParameter(&quot;startdate&quot;));</span>
+			}
+<span class="nc bnc" id="L159" title="All 2 branches missed.">			if (request.getParameter(&quot;enddate&quot;) != null) {</span>
+<span class="nc" id="L160">				eDate = myDateFormat.parse(request.getParameter(&quot;enddate&quot;));</span>
+			}
+<span class="nc" id="L162">			this.startDate = sDate;</span>
+<span class="nc" id="L163">			this.endDate = eDate;</span>
+<span class="nc" id="L164">		} catch (Exception e) {</span>
+<span class="nc" id="L165">			LOGGER.error(&quot;&quot;,e);</span>
+<span class="nc" id="L166">			this.startDate = new Date(dt.getTime());</span>
+<span class="nc" id="L167">			this.endDate = new Date(dt.getTime());</span>
+<span class="nc" id="L168">		}</span>
+<span class="nc" id="L169">	}</span>
+
+	public Date getEndDate() {
+<span class="nc" id="L172">		return endDate;</span>
+	}
+
+	public Date getStartDate() {
+<span class="nc" id="L176">		return startDate;</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

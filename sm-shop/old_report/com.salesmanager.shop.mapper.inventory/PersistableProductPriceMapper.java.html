@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PersistableProductPriceMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.mapper.inventory</a> &gt; <span class="el_source">PersistableProductPriceMapper.java</span></div><h1>PersistableProductPriceMapper.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.mapper.inventory;
+
+import static com.salesmanager.core.business.utils.NumberUtils.isPositive;
+
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.jsoup.helper.Validate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import com.salesmanager.core.business.constants.Constants;
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.catalog.product.ProductService;
+import com.salesmanager.core.business.services.catalog.product.availability.ProductAvailabilityService;
+import com.salesmanager.core.business.services.reference.language.LanguageService;
+import com.salesmanager.core.model.catalog.product.availability.ProductAvailability;
+import com.salesmanager.core.model.catalog.product.price.ProductPrice;
+import com.salesmanager.core.model.catalog.product.price.ProductPriceDescription;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.mapper.Mapper;
+import com.salesmanager.shop.model.catalog.product.PersistableProductPrice;
+import com.salesmanager.shop.store.api.exception.ConversionRuntimeException;
+import com.salesmanager.shop.utils.DateUtil;
+
+@Component
+<span class="fc" id="L33">public class PersistableProductPriceMapper implements Mapper&lt;PersistableProductPrice, ProductPrice&gt; {</span>
+
+	@Autowired
+	private LanguageService languageService;
+
+	@Autowired
+	private ProductService productService;
+
+	@Autowired
+	private ProductAvailabilityService productAvailabilityService;
+
+	@Override
+	public ProductPrice convert(PersistableProductPrice source, MerchantStore store, Language language) {
+<span class="nc" id="L46">		return merge(source, new ProductPrice(), store, language);</span>
+	}
+
+	@Override
+	public ProductPrice merge(PersistableProductPrice source, ProductPrice destination, MerchantStore store,
+			Language language) {
+
+<span class="nc" id="L53">		Validate.notNull(source, &quot;PersistableProductPrice cannot be null&quot;);</span>
+<span class="nc" id="L54">		Validate.notNull(source.getSku(), &quot;Product sku cannot be null&quot;);</span>
+
+		try {
+<span class="nc bnc" id="L57" title="All 2 branches missed.">			if (destination == null) {</span>
+<span class="nc" id="L58">				destination = new ProductPrice();</span>
+			}
+			
+<span class="nc" id="L61">			destination.setId(source.getId());</span>
+
+			/**
+			 * Get product availability and verify the existing br-pa-1.0.0
+			 * 
+			 * Cannot have multiple default price for the same product availability Default
+			 * price can be edited but cannot create new default price
+			 */
+
+<span class="nc" id="L70">			ProductAvailability availability = null;</span>
+
+<span class="nc bnc" id="L72" title="All 2 branches missed.">			if (isPositive(source.getProductAvailabilityId())) {</span>
+<span class="nc" id="L73">				Optional&lt;ProductAvailability&gt; avail = productAvailabilityService</span>
+<span class="nc" id="L74">						.getById(source.getProductAvailabilityId(), store);</span>
+<span class="nc bnc" id="L75" title="All 2 branches missed.">				if (avail.isEmpty()) {</span>
+<span class="nc" id="L76">					throw new ConversionRuntimeException(</span>
+<span class="nc" id="L77">							&quot;Product availability with id [&quot; + source.getProductAvailabilityId() + &quot;] was not found&quot;);</span>
+				}
+<span class="nc" id="L79">				availability = avail.get();</span>
+
+<span class="nc" id="L81">			} else {</span>
+
+				// get an existing product availability
+<span class="nc" id="L84">				List&lt;ProductAvailability&gt; existing = productAvailabilityService.getBySku(source.getSku(), store);</span>
+
+<span class="nc bnc" id="L86" title="All 2 branches missed.">				if (!CollectionUtils.isEmpty(existing)) {</span>
+					// find default availability
+<span class="nc" id="L88">					Optional&lt;ProductAvailability&gt; avail = existing.stream()</span>
+<span class="nc bnc" id="L89" title="All 4 branches missed.">							.filter(a -&gt; a.getRegion() != null &amp;&amp; a.getRegion().equals(Constants.ALL_REGIONS))</span>
+<span class="nc" id="L90">							.findAny();</span>
+<span class="nc bnc" id="L91" title="All 2 branches missed.">					if (avail.isPresent()) {</span>
+<span class="nc" id="L92">						availability = avail.get();</span>
+
+						// if default price exist for sku exit
+<span class="nc bnc" id="L95" title="All 2 branches missed.">						if (source.isDefaultPrice()) {</span>
+<span class="nc" id="L96">							Optional&lt;ProductPrice&gt; defaultPrice = availability.getPrices().stream()</span>
+<span class="nc" id="L97">									.filter(p -&gt; p.isDefaultPrice()).findAny();</span>
+<span class="nc bnc" id="L98" title="All 2 branches missed.">							if (defaultPrice.isPresent()) {</span>
+								//throw new ConversionRuntimeException(
+								//		&quot;Default Price already exist for product with sku [&quot; + source.getSku() + &quot;]&quot;);
+<span class="nc" id="L101">								destination = defaultPrice.get();</span>
+							}
+						}
+					}
+				}
+
+			}
+
+<span class="nc bnc" id="L109" title="All 2 branches missed.">			if (availability == null) {</span>
+
+<span class="nc" id="L111">				com.salesmanager.core.model.catalog.product.Product product = productService.getBySku(source.getSku(),</span>
+						store, language);
+<span class="nc bnc" id="L113" title="All 2 branches missed.">				if (product == null) {</span>
+<span class="nc" id="L114">					throw new ConversionRuntimeException(&quot;Product with sku [&quot; + source.getSku()</span>
+<span class="nc" id="L115">							+ &quot;] not found for MerchantStore [&quot; + store.getCode() + &quot;]&quot;);</span>
+				}
+
+<span class="nc" id="L118">				availability = new ProductAvailability();</span>
+<span class="nc" id="L119">				availability.setProduct(product);</span>
+<span class="nc" id="L120">				availability.setRegion(Constants.ALL_REGIONS);</span>
+			}
+
+<span class="nc" id="L123">			destination.setProductAvailability(availability);</span>
+<span class="nc" id="L124">			destination.setDefaultPrice(source.isDefaultPrice());</span>
+<span class="nc" id="L125">			destination.setProductPriceAmount(source.getPrice());</span>
+<span class="nc" id="L126">			destination.setCode(source.getCode());</span>
+<span class="nc" id="L127">			destination.setProductPriceSpecialAmount(source.getDiscountedPrice());</span>
+<span class="nc bnc" id="L128" title="All 2 branches missed.">			if (source.getDiscountStartDate() != null) {</span>
+<span class="nc" id="L129">				Date startDate = DateUtil.getDate(source.getDiscountStartDate());</span>
+
+<span class="nc" id="L131">				destination.setProductPriceSpecialStartDate(startDate);</span>
+			}
+<span class="nc bnc" id="L133" title="All 2 branches missed.">			if (source.getDiscountEndDate() != null) {</span>
+<span class="nc" id="L134">				Date endDate = DateUtil.getDate(source.getDiscountEndDate());</span>
+
+<span class="nc" id="L136">				destination.setProductPriceSpecialEndDate(endDate);</span>
+			}
+<span class="nc" id="L138">			availability.getPrices().add(destination);</span>
+<span class="nc" id="L139">			destination.setProductAvailability(availability);</span>
+<span class="nc" id="L140">			destination.setDescriptions(this.getProductPriceDescriptions(destination, source.getDescriptions(), store));</span>
+
+			
+<span class="nc" id="L143">			destination.setDefaultPrice(source.isDefaultPrice());</span>
+
+<span class="nc" id="L145">		} catch (Exception e) {</span>
+
+<span class="nc" id="L147">			throw new ConversionRuntimeException(e);</span>
+<span class="nc" id="L148">		}</span>
+<span class="nc" id="L149">		return destination;</span>
+	}
+
+	private Set&lt;ProductPriceDescription&gt; getProductPriceDescriptions(ProductPrice price,
+			List&lt;com.salesmanager.shop.model.catalog.product.ProductPriceDescription&gt; descriptions,
+			MerchantStore store) {
+<span class="nc bnc" id="L155" title="All 2 branches missed.">		if (CollectionUtils.isEmpty(descriptions)) {</span>
+<span class="nc" id="L156">			return Collections.emptySet();</span>
+		}
+<span class="nc" id="L158">		Set&lt;ProductPriceDescription&gt; descs = new HashSet&lt;ProductPriceDescription&gt;();</span>
+<span class="nc bnc" id="L159" title="All 2 branches missed.">		for (com.salesmanager.shop.model.catalog.product.ProductPriceDescription desc : descriptions) {</span>
+<span class="nc" id="L160">			ProductPriceDescription description = null;</span>
+<span class="nc bnc" id="L161" title="All 2 branches missed.">			if (CollectionUtils.isNotEmpty(price.getDescriptions())) {</span>
+<span class="nc bnc" id="L162" title="All 2 branches missed.">				for (ProductPriceDescription d : price.getDescriptions()) {</span>
+<span class="nc bnc" id="L163" title="All 4 branches missed.">					if (isPositive(desc.getId()) &amp;&amp; desc.getId().equals(d.getId())) {</span>
+<span class="nc" id="L164">						desc.setId(d.getId());</span>
+					}
+<span class="nc" id="L166">				}</span>
+			}
+<span class="nc" id="L168">			description = getDescription(desc);</span>
+<span class="nc" id="L169">			description.setProductPrice(price);</span>
+<span class="nc" id="L170">			descs.add(description);</span>
+<span class="nc" id="L171">		}</span>
+<span class="nc" id="L172">		return descs;</span>
+	}
+
+	private ProductPriceDescription getDescription(
+			com.salesmanager.shop.model.catalog.product.ProductPriceDescription desc) {
+<span class="nc" id="L177">		ProductPriceDescription target = new ProductPriceDescription();</span>
+<span class="nc" id="L178">		target.setDescription(desc.getDescription());</span>
+<span class="nc" id="L179">		target.setName(desc.getName());</span>
+<span class="nc" id="L180">		target.setTitle(desc.getTitle());</span>
+<span class="nc" id="L181">		target.setId(null);</span>
+<span class="nc bnc" id="L182" title="All 2 branches missed.">		if (isPositive(desc.getId())) {</span>
+<span class="nc" id="L183">			target.setId(desc.getId());</span>
+		}
+<span class="nc" id="L185">		Language lang = getLanguage(desc);</span>
+<span class="nc" id="L186">		target.setLanguage(lang);</span>
+<span class="nc" id="L187">		return target;</span>
+
+	}
+
+	private Language getLanguage(com.salesmanager.shop.model.catalog.product.ProductPriceDescription desc) {
+		try {
+<span class="nc" id="L193">			return Optional.ofNullable(languageService.getByCode(desc.getLanguage()))</span>
+<span class="nc" id="L194">					.orElseThrow(() -&gt; new ConversionRuntimeException(</span>
+<span class="nc" id="L195">							&quot;Language is null for code &quot; + desc.getLanguage() + &quot; use language ISO code [en, fr ...]&quot;));</span>
+<span class="nc" id="L196">		} catch (ServiceException e) {</span>
+<span class="nc" id="L197">			throw new ConversionRuntimeException(e);</span>
+		}
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

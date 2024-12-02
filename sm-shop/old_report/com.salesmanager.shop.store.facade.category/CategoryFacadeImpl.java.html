@@ -1,0 +1,568 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CategoryFacadeImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.facade.category</a> &gt; <span class="el_source">CategoryFacadeImpl.java</span></div><h1>CategoryFacadeImpl.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.facade.category;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import javax.inject.Inject;
+
+import org.apache.commons.lang3.Validate;
+import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
+
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.catalog.category.CategoryService;
+import com.salesmanager.core.business.services.catalog.product.attribute.ProductAttributeService;
+import com.salesmanager.core.business.services.merchant.MerchantStoreService;
+import com.salesmanager.core.model.catalog.category.Category;
+import com.salesmanager.core.model.catalog.product.attribute.ProductAttribute;
+import com.salesmanager.core.model.catalog.product.attribute.ProductOption;
+import com.salesmanager.core.model.catalog.product.attribute.ProductOptionDescription;
+import com.salesmanager.core.model.catalog.product.attribute.ProductOptionValueDescription;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.mapper.Mapper;
+import com.salesmanager.shop.mapper.catalog.ReadableCategoryMapper;
+import com.salesmanager.shop.model.catalog.category.PersistableCategory;
+import com.salesmanager.shop.model.catalog.category.ReadableCategory;
+import com.salesmanager.shop.model.catalog.category.ReadableCategoryList;
+import com.salesmanager.shop.model.catalog.product.attribute.ReadableProductVariant;
+import com.salesmanager.shop.model.catalog.product.attribute.ReadableProductVariantValue;
+import com.salesmanager.shop.model.entity.ListCriteria;
+import com.salesmanager.shop.populator.catalog.PersistableCategoryPopulator;
+import com.salesmanager.shop.populator.catalog.ReadableCategoryPopulator;
+import com.salesmanager.shop.store.api.exception.OperationNotAllowedException;
+import com.salesmanager.shop.store.api.exception.ResourceNotFoundException;
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+import com.salesmanager.shop.store.api.exception.UnauthorizedException;
+import com.salesmanager.shop.store.controller.category.facade.CategoryFacade;
+
+@Service(value = &quot;categoryFacade&quot;)
+<span class="fc" id="L50">public class CategoryFacadeImpl implements CategoryFacade {</span>
+
+	@Inject
+	private CategoryService categoryService;
+
+	@Inject
+	private MerchantStoreService merchantStoreService;
+
+	@Inject
+	private PersistableCategoryPopulator persistableCatagoryPopulator;
+
+	@Inject
+	private ReadableCategoryMapper readableCategoryMapper;
+
+	@Inject
+	private ProductAttributeService productAttributeService;
+
+	private static final String FEATURED_CATEGORY = &quot;featured&quot;;
+	private static final String VISIBLE_CATEGORY = &quot;visible&quot;;
+	private static final String ADMIN_CATEGORY = &quot;admin&quot;;
+
+	@Override
+	public ReadableCategoryList getCategoryHierarchy(MerchantStore store, ListCriteria criteria, int depth,
+			Language language, List&lt;String&gt; filter, int page, int count) {
+
+<span class="fc" id="L75">		Validate.notNull(store,&quot;MerchantStore can not be null&quot;);</span>
+
+
+		//get parent store
+		try {
+
+<span class="fc" id="L81">			MerchantStore parent = merchantStoreService.getParent(store.getCode());</span>
+
+
+<span class="fc" id="L84">			List&lt;Category&gt; categories = null;</span>
+<span class="fc" id="L85">			ReadableCategoryList returnList = new ReadableCategoryList();</span>
+<span class="pc bpc" id="L86" title="3 of 4 branches missed.">			if (!CollectionUtils.isEmpty(filter) &amp;&amp; filter.contains(FEATURED_CATEGORY)) {</span>
+<span class="nc" id="L87">				categories = categoryService.getListByDepthFilterByFeatured(parent, depth, language);</span>
+<span class="nc" id="L88">				returnList.setRecordsTotal(categories.size());</span>
+<span class="nc" id="L89">				returnList.setNumber(categories.size());</span>
+<span class="nc" id="L90">				returnList.setTotalPages(1);</span>
+			} else {
+<span class="fc" id="L92">				org.springframework.data.domain.Page&lt;Category&gt; pageable = categoryService.getListByDepth(parent, language,</span>
+<span class="pc bpc" id="L93" title="1 of 2 branches missed.">						criteria != null ? criteria.getName() : null, depth, page, count);</span>
+<span class="fc" id="L94">				categories = pageable.getContent();</span>
+<span class="fc" id="L95">				returnList.setRecordsTotal(pageable.getTotalElements());</span>
+<span class="fc" id="L96">				returnList.setTotalPages(pageable.getTotalPages());</span>
+<span class="fc" id="L97">				returnList.setNumber(categories.size());</span>
+			}
+
+
+
+<span class="fc" id="L102">			List&lt;ReadableCategory&gt; readableCategories = null;</span>
+<span class="pc bpc" id="L103" title="3 of 4 branches missed.">			if (filter != null &amp;&amp; filter.contains(VISIBLE_CATEGORY)) {</span>
+<span class="nc" id="L104">				readableCategories = categories.stream().filter(Category::isVisible)</span>
+<span class="nc" id="L105">						.map(cat -&gt; readableCategoryMapper.convert(cat, store, language))</span>
+<span class="nc" id="L106">						.collect(Collectors.toList());</span>
+			} else {
+<span class="fc" id="L108">				readableCategories = categories.stream()</span>
+<span class="fc" id="L109">						.map(cat -&gt; readableCategoryMapper.convert(cat, store, language))</span>
+<span class="fc" id="L110">						.collect(Collectors.toList());</span>
+			}
+
+<span class="fc" id="L113">			Map&lt;Long, ReadableCategory&gt; readableCategoryMap = readableCategories.stream()</span>
+<span class="fc" id="L114">					.collect(Collectors.toMap(ReadableCategory::getId, Function.identity()));</span>
+
+<span class="fc" id="L116">			readableCategories.stream()</span>
+					// .filter(ReadableCategory::isVisible)
+<span class="fc" id="L118">					.filter(cat -&gt; Objects.nonNull(cat.getParent()))</span>
+<span class="fc" id="L119">					.filter(cat -&gt; readableCategoryMap.containsKey(cat.getParent().getId())).forEach(readableCategory -&gt; {</span>
+<span class="fc" id="L120">						ReadableCategory parentCategory = readableCategoryMap.get(readableCategory.getParent().getId());</span>
+<span class="pc bpc" id="L121" title="1 of 2 branches missed.">						if (parentCategory != null) {</span>
+<span class="fc" id="L122">							parentCategory.getChildren().add(readableCategory);</span>
+						}
+<span class="fc" id="L124">					});</span>
+			
+<span class="fc" id="L126">			List&lt;ReadableCategory&gt; filteredList = readableCategoryMap.values().stream().collect(Collectors.toList());</span>
+
+			//execute only if not admin filtered
+<span class="pc bpc" id="L129" title="5 of 6 branches missed.">			if(filter == null || (filter!=null &amp;&amp; !filter.contains(ADMIN_CATEGORY))) {</span>
+<span class="fc bfc" id="L130" title="All 2 branches covered.">					filteredList = readableCategoryMap.values().stream().filter(cat -&gt; cat.getDepth() == 0)</span>
+<span class="fc" id="L131">						.sorted(Comparator.comparing(ReadableCategory::getSortOrder)).collect(Collectors.toList());</span>
+				
+<span class="fc" id="L133">					returnList.setNumber(filteredList.size());</span>
+
+			}
+			
+<span class="fc" id="L137">			returnList.setCategories(filteredList);</span>
+
+			
+			
+<span class="fc" id="L141">			return returnList;</span>
+
+<span class="nc" id="L143">		} catch (ServiceException e) {</span>
+<span class="nc" id="L144">			throw new ServiceRuntimeException(e);</span>
+		}
+
+	}
+
+	@Override
+	public boolean existByCode(MerchantStore store, String code) {
+		try {
+<span class="nc" id="L152">			Category c = categoryService.getByCode(store, code);</span>
+<span class="nc bnc" id="L153" title="All 2 branches missed.">			return c != null ? true : false;</span>
+<span class="nc" id="L154">		} catch (ServiceException e) {</span>
+<span class="nc" id="L155">			throw new ServiceRuntimeException(e);</span>
+		}
+	}
+
+	@Override
+	public PersistableCategory saveCategory(MerchantStore store, PersistableCategory category) {
+		try {
+
+<span class="fc" id="L163">			Long categoryId = category.getId();</span>
+<span class="fc" id="L164">			Category target = Optional.ofNullable(categoryId)</span>
+<span class="pc bpc" id="L165" title="1 of 2 branches missed.">					.filter(merchant -&gt; store !=null)</span>
+<span class="fc bfc" id="L166" title="All 2 branches covered.">					.filter(id -&gt; id &gt; 0)</span>
+<span class="fc" id="L167">					.map(categoryService::getById)</span>
+<span class="fc" id="L168">					.orElse(new Category());</span>
+
+<span class="fc" id="L170">			Category dbCategory = populateCategory(store, category, target);</span>
+<span class="fc" id="L171">			saveCategory(store, dbCategory, null);</span>
+
+			// set category id
+<span class="fc" id="L174">			category.setId(dbCategory.getId());</span>
+<span class="fc" id="L175">			return category;</span>
+<span class="nc" id="L176">		} catch (ServiceException e) {</span>
+<span class="nc" id="L177">			throw new ServiceRuntimeException(&quot;Error while updating category&quot;, e);</span>
+		}
+	}
+
+	private Category populateCategory(MerchantStore store, PersistableCategory category, Category target) {
+		try {
+<span class="fc" id="L183">			return persistableCatagoryPopulator.populate(category, target, store, store.getDefaultLanguage());</span>
+<span class="nc" id="L184">		} catch (ConversionException e) {</span>
+<span class="nc" id="L185">			throw new ServiceRuntimeException(e);</span>
+		}
+	}
+
+	private void saveCategory(MerchantStore store, Category category, Category parent) throws ServiceException {
+
+		/**
+		 * c.children1
+		 *
+		 * &lt;p&gt;
+		 * children1.children1 children1.children2
+		 *
+		 * &lt;p&gt;
+		 * children1.children2.children1
+		 */
+
+		/** set lineage * */
+<span class="fc bfc" id="L202" title="All 2 branches covered.">		if (parent != null) {</span>
+<span class="fc" id="L203">			category.setParent(category);</span>
+
+<span class="fc" id="L205">			String lineage = parent.getLineage();</span>
+<span class="fc" id="L206">			int depth = parent.getDepth();</span>
+
+<span class="fc" id="L208">			category.setDepth(depth + 1);</span>
+<span class="fc" id="L209">			category.setLineage(new StringBuilder().append(lineage).toString());// service</span>
+																										// will
+																										// adjust
+																										// lineage
+		}
+
+<span class="fc" id="L215">		category.setMerchantStore(store);</span>
+
+		// remove children
+<span class="fc" id="L218">		List&lt;Category&gt; children = category.getCategories();</span>
+<span class="pc bpc" id="L219" title="3 of 4 branches missed.">		List&lt;Category&gt; saveAfter = children.stream().filter(c -&gt; c.getId() == null || c.getId().longValue()==0).collect(Collectors.toList());</span>
+<span class="pc bpc" id="L220" title="3 of 4 branches missed.">		List&lt;Category&gt; saveNow = children.stream().filter(c -&gt; c.getId() != null &amp;&amp; c.getId().longValue()&gt;0).collect(Collectors.toList());</span>
+<span class="fc" id="L221">		category.setCategories(saveNow);</span>
+
+		/** set parent * */
+<span class="fc bfc" id="L224" title="All 2 branches covered.">		if (parent != null) {</span>
+<span class="fc" id="L225">			category.setParent(parent);</span>
+		}
+
+<span class="fc" id="L228">		categoryService.saveOrUpdate(category);</span>
+
+<span class="fc bfc" id="L230" title="All 2 branches covered.">		if (!CollectionUtils.isEmpty(saveAfter)) {</span>
+<span class="fc" id="L231">			parent = category;</span>
+<span class="fc bfc" id="L232" title="All 2 branches covered.">			for(Category c: saveAfter) {</span>
+<span class="pc bpc" id="L233" title="1 of 4 branches missed.">				if(c.getId() == null || c.getId().longValue()==0) {</span>
+<span class="fc bfc" id="L234" title="All 2 branches covered.">					for (Category sub : children) {</span>
+<span class="fc" id="L235">						saveCategory(store, sub, parent);</span>
+<span class="fc" id="L236">					}</span>
+				}
+<span class="fc" id="L238">			}</span>
+		}
+
+<span class="fc" id="L241">	}</span>
+
+	@Override
+	public ReadableCategory getById(MerchantStore store, Long id, Language language) {
+
+<span class="nc" id="L246">			Category categoryModel = null;</span>
+<span class="nc bnc" id="L247" title="All 2 branches missed.">			if (language != null) {</span>
+<span class="nc" id="L248">				categoryModel = getCategoryById(id, language);</span>
+			} else {// all langs
+<span class="nc" id="L250">				categoryModel = getById(store, id);</span>
+			}
+
+<span class="nc bnc" id="L253" title="All 2 branches missed.">			if (categoryModel == null)</span>
+<span class="nc" id="L254">				throw new ResourceNotFoundException(&quot;Categori id [&quot; + id + &quot;] not found&quot;);</span>
+
+<span class="nc" id="L256">			StringBuilder lineage = new StringBuilder().append(categoryModel.getLineage());</span>
+
+<span class="nc" id="L258">			ReadableCategory readableCategory = readableCategoryMapper.convert(categoryModel, store,</span>
+					language);
+
+			// get children
+<span class="nc" id="L262">			List&lt;Category&gt; children = getListByLineage(store, lineage.toString());</span>
+
+<span class="nc" id="L264">			List&lt;ReadableCategory&gt; childrenCats = children.stream()</span>
+<span class="nc" id="L265">					.map(cat -&gt; readableCategoryMapper.convert(cat, store, language))</span>
+<span class="nc" id="L266">					.collect(Collectors.toList());</span>
+
+<span class="nc" id="L268">			addChildToParent(readableCategory, childrenCats);</span>
+<span class="nc" id="L269">			return readableCategory;</span>
+
+	}
+
+	private void addChildToParent(ReadableCategory readableCategory, List&lt;ReadableCategory&gt; childrenCats) {
+<span class="nc" id="L274">		Map&lt;Long, ReadableCategory&gt; categoryMap = childrenCats.stream()</span>
+<span class="nc" id="L275">				.collect(Collectors.toMap(ReadableCategory::getId, Function.identity()));</span>
+<span class="nc" id="L276">		categoryMap.put(readableCategory.getId(), readableCategory);</span>
+
+		// traverse map and add child to parent
+<span class="nc bnc" id="L279" title="All 2 branches missed.">		for (ReadableCategory readable : childrenCats) {</span>
+
+<span class="nc bnc" id="L281" title="All 2 branches missed.">			if (readable.getParent() != null) {</span>
+
+<span class="nc" id="L283">				ReadableCategory rc = categoryMap.get(readable.getParent().getId());</span>
+<span class="nc bnc" id="L284" title="All 2 branches missed.">				if (rc != null) {</span>
+<span class="nc" id="L285">					rc.getChildren().add(readable);</span>
+				}
+			}
+<span class="nc" id="L288">		}</span>
+<span class="nc" id="L289">	}</span>
+
+	private List&lt;Category&gt; getListByLineage(MerchantStore store, String lineage) {
+		try {
+<span class="nc" id="L293">			return categoryService.getListByLineage(store, lineage);</span>
+<span class="nc" id="L294">		} catch (ServiceException e) {</span>
+<span class="nc" id="L295">			throw new ServiceRuntimeException(String.format(&quot;Error while getting root category %s&quot;, e.getMessage()), e);</span>
+		}
+	}
+
+	private Category getCategoryById(Long id, Language language) {
+<span class="nc" id="L300">		return Optional.ofNullable(categoryService.getOneByLanguage(id, language))</span>
+<span class="nc" id="L301">				.orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Category id [&quot; + id + &quot;] not found&quot;));</span>
+	}
+
+	@Override
+	public void deleteCategory(Category category) {
+		try {
+<span class="nc" id="L307">			categoryService.delete(category);</span>
+<span class="nc" id="L308">		} catch (ServiceException e) {</span>
+<span class="nc" id="L309">			throw new ServiceRuntimeException(&quot;Error while deleting category&quot;, e);</span>
+<span class="nc" id="L310">		}</span>
+<span class="nc" id="L311">	}</span>
+
+	@Override
+	public ReadableCategory getByCode(MerchantStore store, String code, Language language) throws Exception {
+
+<span class="nc" id="L316">		Validate.notNull(code, &quot;category code must not be null&quot;);</span>
+<span class="nc" id="L317">		ReadableCategoryPopulator categoryPopulator = new ReadableCategoryPopulator();</span>
+<span class="nc" id="L318">		ReadableCategory readableCategory = new ReadableCategory();</span>
+
+<span class="nc" id="L320">		Category category = categoryService.getByCode(store, code);</span>
+<span class="nc" id="L321">		categoryPopulator.populate(category, readableCategory, store, language);</span>
+
+<span class="nc" id="L323">		return readableCategory;</span>
+	}
+
+	@Override
+	public ReadableCategory getCategoryByFriendlyUrl(MerchantStore store, String friendlyUrl, Language language) throws Exception {
+<span class="fc" id="L328">		Validate.notNull(friendlyUrl, &quot;Category search friendly URL must not be null&quot;);</span>
+
+
+<span class="fc" id="L331">		Category category = categoryService.getBySeUrl(store, friendlyUrl, language);</span>
+		
+<span class="pc bpc" id="L333" title="1 of 2 branches missed.">		if(category == null) {</span>
+<span class="nc" id="L334">			throw new ResourceNotFoundException(&quot;Category with friendlyUrl [&quot; + friendlyUrl + &quot;] was not found&quot;);</span>
+		}
+		
+<span class="fc" id="L337">		ReadableCategoryPopulator categoryPopulator = new ReadableCategoryPopulator();</span>
+<span class="fc" id="L338">		ReadableCategory readableCategory = new ReadableCategory();</span>
+		
+		
+<span class="fc" id="L341">		categoryPopulator.populate(category, readableCategory, store, language);</span>
+
+<span class="fc" id="L343">		return readableCategory;</span>
+	}
+
+	private Category getById(MerchantStore store, Long id) {
+<span class="nc" id="L347">		Validate.notNull(id, &quot;category id must not be null&quot;);</span>
+<span class="nc" id="L348">		Validate.notNull(store, &quot;MerchantStore must not be null&quot;);</span>
+<span class="nc" id="L349">		Category category = categoryService.getById(id, store.getId());</span>
+<span class="nc bnc" id="L350" title="All 2 branches missed.">		if (category == null) {</span>
+<span class="nc" id="L351">			throw new ResourceNotFoundException(&quot;Category with id [&quot; + id + &quot;] not found&quot;);</span>
+		}
+<span class="nc bnc" id="L353" title="All 2 branches missed.">		if (category.getMerchantStore().getId().intValue() != store.getId().intValue()) {</span>
+<span class="nc" id="L354">			throw new UnauthorizedException(&quot;Unauthorized&quot;);</span>
+		}
+<span class="nc" id="L356">		return category;</span>
+	}
+
+	@Override
+	public void deleteCategory(Long categoryId, MerchantStore store) {
+<span class="nc" id="L361">		Category category = getOne(categoryId, store.getId());</span>
+<span class="nc" id="L362">		deleteCategory(category);</span>
+<span class="nc" id="L363">	}</span>
+
+	private Category getOne(Long categoryId, int storeId) {
+<span class="nc" id="L366">		return Optional.ofNullable(categoryService.getById(categoryId)).orElseThrow(</span>
+<span class="nc" id="L367">				() -&gt; new ResourceNotFoundException(String.format(&quot;No Category found for ID : %s&quot;, categoryId)));</span>
+	}
+
+	@Override
+	public List&lt;ReadableProductVariant&gt; categoryProductVariants(Long categoryId, MerchantStore store,
+			Language language) {
+<span class="nc" id="L373">		Category category = categoryService.getById(categoryId, store.getId());</span>
+
+<span class="nc" id="L375">		List&lt;ReadableProductVariant&gt; variants = new ArrayList&lt;ReadableProductVariant&gt;();</span>
+
+<span class="nc bnc" id="L377" title="All 2 branches missed.">		if (category == null) {</span>
+<span class="nc" id="L378">			throw new ResourceNotFoundException(&quot;Category [&quot; + categoryId + &quot;] not found&quot;);</span>
+		}
+
+		try {
+<span class="nc" id="L382">			List&lt;ProductAttribute&gt; attributes = productAttributeService.getProductAttributesByCategoryLineage(store,</span>
+<span class="nc" id="L383">					category.getLineage(), language);</span>
+
+			/**
+			 * Option NAME OptionValueName OptionValueName
+			 **/
+<span class="nc" id="L388">			Map&lt;String, List&lt;com.salesmanager.shop.model.catalog.product.attribute.ProductOptionValue&gt;&gt; rawFacet = new HashMap&lt;String, List&lt;com.salesmanager.shop.model.catalog.product.attribute.ProductOptionValue&gt;&gt;();</span>
+<span class="nc" id="L389">			Map&lt;String, ProductOption&gt; references = new HashMap&lt;String, ProductOption&gt;();</span>
+<span class="nc bnc" id="L390" title="All 2 branches missed.">			for (ProductAttribute attr : attributes) {</span>
+<span class="nc" id="L391">				references.put(attr.getProductOption().getCode(), attr.getProductOption());</span>
+<span class="nc" id="L392">				List&lt;com.salesmanager.shop.model.catalog.product.attribute.ProductOptionValue&gt; values = rawFacet.get(attr.getProductOption().getCode());</span>
+<span class="nc bnc" id="L393" title="All 2 branches missed.">				if (values == null) {</span>
+<span class="nc" id="L394">					values = new ArrayList&lt;com.salesmanager.shop.model.catalog.product.attribute.ProductOptionValue&gt;();</span>
+<span class="nc" id="L395">					rawFacet.put(attr.getProductOption().getCode(), values);</span>
+				}
+				
+<span class="nc bnc" id="L398" title="All 2 branches missed.">				if(attr.getProductOptionValue() != null) {</span>
+<span class="nc" id="L399">					Optional&lt;ProductOptionValueDescription&gt; desc = attr.getProductOptionValue().getDescriptions()</span>
+<span class="nc bnc" id="L400" title="All 2 branches missed.">					.stream().filter(o -&gt; o.getLanguage().getId() == language.getId()).findFirst();</span>
+					
+<span class="nc" id="L402">					com.salesmanager.shop.model.catalog.product.attribute.ProductOptionValue val = new com.salesmanager.shop.model.catalog.product.attribute.ProductOptionValue();</span>
+<span class="nc" id="L403">					val.setCode(attr.getProductOption().getCode());</span>
+<span class="nc" id="L404">					String order = attr.getAttributeSortOrder();</span>
+<span class="nc bnc" id="L405" title="All 2 branches missed.">					val.setSortOrder(order == null ? attr.getId().intValue(): Integer.parseInt(attr.getAttributeSortOrder()));</span>
+<span class="nc bnc" id="L406" title="All 2 branches missed.">					if(desc.isPresent()) {</span>
+<span class="nc" id="L407">						val.setName(desc.get().getName());</span>
+					} else {
+<span class="nc" id="L409">						val.setName(attr.getProductOption().getCode());</span>
+					}
+<span class="nc" id="L411">					values.add(val);</span>
+				}
+<span class="nc" id="L413">			}</span>
+
+			// for each reference set Option
+<span class="nc" id="L416">			Iterator&lt;Entry&lt;String, ProductOption&gt;&gt; it = references.entrySet().iterator();</span>
+<span class="nc bnc" id="L417" title="All 2 branches missed.">			while (it.hasNext()) {</span>
+				@SuppressWarnings(&quot;rawtypes&quot;)
+<span class="nc" id="L419">				Map.Entry pair = (Map.Entry) it.next();</span>
+<span class="nc" id="L420">				ProductOption option = (ProductOption) pair.getValue();</span>
+<span class="nc" id="L421">				List&lt;com.salesmanager.shop.model.catalog.product.attribute.ProductOptionValue&gt; values = rawFacet.get(option.getCode());</span>
+
+<span class="nc" id="L423">				ReadableProductVariant productVariant = new ReadableProductVariant();</span>
+<span class="nc bnc" id="L424" title="All 2 branches missed.">				Optional&lt;ProductOptionDescription&gt;  optionDescription = option.getDescriptions().stream().filter(o -&gt; o.getLanguage().getId() == language.getId()).findFirst();</span>
+<span class="nc bnc" id="L425" title="All 2 branches missed.">				if(optionDescription.isPresent()) {</span>
+<span class="nc" id="L426">					productVariant.setName(optionDescription.get().getName());</span>
+<span class="nc" id="L427">					productVariant.setId(optionDescription.get().getId());</span>
+<span class="nc" id="L428">					productVariant.setCode(optionDescription.get().getProductOption().getCode());</span>
+<span class="nc" id="L429">					List&lt;ReadableProductVariantValue&gt; optionValues = new ArrayList&lt;ReadableProductVariantValue&gt;();</span>
+<span class="nc bnc" id="L430" title="All 2 branches missed.">					for (com.salesmanager.shop.model.catalog.product.attribute.ProductOptionValue value : values) {</span>
+<span class="nc" id="L431">						ReadableProductVariantValue v = new ReadableProductVariantValue();</span>
+<span class="nc" id="L432">						v.setCode(value.getCode());</span>
+<span class="nc" id="L433">						v.setName(value.getName());</span>
+<span class="nc" id="L434">						v.setDescription(value.getName());</span>
+<span class="nc" id="L435">						v.setOption(option.getId());</span>
+<span class="nc" id="L436">						v.setValue(value.getId());</span>
+<span class="nc" id="L437">						v.setOrder(option.getProductOptionSortOrder());</span>
+<span class="nc" id="L438">						optionValues.add(v);</span>
+<span class="nc" id="L439">					}</span>
+					
+<span class="nc" id="L441">				    Comparator&lt;ReadableProductVariantValue&gt; orderComparator</span>
+<span class="nc" id="L442">				      = Comparator.comparingInt(ReadableProductVariantValue::getOrder);</span>
+				    
+				    //Arrays.sort(employees, employeeSalaryComparator);
+					
+<span class="nc" id="L446">				    List&lt;ReadableProductVariantValue&gt; readableValues = optionValues.stream()</span>
+<span class="nc" id="L447">				    			.sorted(orderComparator)</span>
+<span class="nc" id="L448">				    	    	.collect(Collectors.toList());</span>
+				    	        
+
+					
+					//sort by name
+					// remove duplicates
+<span class="nc" id="L454">					readableValues = optionValues.stream().distinct().collect(Collectors.toList());</span>
+<span class="nc" id="L455">					readableValues.sort(Comparator.comparing(ReadableProductVariantValue::getName));</span>
+					
+<span class="nc" id="L457">					productVariant.setOptions(readableValues);</span>
+<span class="nc" id="L458">					variants.add(productVariant);</span>
+				}
+<span class="nc" id="L460">			}</span>
+
+
+<span class="nc" id="L463">			return variants;</span>
+<span class="nc" id="L464">		} catch (Exception e) {</span>
+<span class="nc" id="L465">			throw new ServiceRuntimeException(&quot;An error occured while retrieving ProductAttributes&quot;, e);</span>
+		}
+	}
+
+	@Override
+	public void move(Long child, Long parent, MerchantStore store) {
+
+<span class="nc" id="L472">		Validate.notNull(child, &quot;Child category must not be null&quot;);</span>
+<span class="nc" id="L473">		Validate.notNull(parent, &quot;Parent category must not be null&quot;);</span>
+<span class="nc" id="L474">		Validate.notNull(store, &quot;Merhant must not be null&quot;);</span>
+
+
+		try {
+
+<span class="nc" id="L479">			Category c = categoryService.getById(child, store.getId());</span>
+
+<span class="nc bnc" id="L481" title="All 2 branches missed.">			if(c == null) {</span>
+<span class="nc" id="L482">				throw new ResourceNotFoundException(&quot;Category with id [&quot; + child + &quot;] for store [&quot; + store.getCode() + &quot;]&quot;);</span>
+			}
+
+<span class="nc bnc" id="L485" title="All 2 branches missed.">			if(parent.longValue()==-1) {</span>
+<span class="nc" id="L486">				categoryService.addChild(null, c);</span>
+<span class="nc" id="L487">				return;</span>
+
+			}
+
+<span class="nc" id="L491">			Category p = categoryService.getById(parent, store.getId());</span>
+
+<span class="nc bnc" id="L493" title="All 2 branches missed.">			if(p == null) {</span>
+<span class="nc" id="L494">				throw new ResourceNotFoundException(&quot;Category with id [&quot; + parent + &quot;] for store [&quot; + store.getCode() + &quot;]&quot;);</span>
+			}
+
+<span class="nc bnc" id="L497" title="All 4 branches missed.">			if (c.getParent() != null &amp;&amp; c.getParent().getId() == parent) {</span>
+<span class="nc" id="L498">				return;</span>
+			}
+
+<span class="nc bnc" id="L501" title="All 2 branches missed.">			if (c.getMerchantStore().getId().intValue() != store.getId().intValue()) {</span>
+<span class="nc" id="L502">				throw new OperationNotAllowedException(</span>
+<span class="nc" id="L503">						&quot;Invalid identifiers for Merchant [&quot; + c.getMerchantStore().getCode() + &quot;]&quot;);</span>
+			}
+
+<span class="nc bnc" id="L506" title="All 2 branches missed.">			if (p.getMerchantStore().getId().intValue() != store.getId().intValue()) {</span>
+<span class="nc" id="L507">				throw new OperationNotAllowedException(</span>
+<span class="nc" id="L508">						&quot;Invalid identifiers for Merchant [&quot; + c.getMerchantStore().getCode() + &quot;]&quot;);</span>
+			}
+
+<span class="nc" id="L511">			p.getAuditSection().setModifiedBy(&quot;Api&quot;);</span>
+<span class="nc" id="L512">			categoryService.addChild(p, c);</span>
+<span class="nc" id="L513">		} catch (ResourceNotFoundException re) {</span>
+<span class="nc" id="L514">			throw re;</span>
+<span class="nc" id="L515">		} catch (OperationNotAllowedException oe) {</span>
+<span class="nc" id="L516">			throw oe;</span>
+<span class="nc" id="L517">		} catch (Exception e) {</span>
+<span class="nc" id="L518">			throw new ServiceRuntimeException(e);</span>
+<span class="nc" id="L519">		}</span>
+
+<span class="nc" id="L521">	}</span>
+
+	@Override
+	public Category getByCode(String code, MerchantStore store) {
+		try {
+<span class="nc" id="L526">			return categoryService.getByCode(store, code);</span>
+<span class="nc" id="L527">		} catch (ServiceException e) {</span>
+<span class="nc" id="L528">			throw new ServiceRuntimeException(&quot;Exception while reading category code [&quot; + code + &quot;]&quot;,e);</span>
+		}
+	}
+
+	@Override
+	public void setVisible(PersistableCategory category, MerchantStore store) {
+<span class="nc" id="L534">		Validate.notNull(category, &quot;Category must not be null&quot;);</span>
+<span class="nc" id="L535">		Validate.notNull(store, &quot;Store must not be null&quot;);</span>
+		try {
+<span class="nc" id="L537">			Category c = this.getById(store, category.getId());</span>
+<span class="nc" id="L538">			c.setVisible(category.isVisible());</span>
+<span class="nc" id="L539">			categoryService.saveOrUpdate(c);</span>
+<span class="nc" id="L540">		} catch (Exception e) {</span>
+<span class="nc" id="L541">			throw new ServiceRuntimeException(&quot;Error while getting category [&quot; + category.getId() + &quot;]&quot;,e);</span>
+<span class="nc" id="L542">		}</span>
+<span class="nc" id="L543">	}</span>
+
+	@Override
+	public ReadableCategoryList listByProduct(MerchantStore store, Long product, Language language) {
+<span class="nc" id="L547">		Validate.notNull(product, &quot;Product id must not be null&quot;);</span>
+<span class="nc" id="L548">		Validate.notNull(store, &quot;Store must not be null&quot;);</span>
+		
+<span class="nc" id="L550">		List&lt;ReadableCategory&gt; readableCategories = new ArrayList&lt;ReadableCategory&gt;();</span>
+
+<span class="nc" id="L552">			List&lt;Category&gt; categories = categoryService.getByProductId(product, store);</span>
+
+<span class="nc" id="L554">			readableCategories = categories.stream()</span>
+<span class="nc" id="L555">						.map(cat -&gt; readableCategoryMapper.convert(cat, store, language))</span>
+<span class="nc" id="L556">						.collect(Collectors.toList());</span>
+			
+<span class="nc" id="L558">			ReadableCategoryList readableList = new ReadableCategoryList();</span>
+<span class="nc" id="L559">			readableList.setCategories(readableCategories);</span>
+<span class="nc" id="L560">			readableList.setTotalPages(1);</span>
+<span class="nc" id="L561">			readableList.setNumber(readableCategories.size());</span>
+<span class="nc" id="L562">			readableList.setRecordsTotal(readableCategories.size());</span>
+
+		
+<span class="nc" id="L565">		return readableList;</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

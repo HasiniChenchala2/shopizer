@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReadableCustomerDeliveryAddressPopulator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.populator.customer</a> &gt; <span class="el_source">ReadableCustomerDeliveryAddressPopulator.java</span></div><h1>ReadableCustomerDeliveryAddressPopulator.java</h1><pre class="source lang-java linenums">/**
+ * 
+ */
+package com.salesmanager.shop.populator.customer;
+
+import java.util.Map;
+
+import org.apache.commons.lang3.StringUtils;
+
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.reference.country.CountryService;
+import com.salesmanager.core.business.services.reference.zone.ZoneService;
+import com.salesmanager.core.business.utils.AbstractDataPopulator;
+import com.salesmanager.core.model.common.Delivery;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.country.Country;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.core.model.reference.zone.Zone;
+import com.salesmanager.shop.model.customer.ReadableDelivery;
+
+/**
+ * @author Carl Samson
+ *
+ */
+<span class="nc" id="L26">public class ReadableCustomerDeliveryAddressPopulator extends AbstractDataPopulator&lt;Delivery, ReadableDelivery&gt;</span>
+{
+
+    
+	private CountryService countryService;
+	private ZoneService zoneService;
+	
+	@Override
+    public ReadableDelivery populate( Delivery source, ReadableDelivery target, MerchantStore store, Language language )
+        throws ConversionException
+    {
+
+        
+<span class="nc bnc" id="L39" title="All 2 branches missed.">		if(countryService==null) {</span>
+<span class="nc" id="L40">			throw new ConversionException(&quot;countryService must be set&quot;);</span>
+		}
+		
+<span class="nc bnc" id="L43" title="All 2 branches missed.">		if(zoneService==null) {</span>
+<span class="nc" id="L44">			throw new ConversionException(&quot;zoneService must be set&quot;);</span>
+		}
+		
+
+<span class="nc" id="L48">		target.setLatitude(source.getLatitude());</span>
+<span class="nc" id="L49">		target.setLongitude(source.getLongitude());</span>
+
+		
+<span class="nc bnc" id="L52" title="All 2 branches missed.">		if(StringUtils.isNotBlank( source.getCity() )){</span>
+<span class="nc" id="L53">            target.setCity(source.getCity());</span>
+        }
+        
+<span class="nc bnc" id="L56" title="All 2 branches missed.">        if(StringUtils.isNotBlank( source.getCompany() )){</span>
+<span class="nc" id="L57">            target.setCompany(source.getCompany());</span>
+        }
+        
+<span class="nc bnc" id="L60" title="All 2 branches missed.">        if(StringUtils.isNotBlank( source.getAddress() )){</span>
+<span class="nc" id="L61">            target.setAddress(source.getAddress());</span>
+        }
+        
+<span class="nc bnc" id="L64" title="All 2 branches missed.">        if(StringUtils.isNotBlank( source.getFirstName() )){</span>
+<span class="nc" id="L65">            target.setFirstName(source.getFirstName());</span>
+        }
+        
+<span class="nc bnc" id="L68" title="All 2 branches missed.">        if(StringUtils.isNotBlank( source.getLastName() )){</span>
+<span class="nc" id="L69">            target.setLastName(source.getLastName());</span>
+        }
+        
+<span class="nc bnc" id="L72" title="All 2 branches missed.">        if(StringUtils.isNotBlank( source.getPostalCode() )){</span>
+<span class="nc" id="L73">            target.setPostalCode(source.getPostalCode());</span>
+        }
+        
+<span class="nc bnc" id="L76" title="All 2 branches missed.">        if(StringUtils.isNotBlank( source.getTelephone() )){</span>
+<span class="nc" id="L77">            target.setPhone(source.getTelephone());</span>
+        }
+      
+<span class="nc" id="L80">        target.setStateProvince(source.getState());</span>
+        
+<span class="nc bnc" id="L82" title="All 2 branches missed.">        if(source.getTelephone()==null) {</span>
+<span class="nc" id="L83">            target.setPhone(source.getTelephone());</span>
+        }
+<span class="nc" id="L85">        target.setAddress(source.getAddress());</span>
+<span class="nc bnc" id="L86" title="All 2 branches missed.">        if(source.getCountry()!=null) {</span>
+<span class="nc" id="L87">            target.setCountry(source.getCountry().getIsoCode());</span>
+            
+            //resolve country name
+            try {
+<span class="nc" id="L91">				Map&lt;String,Country&gt; countries = countryService.getCountriesMap(language);</span>
+<span class="nc" id="L92">				Country c =countries.get(source.getCountry().getIsoCode());</span>
+<span class="nc bnc" id="L93" title="All 2 branches missed.">				if(c!=null) {</span>
+<span class="nc" id="L94">					target.setCountryName(c.getName());</span>
+				}
+<span class="nc" id="L96">			} catch (ServiceException e) {</span>
+				// TODO Auto-generated catch block
+<span class="nc" id="L98">				throw new ConversionException(e);</span>
+<span class="nc" id="L99">			}</span>
+        }
+<span class="nc bnc" id="L101" title="All 2 branches missed.">        if(source.getZone()!=null) {</span>
+<span class="nc" id="L102">            target.setZone(source.getZone().getCode());</span>
+            
+            //resolve zone name
+            try {
+<span class="nc" id="L106">				Map&lt;String,Zone&gt; zones = zoneService.getZones(language);</span>
+<span class="nc" id="L107">				Zone z = zones.get(source.getZone().getCode());</span>
+<span class="nc bnc" id="L108" title="All 2 branches missed.">				if(z!=null) {</span>
+<span class="nc" id="L109">					target.setProvinceName(z.getName());</span>
+				}
+<span class="nc" id="L111">			} catch (ServiceException e) {</span>
+				// TODO Auto-generated catch block
+<span class="nc" id="L113">				throw new ConversionException(e);</span>
+<span class="nc" id="L114">			}</span>
+        }
+        
+        
+
+<span class="nc" id="L119">        return target;</span>
+    }
+
+	@Override
+	protected ReadableDelivery createTarget() {
+		// TODO Auto-generated method stub
+<span class="nc" id="L125">		return null;</span>
+	}
+
+	public CountryService getCountryService() {
+<span class="nc" id="L129">		return countryService;</span>
+	}
+
+	public void setCountryService(CountryService countryService) {
+<span class="nc" id="L133">		this.countryService = countryService;</span>
+<span class="nc" id="L134">	}</span>
+
+	public ZoneService getZoneService() {
+<span class="nc" id="L137">		return zoneService;</span>
+	}
+
+	public void setZoneService(ZoneService zoneService) {
+<span class="nc" id="L141">		this.zoneService = zoneService;</span>
+<span class="nc" id="L142">	}</span>
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

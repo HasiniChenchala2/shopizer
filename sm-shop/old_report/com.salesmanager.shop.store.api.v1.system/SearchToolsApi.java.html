@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SearchToolsApi.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.api.v1.system</a> &gt; <span class="el_source">SearchToolsApi.java</span></div><h1>SearchToolsApi.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.api.v1.system;
+
+import java.security.Principal;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import javax.inject.Inject;
+import javax.servlet.http.HttpServletRequest;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.constants.Constants;
+import com.salesmanager.shop.model.user.ReadableUser;
+import com.salesmanager.shop.store.api.exception.RestApiException;
+import com.salesmanager.shop.store.api.exception.UnauthorizedException;
+import com.salesmanager.shop.store.controller.search.facade.SearchFacade;
+import com.salesmanager.shop.store.controller.user.facade.UserFacade;
+
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiImplicitParams;
+import io.swagger.annotations.ApiOperation;
+import springfox.documentation.annotations.ApiIgnore;
+
+/**
+ * Searching and indexing products
+ * 
+ * @author c.samson
+ *
+ */
+
+@Controller
+@RequestMapping(&quot;/api/v1&quot;)
+<span class="fc" id="L41">public class SearchToolsApi {</span>
+
+<span class="fc" id="L43">	private static final Logger LOGGER = LoggerFactory.getLogger(SearchToolsApi.class);</span>
+
+	@Inject
+	private SearchFacade searchFacade;
+
+	@Inject
+	private UserFacade userFacade;
+
+	@PostMapping(&quot;/private/system/search/index&quot;)
+	@ApiOperation(httpMethod = &quot;POST&quot;, value = &quot;Indexes all products&quot;, notes = &quot;&quot;, produces = &quot;application/json&quot;)
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	public ResponseEntity&lt;Void&gt; contact(@ApiIgnore MerchantStore merchantStore, @ApiIgnore Language language, HttpServletRequest request) {
+
+		// superadmin, admin and admin_catalogue
+<span class="nc" id="L58">		String authenticatedUser = userFacade.authenticatedUser();</span>
+<span class="nc bnc" id="L59" title="All 2 branches missed.">		if (authenticatedUser == null) {</span>
+<span class="nc" id="L60">			throw new UnauthorizedException();</span>
+		}
+		
+<span class="nc" id="L63">		Principal principal = request.getUserPrincipal();</span>
+<span class="nc" id="L64">		String userName = principal.getName();</span>
+<span class="nc" id="L65">		ReadableUser user = userFacade.findByUserName(userName, null, language);</span>
+		
+<span class="nc bnc" id="L67" title="All 2 branches missed.">		if(user== null) {</span>
+<span class="nc" id="L68">			throw new UnauthorizedException();</span>
+		}
+
+<span class="nc" id="L71">		userFacade.authorizedGroup(authenticatedUser, Stream.of(Constants.GROUP_SUPERADMIN, Constants.GROUP_ADMIN,</span>
+				Constants.GROUP_ADMIN_CATALOGUE, Constants.GROUP_ADMIN_RETAIL)
+<span class="nc" id="L73">				.collect(Collectors.toList()));</span>
+
+<span class="nc bnc" id="L75" title="All 2 branches missed.">		if(!user.getMerchant().equals(merchantStore.getCode())) {</span>
+<span class="nc" id="L76">			throw new UnauthorizedException();</span>
+		}
+		try {
+<span class="nc" id="L79">			searchFacade.indexAllData(merchantStore);</span>
+<span class="nc" id="L80">		} catch (Exception e) {</span>
+<span class="nc" id="L81">			throw new RestApiException(&quot;Exception while indexing store data&quot;, e);</span>
+<span class="nc" id="L82">		}</span>
+<span class="nc" id="L83">		return new ResponseEntity&lt;Void&gt;(HttpStatus.CREATED);</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

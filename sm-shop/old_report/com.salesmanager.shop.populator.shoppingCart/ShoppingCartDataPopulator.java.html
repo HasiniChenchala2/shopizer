@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ShoppingCartDataPopulator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.populator.shoppingCart</a> &gt; <span class="el_source">ShoppingCartDataPopulator.java</span></div><h1>ShoppingCartDataPopulator.java</h1><pre class="source lang-java linenums">/**
+ *
+ */
+package com.salesmanager.shop.populator.shoppingCart;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.apache.commons.beanutils.ConversionException;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.Validate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.catalog.pricing.PricingService;
+import com.salesmanager.core.business.services.shoppingcart.ShoppingCartCalculationService;
+import com.salesmanager.core.business.utils.AbstractDataPopulator;
+import com.salesmanager.core.model.catalog.product.attribute.ProductOptionDescription;
+import com.salesmanager.core.model.catalog.product.attribute.ProductOptionValueDescription;
+import com.salesmanager.core.model.catalog.product.description.ProductDescription;
+import com.salesmanager.core.model.catalog.product.image.ProductImage;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.order.OrderSummary;
+import com.salesmanager.core.model.order.OrderTotalSummary;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.core.model.shoppingcart.ShoppingCart;
+import com.salesmanager.shop.model.order.total.OrderTotal;
+import com.salesmanager.shop.model.shoppingcart.ShoppingCartAttribute;
+import com.salesmanager.shop.model.shoppingcart.ShoppingCartData;
+import com.salesmanager.shop.model.shoppingcart.ShoppingCartItem;
+import com.salesmanager.shop.utils.ImageFilePath;
+
+
+/**
+ * @author Umesh A
+ *
+ */
+
+@Deprecated
+<span class="nc" id="L44">public class ShoppingCartDataPopulator extends AbstractDataPopulator&lt;ShoppingCart,ShoppingCartData&gt;</span>
+{
+
+<span class="nc" id="L47">    private static final Logger LOG = LoggerFactory.getLogger(ShoppingCartDataPopulator.class);</span>
+
+    private PricingService pricingService;
+
+    private  ShoppingCartCalculationService shoppingCartCalculationService;
+    
+    private ImageFilePath imageUtils;
+
+			public ImageFilePath getimageUtils() {
+<span class="nc" id="L56">				return imageUtils;</span>
+			}
+		
+		
+		
+		
+			public void setimageUtils(ImageFilePath imageUtils) {
+<span class="nc" id="L63">				this.imageUtils = imageUtils;</span>
+<span class="nc" id="L64">			}</span>
+
+
+
+    @Override
+    public ShoppingCartData createTarget()
+    {
+
+<span class="nc" id="L72">        return new ShoppingCartData();</span>
+    }
+
+
+
+    public ShoppingCartCalculationService getOrderService() {
+<span class="nc" id="L78">        return shoppingCartCalculationService;</span>
+    }
+
+
+
+    public PricingService getPricingService() {
+<span class="nc" id="L84">        return pricingService;</span>
+    }
+
+
+    @Override
+    public ShoppingCartData populate(final ShoppingCart shoppingCart,
+                                     final ShoppingCartData cart, final MerchantStore store, final Language language) {
+
+<span class="nc" id="L92">    	Validate.notNull(shoppingCart, &quot;Requires ShoppingCart&quot;);</span>
+<span class="nc" id="L93">    	Validate.notNull(language, &quot;Requires Language not null&quot;);</span>
+<span class="nc" id="L94">    	int cartQuantity = 0;</span>
+<span class="nc" id="L95">        cart.setCode(shoppingCart.getShoppingCartCode());</span>
+<span class="nc" id="L96">        Set&lt;com.salesmanager.core.model.shoppingcart.ShoppingCartItem&gt; items = shoppingCart.getLineItems();</span>
+<span class="nc" id="L97">        List&lt;ShoppingCartItem&gt; shoppingCartItemsList=Collections.emptyList();</span>
+        try{
+<span class="nc bnc" id="L99" title="All 2 branches missed.">            if(items!=null) {</span>
+<span class="nc" id="L100">                shoppingCartItemsList=new ArrayList&lt;ShoppingCartItem&gt;();</span>
+<span class="nc bnc" id="L101" title="All 2 branches missed.">                for(com.salesmanager.core.model.shoppingcart.ShoppingCartItem item : items) {</span>
+                	
+<span class="nc" id="L103">                    ShoppingCartItem shoppingCartItem = new ShoppingCartItem();</span>
+<span class="nc" id="L104">                    shoppingCartItem.setCode(cart.getCode());</span>
+<span class="nc" id="L105">                    shoppingCartItem.setSku(item.getProduct().getSku());</span>
+<span class="nc" id="L106">                    shoppingCartItem.setProductVirtual(item.isProductVirtual());</span>
+
+<span class="nc" id="L108">                    shoppingCartItem.setId(item.getId());</span>
+                    
+<span class="nc" id="L110">                    String itemName = item.getProduct().getProductDescription().getName();</span>
+<span class="nc bnc" id="L111" title="All 2 branches missed.">                    if(!CollectionUtils.isEmpty(item.getProduct().getDescriptions())) {</span>
+<span class="nc bnc" id="L112" title="All 2 branches missed.">                    	for(ProductDescription productDescription : item.getProduct().getDescriptions()) {</span>
+<span class="nc bnc" id="L113" title="All 4 branches missed.">                    		if(language != null &amp;&amp; language.getId().intValue() == productDescription.getLanguage().getId().intValue()) {</span>
+<span class="nc" id="L114">                    			itemName = productDescription.getName();</span>
+<span class="nc" id="L115">                    			break;</span>
+                    		}
+<span class="nc" id="L117">                    	}</span>
+                    }
+                    
+<span class="nc" id="L120">                    shoppingCartItem.setName(itemName);</span>
+
+<span class="nc" id="L122">                    shoppingCartItem.setPrice(pricingService.getDisplayAmount(item.getItemPrice(),store));</span>
+<span class="nc" id="L123">                    shoppingCartItem.setQuantity(item.getQuantity());</span>
+                    
+                    
+<span class="nc" id="L126">                    cartQuantity = cartQuantity + item.getQuantity();</span>
+                    
+<span class="nc" id="L128">                    shoppingCartItem.setProductPrice(item.getItemPrice());</span>
+<span class="nc" id="L129">                    shoppingCartItem.setSubTotal(pricingService.getDisplayAmount(item.getSubTotal(), store));</span>
+<span class="nc" id="L130">                    ProductImage image = item.getProduct().getProductImage();</span>
+<span class="nc bnc" id="L131" title="All 4 branches missed.">                    if(image!=null &amp;&amp; imageUtils!=null) {</span>
+<span class="nc" id="L132">                        String imagePath = imageUtils.buildProductImageUtils(store, item.getProduct().getSku(), image.getProductImage());</span>
+<span class="nc" id="L133">                        shoppingCartItem.setImage(imagePath);</span>
+                    }
+<span class="nc" id="L135">                    Set&lt;com.salesmanager.core.model.shoppingcart.ShoppingCartAttributeItem&gt; attributes = item.getAttributes();</span>
+<span class="nc bnc" id="L136" title="All 2 branches missed.">                    if(attributes!=null) {</span>
+<span class="nc" id="L137">                        List&lt;ShoppingCartAttribute&gt; cartAttributes = new ArrayList&lt;ShoppingCartAttribute&gt;();</span>
+<span class="nc bnc" id="L138" title="All 2 branches missed.">                        for(com.salesmanager.core.model.shoppingcart.ShoppingCartAttributeItem attribute : attributes) {</span>
+<span class="nc" id="L139">                            ShoppingCartAttribute cartAttribute = new ShoppingCartAttribute();</span>
+<span class="nc" id="L140">                            cartAttribute.setId(attribute.getId());</span>
+<span class="nc" id="L141">                            cartAttribute.setAttributeId(attribute.getProductAttributeId());</span>
+<span class="nc" id="L142">                            cartAttribute.setOptionId(attribute.getProductAttribute().getProductOption().getId());</span>
+<span class="nc" id="L143">                            cartAttribute.setOptionValueId(attribute.getProductAttribute().getProductOptionValue().getId());</span>
+<span class="nc" id="L144">                            List&lt;ProductOptionDescription&gt; optionDescriptions = attribute.getProductAttribute().getProductOption().getDescriptionsSettoList();</span>
+<span class="nc" id="L145">                            List&lt;ProductOptionValueDescription&gt; optionValueDescriptions = attribute.getProductAttribute().getProductOptionValue().getDescriptionsSettoList();</span>
+<span class="nc bnc" id="L146" title="All 4 branches missed.">                            if(!CollectionUtils.isEmpty(optionDescriptions) &amp;&amp; !CollectionUtils.isEmpty(optionValueDescriptions)) {</span>
+                            	
+<span class="nc" id="L148">                            	String optionName = optionDescriptions.get(0).getName();</span>
+<span class="nc" id="L149">                            	String optionValue = optionValueDescriptions.get(0).getName();</span>
+                            	
+<span class="nc bnc" id="L151" title="All 2 branches missed.">                            	for(ProductOptionDescription optionDescription : optionDescriptions) {</span>
+<span class="nc bnc" id="L152" title="All 4 branches missed.">                            		if(optionDescription.getLanguage() != null &amp;&amp; optionDescription.getLanguage().getId().intValue() == language.getId().intValue()) {</span>
+<span class="nc" id="L153">                            			optionName = optionDescription.getName();</span>
+<span class="nc" id="L154">                            			break;</span>
+                            		}
+<span class="nc" id="L156">                            	}</span>
+                            	
+<span class="nc bnc" id="L158" title="All 2 branches missed.">                            	for(ProductOptionValueDescription optionValueDescription : optionValueDescriptions) {</span>
+<span class="nc bnc" id="L159" title="All 4 branches missed.">                            		if(optionValueDescription.getLanguage() != null &amp;&amp; optionValueDescription.getLanguage().getId().intValue() == language.getId().intValue()) {</span>
+<span class="nc" id="L160">                            			optionValue = optionValueDescription.getName();</span>
+<span class="nc" id="L161">                            			break;</span>
+                            		}
+<span class="nc" id="L163">                            	}</span>
+<span class="nc" id="L164">                            	cartAttribute.setOptionName(optionName);</span>
+<span class="nc" id="L165">                            	cartAttribute.setOptionValue(optionValue);</span>
+<span class="nc" id="L166">                            	cartAttributes.add(cartAttribute);</span>
+                            }
+<span class="nc" id="L168">                        }</span>
+<span class="nc" id="L169">                        shoppingCartItem.setShoppingCartAttributes(cartAttributes);</span>
+                    }
+<span class="nc" id="L171">                    shoppingCartItemsList.add(shoppingCartItem);</span>
+<span class="nc" id="L172">                }</span>
+            }
+<span class="nc bnc" id="L174" title="All 2 branches missed.">            if(CollectionUtils.isNotEmpty(shoppingCartItemsList)){</span>
+<span class="nc" id="L175">                cart.setShoppingCartItems(shoppingCartItemsList);</span>
+            }
+            
+<span class="nc bnc" id="L178" title="All 2 branches missed.">            if(shoppingCart.getOrderId() != null) {</span>
+<span class="nc" id="L179">            	cart.setOrderId(shoppingCart.getOrderId());</span>
+            }
+
+<span class="nc" id="L182">            OrderSummary summary = new OrderSummary();</span>
+<span class="nc" id="L183">            List&lt;com.salesmanager.core.model.shoppingcart.ShoppingCartItem&gt; productsList = new ArrayList&lt;com.salesmanager.core.model.shoppingcart.ShoppingCartItem&gt;();</span>
+<span class="nc" id="L184">            productsList.addAll(shoppingCart.getLineItems());</span>
+<span class="nc" id="L185">            summary.setProducts(productsList.stream().filter(p -&gt; p.getProduct().isAvailable()).collect(Collectors.toList()));</span>
+<span class="nc" id="L186">            OrderTotalSummary orderSummary = shoppingCartCalculationService.calculate(shoppingCart,store, language );</span>
+
+<span class="nc bnc" id="L188" title="All 2 branches missed.">            if(CollectionUtils.isNotEmpty(orderSummary.getTotals())) {</span>
+<span class="nc" id="L189">            	List&lt;OrderTotal&gt; totals = new ArrayList&lt;OrderTotal&gt;();</span>
+<span class="nc bnc" id="L190" title="All 2 branches missed.">            	for(com.salesmanager.core.model.order.OrderTotal t : orderSummary.getTotals()) {</span>
+<span class="nc" id="L191">            		OrderTotal total = new OrderTotal();</span>
+<span class="nc" id="L192">            		total.setCode(t.getOrderTotalCode());</span>
+<span class="nc" id="L193">            		total.setText(t.getText());</span>
+<span class="nc" id="L194">            		total.setValue(t.getValue());</span>
+<span class="nc" id="L195">            		totals.add(total);</span>
+<span class="nc" id="L196">            	}</span>
+<span class="nc" id="L197">            	cart.setTotals(totals);</span>
+            }
+            
+<span class="nc" id="L200">            cart.setSubTotal(pricingService.getDisplayAmount(orderSummary.getSubTotal(), store));</span>
+<span class="nc" id="L201">            cart.setTotal(pricingService.getDisplayAmount(orderSummary.getTotal(), store));</span>
+<span class="nc" id="L202">            cart.setQuantity(cartQuantity);</span>
+<span class="nc" id="L203">            cart.setId(shoppingCart.getId());</span>
+        }
+<span class="nc" id="L205">        catch(ServiceException ex){</span>
+<span class="nc" id="L206">            LOG.error( &quot;Error while converting cart Model to cart Data..&quot;+ex );</span>
+<span class="nc" id="L207">            throw new ConversionException( &quot;Unable to create cart data&quot;, ex );</span>
+<span class="nc" id="L208">        }</span>
+<span class="nc" id="L209">        return cart;</span>
+
+
+    };
+
+
+
+
+
+    public void setPricingService(final PricingService pricingService) {
+<span class="nc" id="L219">        this.pricingService = pricingService;</span>
+<span class="nc" id="L220">    }</span>
+
+
+
+
+
+
+    public void setShoppingCartCalculationService(final ShoppingCartCalculationService shoppingCartCalculationService) {
+<span class="nc" id="L228">        this.shoppingCartCalculationService = shoppingCartCalculationService;</span>
+<span class="nc" id="L229">    }</span>
+
+
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

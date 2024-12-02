@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PaymentApi.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.api.v1.payment</a> &gt; <span class="el_source">PaymentApi.java</span></div><h1>PaymentApi.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.api.v1.payment;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.payments.PaymentService;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.core.model.system.IntegrationConfiguration;
+import com.salesmanager.core.model.system.IntegrationModule;
+import com.salesmanager.shop.model.system.IntegrationModuleConfiguration;
+import com.salesmanager.shop.model.system.IntegrationModuleSummaryEntity;
+import com.salesmanager.shop.store.api.exception.ResourceNotFoundException;
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiImplicitParams;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.SwaggerDefinition;
+import io.swagger.annotations.Tag;
+import springfox.documentation.annotations.ApiIgnore;
+
+/**
+ * This API is for payment modules configurations. For payment of orders see
+ * order
+ * 
+ * @author carlsamson
+ *
+ */
+@RestController
+@RequestMapping(value = &quot;/api/v1&quot;)
+@Api(tags = { &quot;Payment api&quot; })
+@SwaggerDefinition(tags = { @Tag(name = &quot;Payment management resources&quot;, description = &quot;Payment management resources&quot;) })
+<span class="fc" id="L47">public class PaymentApi {</span>
+
+<span class="fc" id="L49">	private static final Logger LOGGER = LoggerFactory.getLogger(PaymentApi.class);</span>
+
+	@Autowired
+	private PaymentService paymentService;
+
+	/**
+	 * Get available payment modules
+	 * 
+	 * @param merchantStore
+	 * @param language
+	 * @return
+	 */
+	@GetMapping(&quot;/private/modules/payment&quot;)
+	@ApiOperation(httpMethod = &quot;GET&quot;, value = &quot;List list of payment modules&quot;, notes = &quot;Requires administration access&quot;, produces = &quot;application/json&quot;, response = List.class)
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;string&quot;, defaultValue = &quot;DEFAULT&quot;) })
+	public List&lt;IntegrationModuleSummaryEntity&gt; paymentModules(
+			@ApiIgnore MerchantStore merchantStore,
+			@ApiIgnore Language language) {
+
+		try {
+<span class="nc" id="L69">			List&lt;IntegrationModule&gt; modules = paymentService.getPaymentMethods(merchantStore);</span>
+
+			// configured modules
+<span class="nc" id="L72">			Map&lt;String, IntegrationConfiguration&gt; configuredModules = paymentService</span>
+<span class="nc" id="L73">					.getPaymentModulesConfigured(merchantStore);</span>
+<span class="nc" id="L74">			return modules.stream().map(m -&gt; integrationModule(m, configuredModules)).collect(Collectors.toList());</span>
+
+<span class="nc" id="L76">		} catch (ServiceException e) {</span>
+<span class="nc" id="L77">			LOGGER.error(&quot;Error getting payment modules&quot;, e);</span>
+<span class="nc" id="L78">			throw new ServiceRuntimeException(&quot;Error getting payment modules&quot;, e);</span>
+		}
+
+	}
+
+	@PostMapping(value = &quot;/private/modules/payment&quot;)
+	public void configure(
+			@RequestBody IntegrationModuleConfiguration configuration,
+			@ApiIgnore MerchantStore merchantStore) {
+		
+		try {
+			
+<span class="nc" id="L90">			List&lt;IntegrationModule&gt; modules = paymentService.getPaymentMethods(merchantStore);</span>
+			
+<span class="nc" id="L92">		    Map&lt;String, IntegrationModule&gt; map = modules.stream()</span>
+<span class="nc" id="L93">		    	      .collect(Collectors.toMap(IntegrationModule::getCode, module -&gt; module));</span>
+		    
+<span class="nc" id="L95">		    IntegrationModule config = map.get(configuration.getCode());</span>
+
+<span class="nc bnc" id="L97" title="All 2 branches missed.">			if (config == null) {</span>
+<span class="nc" id="L98">				throw new ResourceNotFoundException(&quot;Payment module [&quot; + configuration.getCode() + &quot;] not found&quot;);</span>
+			}
+			
+<span class="nc" id="L101">			Map&lt;String, IntegrationConfiguration&gt; configuredModules = paymentService</span>
+<span class="nc" id="L102">					.getPaymentModulesConfigured(merchantStore);</span>
+			
+<span class="nc" id="L104">			IntegrationConfiguration integrationConfiguration = configuredModules.get(configuration.getCode());</span>
+			
+<span class="nc bnc" id="L106" title="All 2 branches missed.">			if(integrationConfiguration == null) {</span>
+<span class="nc" id="L107">				integrationConfiguration = new IntegrationConfiguration();</span>
+<span class="nc" id="L108">				integrationConfiguration.setModuleCode(configuration.getCode());</span>
+			}
+
+
+<span class="nc" id="L112">			integrationConfiguration.setActive(configuration.isActive());</span>
+<span class="nc" id="L113">			integrationConfiguration.setDefaultSelected(configuration.isDefaultSelected());</span>
+<span class="nc" id="L114">			integrationConfiguration.setIntegrationKeys(configuration.getIntegrationKeys());</span>
+<span class="nc" id="L115">			integrationConfiguration.setIntegrationOptions(configuration.getIntegrationOptions());</span>
+
+			
+<span class="nc" id="L118">			paymentService.savePaymentModuleConfiguration(integrationConfiguration, merchantStore);</span>
+<span class="nc" id="L119">		} catch (ServiceException e) {</span>
+<span class="nc" id="L120">			LOGGER.error(&quot;Error getting payment modules&quot;, e);</span>
+<span class="nc" id="L121">			throw new ServiceRuntimeException(&quot;Error saving payment module&quot;, e);</span>
+<span class="nc" id="L122">		}</span>
+
+<span class="nc" id="L124">	}</span>
+
+	/**
+	 * Get merchant payment module details
+	 * 
+	 * @param code
+	 * @param merchantStore
+	 * @param language
+	 * @return
+	 */
+	@GetMapping(&quot;/private/modules/payment/{code}&quot;)
+	@ApiOperation(httpMethod = &quot;GET&quot;, value = &quot;Payment module by code&quot;, produces = &quot;application/json&quot;, response = List.class)
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;string&quot;, defaultValue = &quot;DEFAULT&quot;) })
+	public IntegrationModuleConfiguration paymentModule(@PathVariable String code,
+			@ApiIgnore MerchantStore merchantStore, @ApiIgnore Language language) {
+
+		try {
+			
+			// get module
+<span class="nc" id="L143">			IntegrationModule integrationModule = paymentService.getPaymentMethodByCode(merchantStore, code);</span>
+<span class="nc bnc" id="L144" title="All 2 branches missed.">			if (integrationModule == null) {</span>
+<span class="nc" id="L145">				throw new ResourceNotFoundException(&quot;Payment module [&quot; + code + &quot;] not found&quot;);</span>
+			}
+			
+<span class="nc" id="L148">			IntegrationModuleConfiguration returnConfig = new IntegrationModuleConfiguration();</span>
+<span class="nc" id="L149">			returnConfig.setConfigurable(integrationModule.getConfigurable());</span>
+<span class="nc" id="L150">			returnConfig.setActive(false);</span>
+<span class="nc" id="L151">			returnConfig.setDefaultSelected(false);</span>
+<span class="nc" id="L152">			returnConfig.setCode(code);</span>
+			
+			
+
+			// configured modules
+<span class="nc" id="L157">			IntegrationConfiguration config = paymentService.getPaymentConfiguration(code, merchantStore);</span>
+			
+<span class="nc bnc" id="L159" title="All 2 branches missed.">			if(config == null) {</span>
+<span class="nc" id="L160">				return returnConfig;</span>
+			}
+
+
+			/**
+			 * Build return object for now this is a read copy
+			 */
+
+			
+<span class="nc" id="L169">			returnConfig.setActive(config.isActive());</span>
+<span class="nc" id="L170">			returnConfig.setDefaultSelected(config.isDefaultSelected());</span>
+<span class="nc" id="L171">			returnConfig.setCode(code);</span>
+<span class="nc" id="L172">			returnConfig.setIntegrationKeys(config.getIntegrationKeys());</span>
+<span class="nc" id="L173">			returnConfig.setIntegrationOptions(config.getIntegrationOptions());</span>
+
+<span class="nc" id="L175">			return returnConfig;</span>
+
+<span class="nc" id="L177">		} catch (ServiceException e) {</span>
+<span class="nc" id="L178">			LOGGER.error(&quot;Error getting payment module [&quot; + code + &quot;]&quot;, e);</span>
+<span class="nc" id="L179">			throw new ServiceRuntimeException(&quot;Error getting payment module [&quot; + code + &quot;]&quot;, e);</span>
+		}
+
+	}
+
+	private IntegrationModuleSummaryEntity integrationModule(IntegrationModule module,
+			Map&lt;String, IntegrationConfiguration&gt; configuredModules) {
+
+<span class="nc" id="L187">		IntegrationModuleSummaryEntity readable = null;</span>
+<span class="nc" id="L188">		readable = new IntegrationModuleSummaryEntity();</span>
+
+<span class="nc" id="L190">		readable.setCode(module.getCode());</span>
+<span class="nc" id="L191">		readable.setImage(module.getImage());</span>
+<span class="nc" id="L192">		readable.setBinaryImage(module.getBinaryImage());</span>
+		//readable.setRequiredKeys(module.getConfigurables());
+<span class="nc" id="L194">		readable.setConfigurable(module.getConfigurable());</span>
+<span class="nc bnc" id="L195" title="All 2 branches missed.">		if (configuredModules.containsKey(module.getCode())) {</span>
+<span class="nc" id="L196">			readable.setConfigured(true);</span>
+<span class="nc bnc" id="L197" title="All 2 branches missed.">			if(configuredModules.get(module.getCode()).isActive()) {</span>
+<span class="nc" id="L198">				readable.setActive(true);</span>
+			}
+		}
+<span class="nc" id="L201">		return readable;</span>
+
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

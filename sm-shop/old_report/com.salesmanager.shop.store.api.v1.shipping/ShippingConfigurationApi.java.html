@@ -1,0 +1,322 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ShippingConfigurationApi.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.api.v1.shipping</a> &gt; <span class="el_source">ShippingConfigurationApi.java</span></div><h1>ShippingConfigurationApi.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.api.v1.shipping;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.shipping.ShippingService;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.core.model.shipping.PackageDetails;
+import com.salesmanager.core.model.system.IntegrationConfiguration;
+import com.salesmanager.core.model.system.IntegrationModule;
+import com.salesmanager.shop.constants.Constants;
+import com.salesmanager.shop.model.references.PersistableAddress;
+import com.salesmanager.shop.model.references.ReadableAddress;
+import com.salesmanager.shop.model.system.IntegrationModuleConfiguration;
+import com.salesmanager.shop.model.system.IntegrationModuleSummaryEntity;
+import com.salesmanager.shop.store.api.exception.ResourceNotFoundException;
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+import com.salesmanager.shop.store.controller.shipping.facade.ShippingFacade;
+import com.salesmanager.shop.utils.AuthorizationUtils;
+
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiImplicitParams;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.SwaggerDefinition;
+import io.swagger.annotations.Tag;
+import springfox.documentation.annotations.ApiIgnore;
+
+@RestController
+@RequestMapping(&quot;/api/v1&quot;)
+@Api(tags = { &quot;Shipping configuration resource (Shipping Management Api)&quot; })
+@SwaggerDefinition(tags = {
+		@Tag(name = &quot;Shipping management resource&quot;, description = &quot;Manage shipping configuration&quot;) })
+<span class="fc" id="L53">public class ShippingConfigurationApi {</span>
+
+<span class="fc" id="L55">	private static final Logger LOGGER = LoggerFactory.getLogger(ShippingConfigurationApi.class);</span>
+
+	@Autowired
+	private AuthorizationUtils authorizationUtils;
+
+	@Autowired
+	private ShippingFacade shippingFacade;
+
+	@Autowired
+	private ShippingService shippingService;
+
+	@ApiOperation(httpMethod = &quot;GET&quot;, value = &quot;Get shipping origin for a specific merchant store&quot;, notes = &quot;&quot;, produces = &quot;application/json&quot;, response = ReadableAddress.class)
+	@RequestMapping(value = { &quot;/private/shipping/origin&quot; }, method = RequestMethod.GET)
+	@ResponseStatus(HttpStatus.OK)
+	@ResponseBody
+	public ReadableAddress shippingOrigin(@ApiIgnore MerchantStore merchantStore, @ApiIgnore Language language) {
+
+<span class="nc" id="L72">		String user = authorizationUtils.authenticatedUser();</span>
+<span class="nc" id="L73">		authorizationUtils.authorizeUser(user, Stream.of(Constants.GROUP_SUPERADMIN, Constants.GROUP_ADMIN,</span>
+<span class="nc" id="L74">				Constants.GROUP_SHIPPING, Constants.GROUP_ADMIN_RETAIL).collect(Collectors.toList()), merchantStore);</span>
+
+<span class="nc" id="L76">		return shippingFacade.getShippingOrigin(merchantStore);</span>
+
+	}
+
+	@RequestMapping(value = { &quot;/private/shipping/origin&quot; }, method = RequestMethod.POST)
+	@ResponseStatus(HttpStatus.OK)
+	public void saveShippingOrigin(@RequestBody PersistableAddress address, @ApiIgnore MerchantStore merchantStore,
+			@ApiIgnore Language language) {
+
+<span class="nc" id="L85">		String user = authorizationUtils.authenticatedUser();</span>
+<span class="nc" id="L86">		authorizationUtils.authorizeUser(user, Stream.of(Constants.GROUP_SUPERADMIN, Constants.GROUP_ADMIN,</span>
+<span class="nc" id="L87">				Constants.GROUP_SHIPPING, Constants.GROUP_ADMIN_RETAIL).collect(Collectors.toList()), merchantStore);</span>
+
+<span class="nc" id="L89">		shippingFacade.saveShippingOrigin(address, merchantStore);</span>
+
+<span class="nc" id="L91">	}</span>
+
+	// list packaging
+	@ApiOperation(httpMethod = &quot;GET&quot;, value = &quot;Get list of configured packages types for a specific merchant store&quot;, notes = &quot;&quot;, produces = &quot;application/json&quot;, response = List.class)
+	@RequestMapping(value = { &quot;/private/shipping/packages&quot; }, method = RequestMethod.GET)
+	@ResponseStatus(HttpStatus.OK)
+	public List&lt;PackageDetails&gt; listPackages(@ApiIgnore MerchantStore merchantStore, @ApiIgnore Language language) {
+
+<span class="nc" id="L99">		String user = authorizationUtils.authenticatedUser();</span>
+<span class="nc" id="L100">		authorizationUtils.authorizeUser(user, Stream.of(Constants.GROUP_SUPERADMIN, Constants.GROUP_ADMIN,</span>
+<span class="nc" id="L101">				Constants.GROUP_SHIPPING, Constants.GROUP_ADMIN_RETAIL).collect(Collectors.toList()), merchantStore);</span>
+
+<span class="nc" id="L103">		return shippingFacade.listPackages(merchantStore);</span>
+
+	}
+
+	// get packaging
+	@ApiOperation(httpMethod = &quot;GET&quot;, value = &quot;Get package details&quot;, notes = &quot;&quot;, produces = &quot;application/json&quot;, response = PackageDetails.class)
+	@RequestMapping(value = { &quot;/private/shipping/package/{code}&quot; }, method = RequestMethod.GET)
+	@ResponseStatus(HttpStatus.OK)
+	public PackageDetails getPackage(@PathVariable String code, @ApiIgnore MerchantStore merchantStore,
+			@ApiIgnore Language language) {
+
+<span class="nc" id="L114">		String user = authorizationUtils.authenticatedUser();</span>
+<span class="nc" id="L115">		authorizationUtils.authorizeUser(user, Stream.of(Constants.GROUP_SUPERADMIN, Constants.GROUP_ADMIN,</span>
+<span class="nc" id="L116">				Constants.GROUP_SHIPPING, Constants.GROUP_ADMIN_RETAIL).collect(Collectors.toList()), merchantStore);</span>
+
+<span class="nc" id="L118">		return shippingFacade.getPackage(code, merchantStore);</span>
+
+	}
+
+	// create packaging
+	@ApiOperation(httpMethod = &quot;POST&quot;, value = &quot;Create new package specification&quot;, notes = &quot;&quot;, produces = &quot;application/json&quot;, response = Void.class)
+	@RequestMapping(value = { &quot;/private/shipping/package&quot; }, method = RequestMethod.POST)
+	@ResponseStatus(HttpStatus.OK)
+	public void createPackage(@RequestBody PackageDetails details, @ApiIgnore MerchantStore merchantStore,
+			@ApiIgnore Language language) {
+
+<span class="nc" id="L129">		String user = authorizationUtils.authenticatedUser();</span>
+<span class="nc" id="L130">		authorizationUtils.authorizeUser(user, Stream.of(Constants.GROUP_SUPERADMIN, Constants.GROUP_ADMIN,</span>
+<span class="nc" id="L131">				Constants.GROUP_SHIPPING, Constants.GROUP_ADMIN_RETAIL).collect(Collectors.toList()), merchantStore);</span>
+
+<span class="nc" id="L133">		shippingFacade.createPackage(details, merchantStore);</span>
+
+<span class="nc" id="L135">	}</span>
+
+	// edit packaging
+	@ApiOperation(httpMethod = &quot;PUT&quot;, value = &quot;Edit package specification&quot;, notes = &quot;&quot;, produces = &quot;application/json&quot;, response = Void.class)
+	@RequestMapping(value = { &quot;/private/shipping/package/{code}&quot; }, method = RequestMethod.PUT)
+	@ResponseStatus(HttpStatus.OK)
+	public void updatePackage(@PathVariable String code, @RequestBody PackageDetails details,
+			@ApiIgnore MerchantStore merchantStore, @ApiIgnore Language language) {
+
+<span class="nc" id="L144">		String user = authorizationUtils.authenticatedUser();</span>
+<span class="nc" id="L145">		authorizationUtils.authorizeUser(user, Stream.of(Constants.GROUP_SUPERADMIN, Constants.GROUP_ADMIN,</span>
+<span class="nc" id="L146">				Constants.GROUP_SHIPPING, Constants.GROUP_ADMIN_RETAIL).collect(Collectors.toList()), merchantStore);</span>
+
+<span class="nc" id="L148">		shippingFacade.updatePackage(code, details, merchantStore);</span>
+
+<span class="nc" id="L150">	}</span>
+
+	// delete packaging
+	@ApiOperation(httpMethod = &quot;DELETE&quot;, value = &quot;Delete a package specification&quot;, notes = &quot;&quot;, produces = &quot;application/json&quot;, response = Void.class)
+	@RequestMapping(value = { &quot;/private/shipping/package/{code}&quot; }, method = RequestMethod.DELETE)
+	@ResponseStatus(HttpStatus.OK)
+	public void deletePackage(@PathVariable String code, @ApiIgnore MerchantStore merchantStore,
+			@ApiIgnore Language language) {
+
+<span class="nc" id="L159">		String user = authorizationUtils.authenticatedUser();</span>
+<span class="nc" id="L160">		authorizationUtils.authorizeUser(user, Stream.of(Constants.GROUP_SUPERADMIN, Constants.GROUP_ADMIN,</span>
+<span class="nc" id="L161">				Constants.GROUP_SHIPPING, Constants.GROUP_ADMIN_RETAIL).collect(Collectors.toList()), merchantStore);</span>
+
+<span class="nc" id="L163">		shippingFacade.deletePackage(code, merchantStore);</span>
+
+<span class="nc" id="L165">	}</span>
+
+	/**
+	 * Get available shipping modules
+	 * 
+	 * @param merchantStore
+	 * @param language
+	 * @return
+	 */
+	@GetMapping(&quot;/private/modules/shipping&quot;)
+	@ApiOperation(httpMethod = &quot;GET&quot;, value = &quot;List list of shipping modules&quot;, notes = &quot;Requires administration access&quot;, produces = &quot;application/json&quot;, response = List.class)
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;string&quot;, defaultValue = &quot;DEFAULT&quot;) })
+	public List&lt;IntegrationModuleSummaryEntity&gt; shippingModules(@ApiIgnore MerchantStore merchantStore,
+			@ApiIgnore Language language) {
+
+		try {
+<span class="nc" id="L181">			List&lt;IntegrationModule&gt; modules = shippingService.getShippingMethods(merchantStore);</span>
+
+			// configured modules
+<span class="nc" id="L184">			Map&lt;String, IntegrationConfiguration&gt; configuredModules = shippingService</span>
+<span class="nc" id="L185">					.getShippingModulesConfigured(merchantStore);</span>
+<span class="nc" id="L186">			return modules.stream().map(m -&gt; integrationModule(m, configuredModules)).collect(Collectors.toList());</span>
+
+<span class="nc" id="L188">		} catch (ServiceException e) {</span>
+<span class="nc" id="L189">			LOGGER.error(&quot;Error getting shipping modules&quot;, e);</span>
+<span class="nc" id="L190">			throw new ServiceRuntimeException(&quot;Error getting shipping modules&quot;, e);</span>
+		}
+
+	}
+
+	/**
+	 * Get merchant shipping module details
+	 * 
+	 * @param code
+	 * @param merchantStore
+	 * @param language
+	 * @return
+	 */
+	@GetMapping(&quot;/private/modules/shipping/{code}&quot;)
+	@ApiOperation(httpMethod = &quot;GET&quot;, value = &quot;Shipping module by code&quot;, produces = &quot;application/json&quot;, response = List.class)
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;string&quot;, defaultValue = &quot;DEFAULT&quot;) })
+	public IntegrationConfiguration shippingModule(@PathVariable String code,
+			@ApiIgnore MerchantStore merchantStore, @ApiIgnore Language language) {
+
+		try {
+
+			// configured modules
+<span class="nc" id="L212">			List&lt;IntegrationModule&gt; modules = </span>
+					shippingService
+<span class="nc" id="L214">					.getShippingMethods(merchantStore);</span>
+			
+			//check if exist
+<span class="nc" id="L217">			Optional&lt;IntegrationModule&gt; checkIfExist = modules.stream().filter(m -&gt; m.getCode().equals(code)).findAny();</span>
+			
+<span class="nc bnc" id="L219" title="All 2 branches missed.">			if(!checkIfExist.isPresent()) {</span>
+<span class="nc" id="L220">				throw new ResourceNotFoundException(&quot;Shipping module [&quot; + code + &quot;] not found&quot;);</span>
+			}
+			
+<span class="nc" id="L223">			IntegrationConfiguration config = shippingService.getShippingConfiguration(code, merchantStore);</span>
+<span class="nc bnc" id="L224" title="All 2 branches missed.">			if (config == null) {</span>
+<span class="nc" id="L225">				config = new IntegrationConfiguration();</span>
+			}
+
+			/**
+			 * Build return object for now this is a read copy
+			 */
+
+<span class="nc" id="L232">			config.setActive(config.isActive());</span>
+<span class="nc" id="L233">			config.setDefaultSelected(config.isDefaultSelected());</span>
+<span class="nc" id="L234">			config.setIntegrationKeys(config.getIntegrationKeys());</span>
+<span class="nc" id="L235">			config.setIntegrationOptions(config.getIntegrationOptions());</span>
+
+<span class="nc" id="L237">			return config;</span>
+
+<span class="nc" id="L239">		} catch (ServiceException e) {</span>
+<span class="nc" id="L240">			LOGGER.error(&quot;Error getting shipping module [&quot; + code + &quot;]&quot;, e);</span>
+<span class="nc" id="L241">			throw new ServiceRuntimeException(&quot;Error getting shipping module [&quot; + code + &quot;]&quot;, e);</span>
+		}
+
+	}
+
+	@PostMapping(value = &quot;/private/modules/shipping&quot;)
+	public void configure(@RequestBody IntegrationModuleConfiguration configuration,
+			@ApiIgnore MerchantStore merchantStore) {
+
+		try {
+
+<span class="nc" id="L252">			List&lt;IntegrationModule&gt; modules = shippingService.getShippingMethods(merchantStore);</span>
+
+<span class="nc" id="L254">			Map&lt;String, IntegrationModule&gt; map = modules.stream()</span>
+<span class="nc" id="L255">					.collect(Collectors.toMap(IntegrationModule::getCode, module -&gt; module));</span>
+
+<span class="nc" id="L257">			IntegrationModule config = map.get(configuration.getCode());</span>
+
+<span class="nc bnc" id="L259" title="All 2 branches missed.">			if (config == null) {</span>
+<span class="nc" id="L260">				throw new ResourceNotFoundException(&quot;Shipping module [&quot; + configuration.getCode() + &quot;] not found&quot;);</span>
+			}
+
+<span class="nc" id="L263">			Map&lt;String, IntegrationConfiguration&gt; configuredModules = shippingService</span>
+<span class="nc" id="L264">					.getShippingModulesConfigured(merchantStore);</span>
+
+<span class="nc" id="L266">			IntegrationConfiguration integrationConfiguration = configuredModules.get(configuration.getCode());</span>
+
+<span class="nc bnc" id="L268" title="All 2 branches missed.">			if (integrationConfiguration == null) {</span>
+<span class="nc" id="L269">				integrationConfiguration = new IntegrationConfiguration();</span>
+			}
+
+			/**
+			 * Build return object for now this is a read copy
+			 */
+
+<span class="nc" id="L276">			integrationConfiguration.setActive(configuration.isActive());</span>
+<span class="nc" id="L277">			integrationConfiguration.setDefaultSelected(configuration.isDefaultSelected());</span>
+<span class="nc" id="L278">			integrationConfiguration.setIntegrationKeys(configuration.getIntegrationKeys());</span>
+<span class="nc" id="L279">			integrationConfiguration.setIntegrationOptions(configuration.getIntegrationOptions());</span>
+
+<span class="nc" id="L281">			shippingService.saveShippingQuoteModuleConfiguration(integrationConfiguration, merchantStore);</span>
+
+<span class="nc" id="L283">		} catch (ServiceException e) {</span>
+<span class="nc" id="L284">			LOGGER.error(&quot;Error saving shipping modules&quot;, e);</span>
+<span class="nc" id="L285">			throw new ServiceRuntimeException(&quot;Error saving shipping module&quot;, e);</span>
+<span class="nc" id="L286">		}</span>
+
+<span class="nc" id="L288">	}</span>
+
+	private IntegrationModuleSummaryEntity integrationModule(IntegrationModule module,
+			Map&lt;String, IntegrationConfiguration&gt; configuredModules) {
+
+<span class="nc" id="L293">		IntegrationModuleSummaryEntity readable = null;</span>
+<span class="nc" id="L294">		readable = new IntegrationModuleSummaryEntity();</span>
+
+<span class="nc" id="L296">		readable.setCode(module.getCode());</span>
+<span class="nc" id="L297">		readable.setImage(module.getImage());</span>
+<span class="nc bnc" id="L298" title="All 2 branches missed.">		if (configuredModules.containsKey(module.getCode())) {</span>
+<span class="nc" id="L299">			IntegrationConfiguration conf = configuredModules.get(module.getCode());</span>
+<span class="nc" id="L300">			readable.setConfigured(true);</span>
+<span class="nc bnc" id="L301" title="All 2 branches missed.">			if(conf.isActive()) {</span>
+<span class="nc" id="L302">				readable.setActive(true);</span>
+			}
+		}
+<span class="nc" id="L305">		return readable;</span>
+
+	}
+
+	// Module configuration
+	/**
+	 * private String moduleCode; private boolean active; private boolean
+	 * defaultSelected; private Map&lt;String, String&gt; integrationKeys = new
+	 * HashMap&lt;String, String&gt;(); private Map&lt;String, List&lt;String&gt;&gt;
+	 * integrationOptions = new HashMap&lt;String, List&lt;String&gt;&gt;(); private String
+	 * environment;
+	 * 
+	 * moduleCode:CODE, active:true, defaultSelected:false, environment: &quot;TEST&quot;,
+	 * integrationKeys { &quot;key&quot;:&quot;value&quot;, &quot;anotherkey&quot;:&quot;anothervalue&quot;... }
+	 */
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

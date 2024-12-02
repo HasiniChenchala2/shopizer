@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReadableTaxRateMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.mapper.tax</a> &gt; <span class="el_source">ReadableTaxRateMapper.java</span></div><h1>ReadableTaxRateMapper.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.mapper.tax;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.apache.commons.lang3.Validate;
+import org.springframework.stereotype.Component;
+
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.core.model.tax.taxrate.TaxRate;
+import com.salesmanager.core.model.tax.taxrate.TaxRateDescription;
+import com.salesmanager.shop.mapper.Mapper;
+import com.salesmanager.shop.model.tax.ReadableTaxRate;
+import com.salesmanager.shop.model.tax.ReadableTaxRateDescription;
+
+@Component
+<span class="fc" id="L18">public class ReadableTaxRateMapper implements Mapper&lt;TaxRate, ReadableTaxRate&gt; {</span>
+
+	@Override
+	public ReadableTaxRate convert(TaxRate source, MerchantStore store, Language language) {
+<span class="nc" id="L22">		ReadableTaxRate taxRate = new ReadableTaxRate();</span>
+<span class="nc" id="L23">		return this.merge(source, taxRate, store, language);</span>
+
+	}
+
+	@Override
+	public ReadableTaxRate merge(TaxRate source, ReadableTaxRate destination, MerchantStore store,
+								 Language language) {
+<span class="nc" id="L30">		Validate.notNull(destination, &quot;destination TaxRate cannot be null&quot;);</span>
+<span class="nc" id="L31">		Validate.notNull(source, &quot;source TaxRate cannot be null&quot;);</span>
+<span class="nc" id="L32">		destination.setId(source.getId());</span>
+<span class="nc" id="L33">		destination.setCountry(source.getCountry().getIsoCode());</span>
+<span class="nc" id="L34">		destination.setZone(source.getZone().getCode());</span>
+<span class="nc" id="L35">		destination.setRate(source.getTaxRate().toString());</span>
+<span class="nc" id="L36">		destination.setCode(source.getCode());</span>
+<span class="nc" id="L37">		destination.setPriority(source.getTaxPriority());</span>
+<span class="nc" id="L38">		Optional&lt;ReadableTaxRateDescription&gt; description = this.convertDescription(source.getDescriptions(), language);</span>
+<span class="nc bnc" id="L39" title="All 2 branches missed.">		if(description.isPresent()) {</span>
+<span class="nc" id="L40">			destination.setDescription(description.get());</span>
+		}
+<span class="nc" id="L42">		return destination;</span>
+	}
+	
+	private Optional&lt;ReadableTaxRateDescription&gt; convertDescription(List&lt;TaxRateDescription&gt; descriptions, Language language) {
+<span class="nc" id="L46">		Validate.notEmpty(descriptions,&quot;List of TaxRateDescriptions should not be empty&quot;);</span>
+		
+<span class="nc" id="L48">	    Optional&lt;TaxRateDescription&gt; description = descriptions.stream()</span>
+<span class="nc" id="L49">	            .filter(desc -&gt; desc.getLanguage().getCode().equals(language.getCode())).findAny();</span>
+<span class="nc bnc" id="L50" title="All 2 branches missed.">	        if (description.isPresent()) {</span>
+<span class="nc" id="L51">	          return Optional.of(convertDescription(description.get()));</span>
+	        } else {
+<span class="nc" id="L53">	          return Optional.empty();</span>
+	        }
+		
+		
+	}
+	
+	private ReadableTaxRateDescription convertDescription(TaxRateDescription desc) {
+<span class="nc" id="L60">		ReadableTaxRateDescription d = new ReadableTaxRateDescription();</span>
+<span class="nc" id="L61">		d.setDescription(desc.getDescription());</span>
+<span class="nc" id="L62">		d.setName(desc.getName());</span>
+<span class="nc" id="L63">		d.setLanguage(desc.getLanguage().getCode());</span>
+<span class="nc" id="L64">		d.setDescription(desc.getDescription());</span>
+<span class="nc" id="L65">		d.setId(desc.getId());</span>
+<span class="nc" id="L66">		d.setTitle(desc.getTitle());</span>
+<span class="nc" id="L67">		return d;</span>
+	}
+
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

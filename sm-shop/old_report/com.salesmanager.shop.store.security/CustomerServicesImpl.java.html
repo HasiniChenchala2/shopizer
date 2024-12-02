@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CustomerServicesImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.security</a> &gt; <span class="el_source">CustomerServicesImpl.java</span></div><h1>CustomerServicesImpl.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.security;
+
+import java.util.Collection;
+import javax.inject.Inject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Service;
+import com.salesmanager.core.business.services.customer.CustomerService;
+import com.salesmanager.core.business.services.user.GroupService;
+import com.salesmanager.core.business.services.user.PermissionService;
+import com.salesmanager.core.model.customer.Customer;
+import com.salesmanager.shop.store.security.user.CustomerDetails;
+
+
+/**
+ * 
+ * @author casams1
+ *         http://stackoverflow.com/questions/5105776/spring-security-with
+ *         -custom-user-details
+ */
+@Service(&quot;customerDetailsService&quot;)
+public class CustomerServicesImpl extends AbstractCustomerServices{
+
+<span class="fc" id="L26">	private static final Logger LOGGER = LoggerFactory.getLogger(CustomerServicesImpl.class);</span>
+	
+
+	private CustomerService customerService;
+	private PermissionService  permissionService;
+	private GroupService   groupService;
+	
+	@Inject
+	public CustomerServicesImpl(CustomerService customerService, PermissionService permissionService, GroupService groupService) {
+<span class="fc" id="L35">		super(customerService, permissionService, groupService);</span>
+<span class="fc" id="L36">		this.customerService = customerService;</span>
+<span class="fc" id="L37">		this.permissionService = permissionService;</span>
+<span class="fc" id="L38">		this.groupService = groupService;</span>
+<span class="fc" id="L39">	}</span>
+	
+	@Override
+	protected UserDetails userDetails(String userName, Customer customer, Collection&lt;GrantedAuthority&gt; authorities) {
+
+<span class="nc" id="L44">		CustomerDetails authUser = new CustomerDetails(userName, customer.getPassword(), true, true,</span>
+				true, true, authorities);
+		
+<span class="nc" id="L47">		authUser.setEmail(customer.getEmailAddress());</span>
+<span class="nc" id="L48">		authUser.setId(customer.getId());</span>
+		
+<span class="nc" id="L50">		return authUser;</span>
+	}
+	
+
+
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

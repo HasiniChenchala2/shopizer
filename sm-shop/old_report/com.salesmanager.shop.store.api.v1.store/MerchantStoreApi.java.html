@@ -1,0 +1,378 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MerchantStoreApi.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.api.v1.store</a> &gt; <span class="el_source">MerchantStoreApi.java</span></div><h1>MerchantStoreApi.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.api.v1.store;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.security.Principal;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import javax.inject.Inject;
+import javax.servlet.http.HttpServletRequest;
+import javax.validation.Valid;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.google.common.collect.ImmutableMap;
+import com.salesmanager.core.model.content.FileContentType;
+import com.salesmanager.core.model.content.InputContentFile;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.merchant.MerchantStoreCriteria;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.constants.Constants;
+import com.salesmanager.shop.model.entity.EntityExists;
+import com.salesmanager.shop.model.store.PersistableBrand;
+import com.salesmanager.shop.model.store.PersistableMerchantStore;
+import com.salesmanager.shop.model.store.ReadableBrand;
+import com.salesmanager.shop.model.store.ReadableMerchantStore;
+import com.salesmanager.shop.model.store.ReadableMerchantStoreList;
+import com.salesmanager.shop.store.api.exception.RestApiException;
+import com.salesmanager.shop.store.api.exception.UnauthorizedException;
+import com.salesmanager.shop.store.controller.store.facade.StoreFacade;
+import com.salesmanager.shop.store.controller.user.facade.UserFacade;
+import com.salesmanager.shop.utils.ServiceRequestCriteriaBuilderUtils;
+
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiImplicitParams;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.SwaggerDefinition;
+import io.swagger.annotations.Tag;
+import springfox.documentation.annotations.ApiIgnore;
+
+@RestController
+@RequestMapping(&quot;/api/v1&quot;)
+@Api(tags = { &quot;Merchant and store management resource (Merchant - Store Management Api)&quot; })
+@SwaggerDefinition(tags = {
+		@Tag(name = &quot;Merchant and store management&quot;, description = &quot;Edit merchants (retailers) and stores&quot;) })
+<span class="fc" id="L66">public class MerchantStoreApi {</span>
+
+<span class="fc" id="L68">	private static final Logger LOGGER = LoggerFactory.getLogger(MerchantStoreApi.class);</span>
+
+<span class="fc" id="L70">	private static final Map&lt;String, String&gt; MAPPING_FIELDS = ImmutableMap.&lt;String, String&gt;builder()</span>
+<span class="fc" id="L71">			.put(&quot;name&quot;, &quot;name&quot;).put(&quot;readableAudit.user&quot;, &quot;auditSection.modifiedBy&quot;).build();</span>
+
+	@Inject
+	private StoreFacade storeFacade;
+
+	@Inject
+	private UserFacade userFacade;
+
+	@GetMapping(value = { &quot;/store/{code}&quot; }, produces = MediaType.APPLICATION_JSON_VALUE)
+	@ApiOperation(httpMethod = &quot;GET&quot;, value = &quot;Get merchant store&quot;, notes = &quot;&quot;, response = ReadableMerchantStore.class)
+	public ReadableMerchantStore store(@PathVariable String code,
+			@RequestParam(value = &quot;lang&quot;, required = false) String lang) {
+		//return storeFacade.getByCode(code, lang);
+<span class="fc" id="L84">		ReadableMerchantStore readable =  storeFacade.getByCode(code, lang);</span>
+<span class="fc" id="L85">		return readable;</span>
+	}
+
+	@GetMapping(value = { &quot;/private/store/{code}&quot; }, produces = MediaType.APPLICATION_JSON_VALUE)
+	@ApiOperation(httpMethod = &quot;GET&quot;, value = &quot;Get merchant store full details&quot;, notes = &quot;&quot;, response = ReadableMerchantStore.class)
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	public ReadableMerchantStore storeFull(
+			@PathVariable String code,
+			@ApiIgnore Language language) {
+
+<span class="nc" id="L95">		String authenticatedUser = userFacade.authenticatedUser();</span>
+<span class="nc bnc" id="L96" title="All 2 branches missed.">		if (authenticatedUser == null) {</span>
+<span class="nc" id="L97">			throw new UnauthorizedException();</span>
+		}
+
+<span class="nc" id="L100">		userFacade.authorizedGroup(authenticatedUser, Stream.of(&quot;SUPERADMIN&quot;, &quot;ADMIN_RETAILER&quot;).collect(Collectors.toList()));</span>
+<span class="nc" id="L101">		return storeFacade.getFullByCode(code, language);</span>
+	}
+
+	@GetMapping(value = { &quot;/private/merchant/{code}/stores&quot; }, produces = MediaType.APPLICATION_JSON_VALUE)
+	@ApiOperation(httpMethod = &quot;GET&quot;, value = &quot;Get retailer child stores&quot;, notes = &quot;Merchant (retailer) can have multiple stores&quot;, response = ReadableMerchantStore.class)
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	public ReadableMerchantStoreList list(@PathVariable String code, @ApiIgnore Language language,
+			@RequestParam(value = &quot;page&quot;, required = false, defaultValue = &quot;0&quot;) Integer page,
+			@RequestParam(value = &quot;count&quot;, required = false, defaultValue = &quot;10&quot;) Integer count) {
+
+<span class="nc" id="L111">		String authenticatedUser = userFacade.authenticatedUser();</span>
+<span class="nc bnc" id="L112" title="All 2 branches missed.">		if (authenticatedUser == null) {</span>
+<span class="nc" id="L113">			throw new UnauthorizedException();</span>
+		}
+
+<span class="nc" id="L116">		userFacade.authorizedGroup(authenticatedUser, Stream.of(&quot;SUPERADMIN&quot;, &quot;ADMIN_RETAILER&quot;).collect(Collectors.toList()));</span>
+
+		//ADMIN_RETAILER only see pertaining stores
+		
+		
+<span class="nc" id="L121">		return storeFacade.getChildStores(language, code, page, count);</span>
+	}
+
+	@ResponseStatus(HttpStatus.OK)
+	@GetMapping(value = { &quot;/private/stores&quot; }, produces = MediaType.APPLICATION_JSON_VALUE)
+	@ApiOperation(httpMethod = &quot;GET&quot;, value = &quot;Get list of stores. Returns all retailers and stores. If superadmin everything is returned, else only retailer and child stores.&quot;, notes = &quot;&quot;, response = ReadableMerchantStore.class)
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	public ReadableMerchantStoreList get(
+			@ApiIgnore MerchantStore merchantStore,
+			@ApiIgnore Language language,
+			@RequestParam(value = &quot;page&quot;, required = false, defaultValue = &quot;0&quot;) Integer page,
+			@RequestParam(value = &quot;count&quot;, required = false, defaultValue = &quot;10&quot;) Integer count,
+			HttpServletRequest request) {
+
+<span class="nc" id="L135">		String authenticatedUser = userFacade.authenticatedUser();</span>
+<span class="nc bnc" id="L136" title="All 2 branches missed.">		if (authenticatedUser == null) {</span>
+<span class="nc" id="L137">			throw new UnauthorizedException();</span>
+		}
+
+		// requires superadmin, admin and admin retail to see all
+<span class="nc" id="L141">		userFacade.authorizedGroup(authenticatedUser,</span>
+<span class="nc" id="L142">				Stream.of(Constants.GROUP_SUPERADMIN, Constants.GROUP_ADMIN, Constants.GROUP_ADMIN_RETAIL)</span>
+<span class="nc" id="L143">						.collect(Collectors.toList()));</span>
+
+<span class="nc" id="L145">		MerchantStoreCriteria criteria = createMerchantStoreCriteria(request);</span>
+		
+<span class="nc bnc" id="L147" title="All 2 branches missed.">		if (userFacade.userInRoles(authenticatedUser, Arrays.asList(Constants.GROUP_SUPERADMIN))) {</span>
+<span class="nc" id="L148">			criteria.setStoreCode(null);</span>
+		} else {
+<span class="nc" id="L150">			criteria.setStoreCode(merchantStore.getCode());</span>
+		}
+
+		//return storeFacade.findAll(criteria, language, page, count);
+<span class="nc" id="L154">		ReadableMerchantStoreList readable = storeFacade.findAll(criteria, language, page, count);</span>
+<span class="nc" id="L155">		return readable;</span>
+	}
+	
+
+
+	/**
+	 * List of store names
+	 * @param merchantStore
+	 * @param request
+	 * @return
+	 */
+	@ResponseStatus(HttpStatus.OK)
+	@GetMapping(value = { &quot;/private/stores/names&quot; }, produces = MediaType.APPLICATION_JSON_VALUE)
+	@ApiOperation(httpMethod = &quot;GET&quot;, value = &quot;Get list of store names. Returns all retailers and stores&quot;, notes = &quot;&quot;, response = ReadableMerchantStore.class)
+	public List&lt;ReadableMerchantStore&gt; list(
+			@ApiIgnore MerchantStore merchantStore,
+			@ApiIgnore Language language,
+			@RequestParam(value = &quot;page&quot;, required = false, defaultValue = &quot;0&quot;) Integer page,
+			@RequestParam(value = &quot;count&quot;, required = false, defaultValue = &quot;10&quot;) Integer count,
+			HttpServletRequest request
+			) {
+		
+<span class="nc" id="L177">		String authenticatedUser = userFacade.authenticatedUser();</span>
+<span class="nc bnc" id="L178" title="All 2 branches missed.">		if (authenticatedUser == null) {</span>
+<span class="nc" id="L179">			throw new UnauthorizedException();</span>
+		}
+
+		// requires superadmin, admin and admin retail to see all
+<span class="nc" id="L183">		userFacade.authorizedGroup(authenticatedUser,</span>
+<span class="nc" id="L184">				Stream.of(Constants.GROUP_SUPERADMIN, Constants.GROUP_ADMIN, Constants.GROUP_ADMIN_RETAIL)</span>
+<span class="nc" id="L185">						.collect(Collectors.toList()));</span>
+
+<span class="nc" id="L187">		MerchantStoreCriteria criteria = createMerchantStoreCriteria(request);</span>
+		
+<span class="nc bnc" id="L189" title="All 2 branches missed.">		if (userFacade.userInRoles(authenticatedUser, Arrays.asList(Constants.GROUP_SUPERADMIN))) {</span>
+<span class="nc" id="L190">			criteria.setStoreCode(null);</span>
+		} else {
+<span class="nc" id="L192">			criteria.setStoreCode(merchantStore.getCode());</span>
+		}
+
+<span class="nc" id="L195">		ReadableMerchantStoreList list = storeFacade.findAll(criteria, language, page, count);</span>
+<span class="nc" id="L196">		return list.getData();</span>
+
+	}
+	
+	@ResponseStatus(HttpStatus.OK)
+	@GetMapping(value = { &quot;/store/languages&quot; }, produces = MediaType.APPLICATION_JSON_VALUE)
+	@ApiOperation(httpMethod = &quot;GET&quot;, value = &quot;Get list of store supported languages.&quot;, notes = &quot;&quot;, response = ReadableMerchantStore.class)
+	public List&lt;Language&gt; supportedLanguages(
+			@ApiIgnore MerchantStore merchantStore,
+			HttpServletRequest request) {
+
+<span class="nc" id="L207">		return storeFacade.supportedLanguages(merchantStore);</span>
+	}
+
+	@ResponseStatus(HttpStatus.OK)
+	@PostMapping(value = { &quot;/private/store&quot; }, produces = MediaType.APPLICATION_JSON_VALUE)
+	@ApiOperation(httpMethod = &quot;POST&quot;, value = &quot;Creates a new store&quot;, notes = &quot;&quot;, response = ReadableMerchantStore.class)
+	public void create(@Valid @RequestBody PersistableMerchantStore store) {
+		
+		
+<span class="fc" id="L216">		String authenticatedUser = userFacade.authenticatedUser();</span>
+<span class="pc bpc" id="L217" title="1 of 2 branches missed.">		if (authenticatedUser == null) {</span>
+<span class="nc" id="L218">			throw new UnauthorizedException();</span>
+		}
+		
+<span class="fc" id="L221">		userFacade.authorizedGroup(authenticatedUser, Stream.of(&quot;SUPERADMIN&quot;, &quot;ADMIN_RETAILER&quot;).collect(Collectors.toList()));</span>
+
+		
+<span class="fc" id="L224">		storeFacade.create(store);</span>
+<span class="fc" id="L225">	}</span>
+
+	@ResponseStatus(HttpStatus.OK)
+	@PutMapping(value = { &quot;/private/store/{code}&quot; }, produces = MediaType.APPLICATION_JSON_VALUE)
+	@ApiOperation(httpMethod = &quot;PUT&quot;, value = &quot;Updates a store&quot;, notes = &quot;&quot;, response = ReadableMerchantStore.class)
+	public void update(@PathVariable String code, @Valid @RequestBody PersistableMerchantStore store,
+			HttpServletRequest request) {
+
+<span class="nc" id="L233">		String userName = getUserFromRequest(request);</span>
+<span class="nc" id="L234">		validateUserPermission(userName, code);</span>
+<span class="nc" id="L235">		store.setCode(code);</span>
+<span class="nc" id="L236">		storeFacade.update(store);</span>
+<span class="nc" id="L237">	}</span>
+
+	private String getUserFromRequest(HttpServletRequest request) {
+		// user doing action must be attached to the store being modified
+<span class="fc" id="L241">		Principal principal = request.getUserPrincipal();</span>
+<span class="fc" id="L242">		return principal.getName();</span>
+	}
+
+	private void validateUserPermission(String userName, String code) {
+		// TODO reviewed Spring Security should be used
+<span class="pc bpc" id="L247" title="1 of 2 branches missed.">		if (!userFacade.authorizedStore(userName, code)) {</span>
+<span class="nc" id="L248">			throw new UnauthorizedException(&quot;User &quot; + userName + &quot; not authorized&quot;);</span>
+		}
+<span class="fc" id="L250">	}</span>
+
+	@ResponseStatus(HttpStatus.OK)
+	@GetMapping(value = { &quot;/private/store/{code}/marketing&quot; }, produces = MediaType.APPLICATION_JSON_VALUE)
+	@ApiOperation(httpMethod = &quot;GET&quot;, value = &quot;Get store branding and marketing details&quot;, notes = &quot;&quot;, response = ReadableBrand.class)
+	public ReadableBrand getStoreMarketing(@PathVariable String code, HttpServletRequest request) {
+<span class="nc" id="L256">		String userName = getUserFromRequest(request);</span>
+<span class="nc" id="L257">		validateUserPermission(userName, code);</span>
+<span class="nc" id="L258">		return storeFacade.getBrand(code);</span>
+	}
+
+	/**
+	 * List child stores
+	 * 
+	 * @param code
+	 * @param request
+	 * @return
+	 */
+	@ResponseStatus(HttpStatus.OK)
+	@GetMapping(value = { &quot;/private/merchant/{code}/children&quot; }, produces = MediaType.APPLICATION_JSON_VALUE)
+	@ApiOperation(httpMethod = &quot;GET&quot;, value = &quot;Get child stores&quot;, notes = &quot;&quot;, response = List.class)
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	public ReadableMerchantStoreList children(@PathVariable String code, @ApiIgnore Language language,
+			@RequestParam(value = &quot;page&quot;, required = false, defaultValue = &quot;0&quot;) Integer page,
+			@RequestParam(value = &quot;count&quot;, required = false, defaultValue = &quot;10&quot;) Integer count,
+			HttpServletRequest request) {
+
+<span class="nc" id="L277">		String userName = getUserFromRequest(request);</span>
+<span class="nc" id="L278">		validateUserPermission(userName, code);</span>
+<span class="nc" id="L279">		return storeFacade.getChildStores(language, code, page, count);</span>
+
+	}
+
+	@Deprecated
+	@ResponseStatus(HttpStatus.CREATED)
+	@PostMapping(value = { &quot;/private/store/{code}/marketing&quot; }, produces = MediaType.APPLICATION_JSON_VALUE)
+	@ApiOperation(httpMethod = &quot;POST&quot;, value = &quot;Create or save store branding and marketing details&quot;, notes = &quot;&quot;, response = ReadableBrand.class)
+	public void saveStoreMarketing(@PathVariable String code, @RequestBody PersistableBrand brand,
+			HttpServletRequest request) {
+<span class="nc" id="L289">		String userName = getUserFromRequest(request);</span>
+<span class="nc" id="L290">		validateUserPermission(userName, code);</span>
+<span class="nc" id="L291">		storeFacade.createBrand(code, brand);</span>
+<span class="nc" id="L292">	}</span>
+
+	@ResponseStatus(HttpStatus.CREATED)
+	@PostMapping(value = { &quot;/private/store/{code}/marketing/logo&quot; })
+	@ApiOperation(httpMethod = &quot;POST&quot;, value = &quot;Add store logo&quot;, notes = &quot;&quot;)
+	public void addLogo(@PathVariable String code, @RequestParam(&quot;file&quot;) MultipartFile uploadfile,
+			HttpServletRequest request) {
+
+		// user doing action must be attached to the store being modified
+<span class="fc" id="L301">		String userName = getUserFromRequest(request);</span>
+
+<span class="fc" id="L303">		validateUserPermission(userName, code);</span>
+
+<span class="pc bpc" id="L305" title="1 of 2 branches missed.">		if (uploadfile.isEmpty()) {</span>
+<span class="nc" id="L306">			throw new RestApiException(&quot;Upload file is empty&quot;);</span>
+		}
+
+<span class="fc" id="L309">		InputContentFile cmsContentImage = createInputContentFile(uploadfile);</span>
+<span class="fc" id="L310">		storeFacade.addStoreLogo(code, cmsContentImage);</span>
+<span class="fc" id="L311">	}</span>
+
+	private InputContentFile createInputContentFile(MultipartFile image) {
+
+<span class="fc" id="L315">		InputContentFile cmsContentImage = null;</span>
+
+		try {
+
+<span class="fc" id="L319">			InputStream input = new ByteArrayInputStream(image.getBytes());</span>
+<span class="fc" id="L320">			cmsContentImage = new InputContentFile();</span>
+<span class="fc" id="L321">			cmsContentImage.setFileName(image.getOriginalFilename());</span>
+<span class="fc" id="L322">			cmsContentImage.setMimeType(image.getContentType());</span>
+<span class="fc" id="L323">			cmsContentImage.setFileContentType(FileContentType.LOGO);</span>
+<span class="fc" id="L324">			cmsContentImage.setFile(input);</span>
+
+<span class="nc" id="L326">		} catch (IOException ioe) {</span>
+<span class="nc" id="L327">			throw new RestApiException(ioe);</span>
+<span class="fc" id="L328">		}</span>
+
+<span class="fc" id="L330">		return cmsContentImage;</span>
+	}
+
+	@ResponseStatus(HttpStatus.OK)
+	@DeleteMapping(value = { &quot;/private/store/{code}/marketing/logo&quot; })
+	@ApiOperation(httpMethod = &quot;DELETE&quot;, value = &quot;Delete store logo&quot;, notes = &quot;&quot;, response = Void.class)
+	public void deleteStoreLogo(@PathVariable String code, HttpServletRequest request) {
+
+		// user doing action must be attached to the store being modified
+<span class="fc" id="L339">		String userName = getUserFromRequest(request);</span>
+<span class="fc" id="L340">		validateUserPermission(userName, code);</span>
+
+		// delete store logo
+<span class="fc" id="L343">		storeFacade.deleteLogo(code);</span>
+<span class="fc" id="L344">	}</span>
+
+	@ResponseStatus(HttpStatus.OK)
+	@GetMapping(value = { &quot;/store/unique&quot;,&quot;/private/store/unique&quot; }, produces = MediaType.APPLICATION_JSON_VALUE)
+	@ApiOperation(httpMethod = &quot;GET&quot;, value = &quot;Check if store code already exists&quot;, notes = &quot;&quot;, response = EntityExists.class)
+	public ResponseEntity&lt;EntityExists&gt; exists(@RequestParam(value = &quot;code&quot;) String code) {
+<span class="nc" id="L350">		boolean isStoreExist = storeFacade.existByCode(code);</span>
+<span class="nc" id="L351">		return new ResponseEntity&lt;EntityExists&gt;(new EntityExists(isStoreExist), HttpStatus.OK);</span>
+	}
+
+
+
+	@ResponseStatus(HttpStatus.OK)
+	@DeleteMapping(value = { &quot;/private/store/{code}&quot; })
+	@ApiOperation(httpMethod = &quot;DELETE&quot;, value = &quot;Deletes a store&quot;, notes = &quot;&quot;, response = Void.class)
+	public void delete(@PathVariable String code, HttpServletRequest request) {
+<span class="nc" id="L360">		String userName = getUserFromRequest(request);</span>
+<span class="nc" id="L361">		validateUserPermission(userName, code);</span>
+<span class="nc" id="L362">		storeFacade.delete(code);</span>
+<span class="nc" id="L363">	}</span>
+
+	
+	private MerchantStoreCriteria createMerchantStoreCriteria(HttpServletRequest request) {
+		try {
+<span class="nc" id="L368">			return (MerchantStoreCriteria)ServiceRequestCriteriaBuilderUtils.buildRequestCriterias(new MerchantStoreCriteria(), MAPPING_FIELDS,</span>
+					request);
+<span class="nc" id="L370">		} catch (Exception e) {</span>
+<span class="nc" id="L371">			throw new RestApiException(&quot;Error while binding request parameters&quot;);</span>
+		}
+
+	}
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

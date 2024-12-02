@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ProductVariantGroupFacadeImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.facade.product</a> &gt; <span class="el_source">ProductVariantGroupFacadeImpl.java</span></div><h1>ProductVariantGroupFacadeImpl.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.facade.product;
+
+import static com.salesmanager.shop.util.ReadableEntityUtil.createReadableList;
+
+import java.io.InputStream;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.jsoup.helper.Validate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.stereotype.Component;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.salesmanager.core.business.constants.Constants;
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.catalog.product.variant.ProductVariantGroupService;
+import com.salesmanager.core.business.services.catalog.product.variant.ProductVariantImageService;
+import com.salesmanager.core.business.services.catalog.product.variant.ProductVariantService;
+import com.salesmanager.core.business.services.content.ContentService;
+import com.salesmanager.core.model.catalog.product.variant.ProductVariantImage;
+import com.salesmanager.core.model.catalog.product.variant.ProductVariant;
+import com.salesmanager.core.model.catalog.product.variant.ProductVariantGroup;
+import com.salesmanager.core.model.content.FileContentType;
+import com.salesmanager.core.model.content.InputContentFile;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.mapper.catalog.product.PersistableProductVariantGroupMapper;
+import com.salesmanager.shop.mapper.catalog.product.ReadableProductVariantGroupMapper;
+import com.salesmanager.shop.model.catalog.product.product.variantGroup.PersistableProductVariantGroup;
+import com.salesmanager.shop.model.catalog.product.product.variantGroup.ReadableProductVariantGroup;
+import com.salesmanager.shop.model.entity.ReadableEntityList;
+import com.salesmanager.shop.store.api.exception.ResourceNotFoundException;
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+import com.salesmanager.shop.store.controller.product.facade.ProductVariantGroupFacade;
+
+
+@Component
+<span class="fc" id="L40">public class ProductVariantGroupFacadeImpl implements ProductVariantGroupFacade {</span>
+	
+	@Autowired
+	private ProductVariantGroupService productVariantGroupService;
+	
+	@Autowired
+	private ProductVariantService productVariantService;
+	
+	@Autowired
+	private ProductVariantImageService productVariantImageService;
+	
+	@Autowired
+	private PersistableProductVariantGroupMapper persistableProductIntanceGroupMapper;
+	
+	@Autowired
+	private ReadableProductVariantGroupMapper readableProductVariantGroupMapper;
+	
+	@Autowired
+	private ContentService contentService; //file management
+
+	@Override
+	public ReadableProductVariantGroup get(Long instanceGroupId, MerchantStore store, Language language) {
+		
+<span class="nc" id="L63">		ProductVariantGroup group = this.group(instanceGroupId, store);</span>
+<span class="nc" id="L64">		return readableProductVariantGroupMapper.convert(group, store, language);</span>
+	}
+
+	@Override
+	public Long create(PersistableProductVariantGroup productVariantGroup, MerchantStore store, Language language) {
+		
+<span class="nc" id="L70">		ProductVariantGroup group = persistableProductIntanceGroupMapper.convert(productVariantGroup, store, language);</span>
+		try {
+<span class="nc" id="L72">			group = productVariantGroupService.saveOrUpdate(group);</span>
+<span class="nc" id="L73">		} catch (ServiceException e) {</span>
+<span class="nc" id="L74">			throw new ServiceRuntimeException(&quot;Cannot save product instance group [&quot; + productVariantGroup + &quot;] for store [&quot; + store.getCode() + &quot;]&quot;); </span>
+<span class="nc" id="L75">		}</span>
+		
+<span class="nc" id="L77">		return group.getId();</span>
+	}
+
+	@Override
+	public void update(Long productVariantGroup, PersistableProductVariantGroup instance, MerchantStore store,
+			Language language) {
+<span class="nc" id="L83">		ProductVariantGroup group = this.group(productVariantGroup, store);</span>
+<span class="nc" id="L84">		instance.setId(productVariantGroup);</span>
+		
+<span class="nc" id="L86">		group = persistableProductIntanceGroupMapper.merge(instance, group, store, language);</span>
+		
+		try {
+<span class="nc" id="L89">			productVariantGroupService.saveOrUpdate(group);</span>
+<span class="nc" id="L90">		} catch (ServiceException e) {</span>
+<span class="nc" id="L91">			throw new ServiceRuntimeException(&quot;Cannot save product instance group [&quot; + productVariantGroup + &quot;] for store [&quot; + store.getCode() + &quot;]&quot;); </span>
+<span class="nc" id="L92">		}</span>
+		
+<span class="nc" id="L94">	}</span>
+
+	@Override
+	public void delete(Long productVariantGroup, Long productId, MerchantStore store) {
+
+<span class="nc" id="L99">		ProductVariantGroup group = this.group(productVariantGroup, store);</span>
+		
+<span class="nc bnc" id="L101" title="All 2 branches missed.">		if(group == null) {</span>
+<span class="nc" id="L102">			throw new ResourceNotFoundException(&quot;Product instance group [&quot; + group.getId() + &quot; not found for store [&quot; + store.getCode() + &quot;]&quot;);</span>
+		}
+		
+		try {
+		
+			//null all group from instances
+<span class="nc bnc" id="L108" title="All 2 branches missed.">			for(ProductVariant instance : group.getProductVariants()) {</span>
+<span class="nc" id="L109">				Optional&lt;ProductVariant&gt; p = productVariantService.getById(instance.getId(), store);</span>
+<span class="nc bnc" id="L110" title="All 2 branches missed.">				if(p.isEmpty()) {</span>
+<span class="nc" id="L111">					throw new ResourceNotFoundException(&quot;Product instance [&quot; + instance.getId() + &quot; not found for store [&quot; + store.getCode() + &quot;]&quot;);</span>
+				}
+<span class="nc" id="L113">				instance.setProductVariantGroup(null);</span>
+<span class="nc" id="L114">				productVariantService.save(instance);</span>
+<span class="nc" id="L115">			}</span>
+
+			//now delete
+<span class="nc" id="L118">			productVariantGroupService.delete(group);</span>
+<span class="nc" id="L119">		} catch (ServiceException e) {</span>
+<span class="nc" id="L120">			throw new ServiceRuntimeException(&quot;Cannot remove product instance group [&quot; + productVariantGroup + &quot;] for store [&quot; + store.getCode() + &quot;]&quot;);</span>
+<span class="nc" id="L121">		}</span>
+
+<span class="nc" id="L123">	}</span>
+
+	@Override
+	public ReadableEntityList&lt;ReadableProductVariantGroup&gt; list(Long productId, MerchantStore store, Language language,
+			int page, int count) {
+		
+		
+<span class="nc" id="L130">		Page&lt;ProductVariantGroup&gt; groups = productVariantGroupService.getByProductId(store, productId, language, page, count);</span>
+		
+<span class="nc" id="L132">		List&lt;ReadableProductVariantGroup&gt; readableInstances = groups.stream()</span>
+<span class="nc" id="L133">				.map(rp -&gt; this.readableProductVariantGroupMapper.convert(rp, store, language)).collect(Collectors.toList());</span>
+
+<span class="nc" id="L135">	    return createReadableList(groups, readableInstances);</span>
+
+	}
+	
+	
+	private ProductVariantGroup group(Long productOptionGroupId,MerchantStore store) {
+<span class="nc" id="L141">		Optional&lt;ProductVariantGroup&gt; group = productVariantGroupService.getById(productOptionGroupId, store);</span>
+<span class="nc bnc" id="L142" title="All 2 branches missed.">		if(group.isEmpty()) {</span>
+<span class="nc" id="L143">			throw new ResourceNotFoundException(&quot;Product instance group [&quot; + productOptionGroupId + &quot;] not found&quot;);</span>
+		}
+		
+<span class="nc" id="L146">		return group.get();</span>
+	}
+	
+	@Override
+	public void addImage(MultipartFile image, Long instanceGroupId,
+			MerchantStore store, Language language) {
+		
+		
+<span class="nc" id="L154">		Validate.notNull(instanceGroupId,&quot;productVariantGroupId must not be null&quot;);</span>
+<span class="nc" id="L155">		Validate.notNull(image,&quot;Image must not be null&quot;);</span>
+<span class="nc" id="L156">		Validate.notNull(store,&quot;MerchantStore must not be null&quot;);</span>
+		//get option group
+		
+<span class="nc" id="L159">		ProductVariantGroup group = this.group(instanceGroupId, store);</span>
+<span class="nc" id="L160">		ProductVariantImage instanceImage = new ProductVariantImage();</span>
+		
+		try {
+			
+<span class="nc" id="L164">			String path = new StringBuilder().append(&quot;group&quot;).append(Constants.SLASH).append(instanceGroupId).toString();</span>
+			
+			
+			
+<span class="nc" id="L168">			instanceImage.setProductImage(image.getOriginalFilename());</span>
+<span class="nc" id="L169">			instanceImage.setProductVariantGroup(group);</span>
+<span class="nc" id="L170">			String imageName = image.getOriginalFilename();</span>
+<span class="nc" id="L171">			InputStream inputStream = image.getInputStream();</span>
+<span class="nc" id="L172">			InputContentFile cmsContentImage = new InputContentFile();</span>
+<span class="nc" id="L173">			cmsContentImage.setFileName(imageName);</span>
+<span class="nc" id="L174">			cmsContentImage.setMimeType(image.getContentType());</span>
+<span class="nc" id="L175">			cmsContentImage.setFile(inputStream);</span>
+<span class="nc" id="L176">			cmsContentImage.setPath(path);</span>
+<span class="nc" id="L177">			cmsContentImage.setFileContentType(FileContentType.VARIANT);</span>
+
+<span class="nc" id="L179">			contentService.addContentFile(store.getCode(), cmsContentImage);</span>
+
+<span class="nc" id="L181">			group.getImages().add(instanceImage);</span>
+			
+<span class="nc" id="L183">			productVariantGroupService.saveOrUpdate(group);</span>
+<span class="nc" id="L184">		} catch (Exception e) {</span>
+<span class="nc" id="L185">			throw new ServiceRuntimeException(&quot;Exception while adding instance group image&quot;, e);</span>
+<span class="nc" id="L186">		}</span>
+
+
+<span class="nc" id="L189">		return;</span>
+	}
+
+	@Override
+	public void removeImage(Long imageId, Long productVariantGroupId, MerchantStore store) {
+		
+<span class="nc" id="L195">		Validate.notNull(productVariantGroupId,&quot;productVariantGroupId must not be null&quot;);</span>
+<span class="nc" id="L196">		Validate.notNull(store,&quot;MerchantStore must not be null&quot;);</span>
+		
+<span class="nc" id="L198">		ProductVariantImage image = productVariantImageService.getById(imageId);</span>
+		
+<span class="nc bnc" id="L200" title="All 2 branches missed.">		if(image == null) {</span>
+<span class="nc" id="L201">			throw new ResourceNotFoundException(&quot;productVariantImage [&quot; + imageId + &quot;] was not found&quot;);</span>
+		}
+		
+<span class="nc" id="L204">		ProductVariantGroup group = this.group(productVariantGroupId, store);</span>
+
+		
+		try {
+<span class="nc" id="L208">			contentService.removeFile(Constants.SLASH + store.getCode() + Constants.SLASH + productVariantGroupId, FileContentType.VARIANT, image.getProductImage());</span>
+<span class="nc bnc" id="L209" title="All 2 branches missed.">			group.getImages().removeIf(i -&gt; (i.getId() == image.getId()));</span>
+			//update productVariantroup
+<span class="nc" id="L211">			productVariantGroupService.update(group);</span>
+<span class="nc" id="L212">		} catch (ServiceException e) {</span>
+<span class="nc" id="L213">			throw new ServiceRuntimeException(&quot;An exception occured while removing instance image [&quot; + imageId + &quot;]&quot;,e);</span>
+<span class="nc" id="L214">		}</span>
+			
+<span class="nc" id="L216">	}</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

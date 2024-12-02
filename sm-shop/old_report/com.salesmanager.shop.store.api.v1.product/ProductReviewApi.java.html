@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ProductReviewApi.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.api.v1.product</a> &gt; <span class="el_source">ProductReviewApi.java</span></div><h1>ProductReviewApi.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.api.v1.product;
+
+import java.util.List;
+
+import javax.inject.Inject;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.validation.Valid;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
+
+import com.salesmanager.core.business.services.catalog.product.ProductService;
+import com.salesmanager.core.business.services.catalog.product.review.ProductReviewService;
+import com.salesmanager.core.model.catalog.product.Product;
+import com.salesmanager.core.model.catalog.product.review.ProductReview;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.constants.Constants;
+import com.salesmanager.shop.model.catalog.product.PersistableProductReview;
+import com.salesmanager.shop.model.catalog.product.ReadableProductReview;
+import com.salesmanager.shop.store.controller.product.facade.ProductCommonFacade;
+
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiImplicitParams;
+import springfox.documentation.annotations.ApiIgnore;
+
+@Controller
+@RequestMapping(&quot;/api/v1&quot;)
+<span class="fc" id="L38">public class ProductReviewApi {</span>
+
+  @Inject private ProductCommonFacade productCommonFacade;
+
+  @Inject private ProductService productService;
+
+  @Inject private ProductReviewService productReviewService;
+
+<span class="fc" id="L46">  private static final Logger LOGGER = LoggerFactory.getLogger(ProductReviewApi.class);</span>
+
+  @RequestMapping(
+      value = {
+        &quot;/private/products/{id}/reviews&quot;,
+        &quot;/auth/products/{id}/reviews&quot;,
+        &quot;/auth/products/{id}/reviews&quot;,
+        &quot;/auth/products/{id}/reviews&quot;
+      },
+      method = RequestMethod.POST)
+  @ResponseStatus(HttpStatus.CREATED)
+  @ResponseBody
+  @ApiImplicitParams({
+      @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+      @ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;)
+  })
+  public PersistableProductReview create(
+      @PathVariable final Long id,
+      @Valid @RequestBody PersistableProductReview review,
+      @ApiIgnore MerchantStore merchantStore,
+      @ApiIgnore Language language,
+      HttpServletRequest request,
+      HttpServletResponse response) {
+
+    try {
+      // rating already exist
+<span class="nc" id="L72">      ProductReview prodReview =</span>
+<span class="nc" id="L73">          productReviewService.getByProductAndCustomer(</span>
+<span class="nc" id="L74">              review.getProductId(), review.getCustomerId());</span>
+<span class="nc bnc" id="L75" title="All 2 branches missed.">      if (prodReview != null) {</span>
+<span class="nc" id="L76">        response.sendError(500, &quot;A review already exist for this customer and product&quot;);</span>
+<span class="nc" id="L77">        return null;</span>
+      }
+
+      // rating maximum 5
+<span class="nc bnc" id="L81" title="All 2 branches missed.">      if (review.getRating() &gt; Constants.MAX_REVIEW_RATING_SCORE) {</span>
+<span class="nc" id="L82">        response.sendError(503, &quot;Maximum rating score is &quot; + Constants.MAX_REVIEW_RATING_SCORE);</span>
+<span class="nc" id="L83">        return null;</span>
+      }
+
+<span class="nc" id="L86">      review.setProductId(id);</span>
+
+<span class="nc" id="L88">      productCommonFacade.saveOrUpdateReview(review, merchantStore, language);</span>
+
+<span class="nc" id="L90">      return review;</span>
+
+<span class="nc" id="L92">    } catch (Exception e) {</span>
+<span class="nc" id="L93">      LOGGER.error(&quot;Error while saving product review&quot;, e);</span>
+      try {
+<span class="nc" id="L95">        response.sendError(503, &quot;Error while saving product review&quot; + e.getMessage());</span>
+<span class="nc" id="L96">      } catch (Exception ignore) {</span>
+<span class="nc" id="L97">      }</span>
+
+<span class="nc" id="L99">      return null;</span>
+    }
+  }
+
+  @RequestMapping(value = &quot;/product/{id}/reviews&quot;, method = RequestMethod.GET)
+  @ResponseStatus(HttpStatus.OK)
+  @ResponseBody
+  @ApiImplicitParams({
+      @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+      @ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;)
+  })
+  public List&lt;ReadableProductReview&gt; getAll(
+      @PathVariable final Long id,
+      @ApiIgnore MerchantStore merchantStore,
+      @ApiIgnore Language language,
+      HttpServletResponse response) {
+
+    try {
+      // product exist
+<span class="nc" id="L118">      Product product = productService.getById(id);</span>
+
+<span class="nc bnc" id="L120" title="All 2 branches missed.">      if (product == null) {</span>
+<span class="nc" id="L121">        response.sendError(404, &quot;Product id &quot; + id + &quot; does not exists&quot;);</span>
+<span class="nc" id="L122">        return null;</span>
+      }
+
+<span class="nc" id="L125">      List&lt;ReadableProductReview&gt; reviews =</span>
+<span class="nc" id="L126">    		  productCommonFacade.getProductReviews(product, merchantStore, language);</span>
+
+<span class="nc" id="L128">      return reviews;</span>
+
+<span class="nc" id="L130">    } catch (Exception e) {</span>
+<span class="nc" id="L131">      LOGGER.error(&quot;Error while getting product reviews&quot;, e);</span>
+      try {
+<span class="nc" id="L133">        response.sendError(503, &quot;Error while getting product reviews&quot; + e.getMessage());</span>
+<span class="nc" id="L134">      } catch (Exception ignore) {</span>
+<span class="nc" id="L135">      }</span>
+
+<span class="nc" id="L137">      return null;</span>
+    }
+  }
+
+  @RequestMapping(
+      value = {
+        &quot;/private/products/{id}/reviews/{reviewid}&quot;,
+        &quot;/auth/products/{id}/reviews/{reviewid}&quot;
+      },
+      method = RequestMethod.PUT)
+  @ResponseStatus(HttpStatus.OK)
+  @ResponseBody
+  @ApiImplicitParams({
+      @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+      @ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;)
+  })
+  public PersistableProductReview update(
+      @PathVariable final Long id,
+      @PathVariable final Long reviewId,
+      @Valid @RequestBody PersistableProductReview review,
+      @ApiIgnore MerchantStore merchantStore,
+      @ApiIgnore Language language,
+      HttpServletRequest request,
+      HttpServletResponse response) {
+
+    try {
+<span class="nc" id="L163">      ProductReview prodReview = productReviewService.getById(reviewId);</span>
+<span class="nc bnc" id="L164" title="All 2 branches missed.">      if (prodReview == null) {</span>
+<span class="nc" id="L165">        response.sendError(404, &quot;Product review with id &quot; + reviewId + &quot; does not exist&quot;);</span>
+<span class="nc" id="L166">        return null;</span>
+      }
+
+<span class="nc bnc" id="L169" title="All 2 branches missed.">      if (prodReview.getCustomer().getId().longValue() != review.getCustomerId().longValue()) {</span>
+<span class="nc" id="L170">        response.sendError(404, &quot;Product review with id &quot; + reviewId + &quot; does not exist&quot;);</span>
+<span class="nc" id="L171">        return null;</span>
+      }
+
+      // rating maximum 5
+<span class="nc bnc" id="L175" title="All 2 branches missed.">      if (review.getRating() &gt; Constants.MAX_REVIEW_RATING_SCORE) {</span>
+<span class="nc" id="L176">        response.sendError(503, &quot;Maximum rating score is &quot; + Constants.MAX_REVIEW_RATING_SCORE);</span>
+<span class="nc" id="L177">        return null;</span>
+      }
+
+<span class="nc" id="L180">      review.setProductId(id);</span>
+
+<span class="nc" id="L182">      productCommonFacade.saveOrUpdateReview(review, merchantStore, language);</span>
+
+<span class="nc" id="L184">      return review;</span>
+
+<span class="nc" id="L186">    } catch (Exception e) {</span>
+<span class="nc" id="L187">      LOGGER.error(&quot;Error while saving product review&quot;, e);</span>
+      try {
+<span class="nc" id="L189">        response.sendError(503, &quot;Error while saving product review&quot; + e.getMessage());</span>
+<span class="nc" id="L190">      } catch (Exception ignore) {</span>
+<span class="nc" id="L191">      }</span>
+
+<span class="nc" id="L193">      return null;</span>
+    }
+  }
+
+  @RequestMapping(
+      value = {
+        &quot;/private/products/{id}/reviews/{reviewid}&quot;,
+        &quot;/auth/products/{id}/reviews/{reviewid}&quot;
+      },
+      method = RequestMethod.DELETE)
+  @ResponseStatus(HttpStatus.OK)
+  @ResponseBody
+  @ApiImplicitParams({
+      @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+      @ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;)
+  })
+  public void delete(
+      @PathVariable final Long id,
+      @PathVariable final Long reviewId,
+      @ApiIgnore MerchantStore merchantStore,
+      @ApiIgnore Language language,
+      HttpServletResponse response) {
+
+    try {
+<span class="nc" id="L217">      ProductReview prodReview = productReviewService.getById(reviewId);</span>
+<span class="nc bnc" id="L218" title="All 2 branches missed.">      if (prodReview == null) {</span>
+<span class="nc" id="L219">        response.sendError(404, &quot;Product review with id &quot; + reviewId + &quot; does not exist&quot;);</span>
+<span class="nc" id="L220">        return;</span>
+      }
+
+<span class="nc bnc" id="L223" title="All 2 branches missed.">      if (prodReview.getProduct().getId().longValue() != id.longValue()) {</span>
+<span class="nc" id="L224">        response.sendError(404, &quot;Product review with id &quot; + reviewId + &quot; does not exist&quot;);</span>
+<span class="nc" id="L225">        return;</span>
+      }
+
+<span class="nc" id="L228">      productCommonFacade.deleteReview(prodReview, merchantStore, language);</span>
+
+<span class="nc" id="L230">    } catch (Exception e) {</span>
+<span class="nc" id="L231">      LOGGER.error(&quot;Error while deleting product review&quot;, e);</span>
+      try {
+<span class="nc" id="L233">        response.sendError(503, &quot;Error while deleting product review&quot; + e.getMessage());</span>
+<span class="nc" id="L234">      } catch (Exception ignore) {</span>
+<span class="nc" id="L235">      }</span>
+
+<span class="nc" id="L237">      return;</span>
+<span class="nc" id="L238">    }</span>
+<span class="nc" id="L239">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

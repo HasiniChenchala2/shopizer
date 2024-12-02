@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ShopApplicationConfiguration.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.application.config</a> &gt; <span class="el_source">ShopApplicationConfiguration.java</span></div><h1>ShopApplicationConfiguration.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.application.config;
+
+import static org.springframework.http.MediaType.APPLICATION_OCTET_STREAM;
+import static org.springframework.http.MediaType.IMAGE_GIF;
+import static org.springframework.http.MediaType.IMAGE_JPEG;
+import static org.springframework.http.MediaType.IMAGE_PNG;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.boot.web.servlet.ServletComponentScan;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.event.EventListener;
+import org.springframework.context.support.ReloadableResourceBundleMessageSource;
+import org.springframework.http.MediaType;
+import org.springframework.http.converter.ByteArrayHttpMessageConverter;
+import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
+import org.springframework.web.servlet.i18n.SessionLocaleResolver;
+
+import com.salesmanager.core.business.configuration.CoreApplicationConfiguration;
+import com.salesmanager.shop.filter.CorsFilter;
+import com.salesmanager.shop.filter.XssFilter;
+import com.salesmanager.shop.utils.LabelUtils;
+
+@Configuration
+@ComponentScan({&quot;com.salesmanager.shop&quot;})
+@ServletComponentScan
+@Import({CoreApplicationConfiguration.class}) // import sm-core configurations
+@EnableWebSecurity
+<span class="fc" id="L44">public class ShopApplicationConfiguration implements WebMvcConfigurer {</span>
+
+<span class="fc" id="L46">  protected final Log logger = LogFactory.getLog(getClass());</span>
+
+  @EventListener(ApplicationReadyEvent.class)
+  public void applicationReadyCode() {
+<span class="fc" id="L50">    String workingDir = System.getProperty(&quot;user.dir&quot;);</span>
+<span class="fc" id="L51">    logger.info(&quot;Current working directory : &quot; + workingDir);</span>
+<span class="fc" id="L52">  }</span>
+
+  @Bean
+  public FilterRegistrationBean&lt;XssFilter&gt; croseSiteFilter(){
+<span class="fc" id="L56">      FilterRegistrationBean&lt;XssFilter&gt; registrationBean </span>
+        = new FilterRegistrationBean&lt;&gt;();
+          
+<span class="fc" id="L59">      registrationBean.setFilter(new XssFilter());</span>
+<span class="fc" id="L60">      registrationBean.addUrlPatterns(&quot;/shop/**&quot;);</span>
+<span class="fc" id="L61">      registrationBean.addUrlPatterns(&quot;/api/**&quot;);</span>
+<span class="fc" id="L62">      registrationBean.addUrlPatterns(&quot;/customer/**&quot;);</span>
+          
+<span class="fc" id="L64">      return registrationBean;    </span>
+  }
+
+  @Override
+  public void configureMessageConverters(List&lt;HttpMessageConverter&lt;?&gt;&gt; converters) {
+<span class="fc" id="L69">    converters.add(new MappingJackson2HttpMessageConverter());</span>
+<span class="fc" id="L70">  }</span>
+
+  @Override
+  public void addViewControllers(ViewControllerRegistry registry) {
+<span class="fc" id="L74">    registry.addViewController(&quot;/&quot;).setViewName(&quot;shop&quot;);</span>
+<span class="fc" id="L75">  }</span>
+
+  @Override
+  public void addInterceptors(InterceptorRegistry registry) {
+    // Changes the locale when a 'locale' request parameter is sent; e.g. /?locale=de
+<span class="fc" id="L80">    registry.addInterceptor(localeChangeInterceptor());</span>
+
+    /**
+    registry
+        .addInterceptor(storeFilter())
+        // store web front filter
+        .addPathPatterns(&quot;/shop/**&quot;)
+        // customer section filter
+        .addPathPatterns(&quot;/customer/**&quot;);
+     **/
+
+<span class="fc" id="L91">    registry</span>
+<span class="fc" id="L92">        .addInterceptor(corsFilter())</span>
+        // public services cors filter
+<span class="fc" id="L94">        .addPathPatterns(&quot;/services/**&quot;)</span>
+        // REST api
+<span class="fc" id="L96">        .addPathPatterns(&quot;/api/**&quot;);</span>
+
+<span class="fc" id="L98">  }</span>
+
+  @Bean
+  public ByteArrayHttpMessageConverter byteArrayHttpMessageConverter() {
+<span class="fc" id="L102">    List&lt;MediaType&gt; supportedMediaTypes = Arrays.asList(IMAGE_JPEG, IMAGE_GIF, IMAGE_PNG, APPLICATION_OCTET_STREAM);</span>
+
+<span class="fc" id="L104">    ByteArrayHttpMessageConverter byteArrayHttpMessageConverter =</span>
+        new ByteArrayHttpMessageConverter();
+<span class="fc" id="L106">    byteArrayHttpMessageConverter.setSupportedMediaTypes(supportedMediaTypes);</span>
+<span class="fc" id="L107">    return byteArrayHttpMessageConverter;</span>
+  }
+
+  @Bean
+  public LocaleChangeInterceptor localeChangeInterceptor() {
+<span class="fc" id="L112">    return new LocaleChangeInterceptor();</span>
+  }
+
+	/*
+	 * @Bean public StoreFilter storeFilter() { return new StoreFilter(); }
+	 */
+
+  @Bean
+  public CorsFilter corsFilter() {
+<span class="fc" id="L121">    return new CorsFilter();</span>
+  }
+
+
+  @Bean
+  public SessionLocaleResolver localeResolver() {
+<span class="fc" id="L127">    SessionLocaleResolver slr = new SessionLocaleResolver();</span>
+<span class="fc" id="L128">    slr.setDefaultLocale(Locale.getDefault());</span>
+<span class="fc" id="L129">    return slr;</span>
+  }
+
+  @Bean
+  public ReloadableResourceBundleMessageSource messageSource() {
+<span class="fc" id="L134">    ReloadableResourceBundleMessageSource messageSource =</span>
+        new ReloadableResourceBundleMessageSource();
+<span class="fc" id="L136">    messageSource.setBasenames(</span>
+        &quot;classpath:bundles/shopizer&quot;,
+        &quot;classpath:bundles/messages&quot;,
+        &quot;classpath:bundles/shipping&quot;,
+        &quot;classpath:bundles/payment&quot;);
+
+<span class="fc" id="L142">    messageSource.setDefaultEncoding(&quot;UTF-8&quot;);</span>
+<span class="fc" id="L143">    return messageSource;</span>
+  }
+
+  @Bean
+  public LabelUtils messages() {
+<span class="fc" id="L148">    return new LabelUtils();</span>
+  }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

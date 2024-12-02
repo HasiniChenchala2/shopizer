@@ -1,0 +1,388 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ShippingFacadeImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.controller.shipping.facade</a> &gt; <span class="el_source">ShippingFacadeImpl.java</span></div><h1>ShippingFacadeImpl.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.controller.shipping.facade;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.jsoup.helper.Validate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.reference.country.CountryService;
+import com.salesmanager.core.business.services.reference.zone.ZoneService;
+import com.salesmanager.core.business.services.shipping.ShippingOriginService;
+import com.salesmanager.core.business.services.shipping.ShippingService;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.country.Country;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.core.model.reference.zone.Zone;
+import com.salesmanager.core.model.shipping.PackageDetails;
+import com.salesmanager.core.model.shipping.ShippingConfiguration;
+import com.salesmanager.core.model.shipping.ShippingOrigin;
+import com.salesmanager.core.model.shipping.ShippingPackageType;
+import com.salesmanager.core.model.shipping.ShippingType;
+import com.salesmanager.shop.model.references.PersistableAddress;
+import com.salesmanager.shop.model.references.ReadableAddress;
+import com.salesmanager.shop.model.references.ReadableCountry;
+import com.salesmanager.shop.model.shipping.ExpeditionConfiguration;
+import com.salesmanager.shop.populator.references.ReadableCountryPopulator;
+import com.salesmanager.shop.store.api.exception.ConversionRuntimeException;
+import com.salesmanager.shop.store.api.exception.OperationNotAllowedException;
+import com.salesmanager.shop.store.api.exception.ResourceNotFoundException;
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+
+@Service(&quot;shippingFacade&quot;)
+<span class="fc" id="L41">public class ShippingFacadeImpl implements ShippingFacade {</span>
+	
+<span class="fc" id="L43">	private static final Logger LOGGER = LoggerFactory.getLogger(ShippingFacadeImpl.class);</span>
+
+	@Autowired
+	ShippingOriginService shippingOriginService;
+	
+	@Autowired
+	ShippingService shippingService;
+	
+	@Autowired
+	CountryService countryService;
+	
+	@Autowired
+	ZoneService zoneService;
+	
+	
+
+
+	@Override
+	public ExpeditionConfiguration getExpeditionConfiguration(MerchantStore store, Language language) {
+<span class="nc" id="L62">		ExpeditionConfiguration expeditionConfiguration = new ExpeditionConfiguration();</span>
+		try {
+			
+<span class="nc" id="L65">			ShippingConfiguration config = getDbConfig(store);</span>
+<span class="nc bnc" id="L66" title="All 2 branches missed.">			if(config!=null) {</span>
+<span class="nc bnc" id="L67" title="All 4 branches missed.">				expeditionConfiguration.setIternationalShipping(config.getShipType()!=null &amp;&amp; config.getShipType().equals(ShippingType.INTERNATIONAL.name())?true:false);</span>
+<span class="nc" id="L68">				expeditionConfiguration.setTaxOnShipping(config.isTaxOnShipping());</span>
+			}
+			
+<span class="nc" id="L71">			List&lt;String&gt; countries = shippingService.getSupportedCountries(store);</span>
+
+<span class="nc bnc" id="L73" title="All 2 branches missed.">			if(!CollectionUtils.isEmpty(countries)) {</span>
+				
+<span class="nc" id="L75">				List&lt;String&gt; countryCode = countries.stream()</span>
+<span class="nc" id="L76">						.sorted(Comparator.comparing(n-&gt;n.toString()))</span>
+<span class="nc" id="L77">						.collect(Collectors.toList());</span>
+				
+<span class="nc" id="L79">				expeditionConfiguration.setShipToCountry(countryCode);</span>
+			}
+
+<span class="nc" id="L82">		} catch (ServiceException e) {</span>
+<span class="nc" id="L83">			LOGGER.error(&quot;Error while getting expedition configuration&quot;, e);</span>
+<span class="nc" id="L84">			throw new ServiceRuntimeException(&quot;Error while getting Expedition configuration for store[&quot; + store.getCode() + &quot;]&quot;, e);</span>
+<span class="nc" id="L85">		}</span>
+<span class="nc" id="L86">		return expeditionConfiguration;</span>
+	}
+
+	@Override
+	public void saveExpeditionConfiguration(ExpeditionConfiguration expedition, MerchantStore store) {
+<span class="nc" id="L91">		Validate.notNull(expedition, &quot;ExpeditionConfiguration cannot be null&quot;);</span>
+		try {
+			
+			//get original configuration
+<span class="nc" id="L95">			ShippingConfiguration config = getDbConfig(store);</span>
+<span class="nc" id="L96">			config.setTaxOnShipping(expedition.isTaxOnShipping());</span>
+<span class="nc bnc" id="L97" title="All 2 branches missed.">			config.setShippingType(expedition.isIternationalShipping()?ShippingType.INTERNATIONAL:ShippingType.NATIONAL);</span>
+<span class="nc" id="L98">			this.saveShippingConfiguration(config, store);</span>
+			
+<span class="nc" id="L100">			shippingService.setSupportedCountries(store, expedition.getShipToCountry());</span>
+
+
+<span class="nc" id="L103">		} catch (ServiceException e) {</span>
+<span class="nc" id="L104">			LOGGER.error(&quot;Error while getting expedition configuration&quot;, e);</span>
+<span class="nc" id="L105">			throw new ServiceRuntimeException(&quot;Error while getting Expedition configuration for store[&quot; + store.getCode() + &quot;]&quot;, e);</span>
+<span class="nc" id="L106">		}</span>
+
+<span class="nc" id="L108">	}</span>
+	
+	private void saveShippingConfiguration(ShippingConfiguration config, MerchantStore store) throws ServiceRuntimeException {
+		try {
+<span class="nc" id="L112">			shippingService.saveShippingConfiguration(config, store);</span>
+<span class="nc" id="L113">		} catch (ServiceException e) {</span>
+<span class="nc" id="L114">			LOGGER.error(&quot;Error while saving shipping configuration&quot;, e);</span>
+<span class="nc" id="L115">			throw new ServiceRuntimeException(&quot;Error while saving shipping configuration for store [&quot; + store.getCode() + &quot;]&quot;, e);</span>
+<span class="nc" id="L116">		}</span>
+<span class="nc" id="L117">	}</span>
+
+	@Override
+	public ReadableAddress getShippingOrigin(MerchantStore store) {
+		
+<span class="nc" id="L122">		ShippingOrigin o = shippingOriginService.getByStore(store);</span>
+		
+<span class="nc bnc" id="L124" title="All 2 branches missed.">		if(o == null) {</span>
+<span class="nc" id="L125">			throw new ResourceNotFoundException(&quot;Shipping origin does not exists for store [&quot; + store.getCode() + &quot;]&quot;);</span>
+		}
+		
+<span class="nc" id="L128">		ReadableAddress address = new ReadableAddress();</span>
+<span class="nc" id="L129">		address.setAddress(o.getAddress());</span>
+<span class="nc" id="L130">		address.setActive(o.isActive());</span>
+<span class="nc" id="L131">		address.setCity(o.getCity());</span>
+<span class="nc" id="L132">		address.setPostalCode(o.getPostalCode());</span>
+<span class="nc bnc" id="L133" title="All 2 branches missed.">		if(o.getCountry()!=null) {</span>
+<span class="nc" id="L134">			address.setCountry(o.getCountry().getIsoCode());</span>
+		}
+<span class="nc" id="L136">		Zone z = o.getZone();</span>
+<span class="nc bnc" id="L137" title="All 2 branches missed.">		if(z != null) {</span>
+<span class="nc" id="L138">			address.setStateProvince(z.getCode());</span>
+		} else {
+<span class="nc" id="L140">			address.setStateProvince(o.getState());</span>
+		}
+
+<span class="nc" id="L143">		return address;</span>
+	}
+
+	@Override
+	public void saveShippingOrigin(PersistableAddress address, MerchantStore store) {
+<span class="nc" id="L148">		Validate.notNull(address, &quot;PersistableAddress cannot be null&quot;);</span>
+		try {
+<span class="nc" id="L150">			ShippingOrigin o = shippingOriginService.getByStore(store);</span>
+<span class="nc bnc" id="L151" title="All 2 branches missed.">			if(o == null) {</span>
+<span class="nc" id="L152">				o = new ShippingOrigin();</span>
+			}
+			
+<span class="nc" id="L155">			o.setAddress(address.getAddress());</span>
+<span class="nc" id="L156">			o.setCity(address.getCity());</span>
+<span class="nc" id="L157">			o.setCountry(countryService.getByCode(address.getCountry()));</span>
+<span class="nc" id="L158">			o.setMerchantStore(store);</span>
+<span class="nc" id="L159">			o.setActive(address.isActive());</span>
+<span class="nc" id="L160">			o.setPostalCode(address.getPostalCode());</span>
+			
+<span class="nc" id="L162">			Zone zone = zoneService.getByCode(address.getStateProvince());</span>
+<span class="nc bnc" id="L163" title="All 2 branches missed.">			if(zone == null) {</span>
+<span class="nc" id="L164">				o.setState(address.getStateProvince());</span>
+			} else {
+<span class="nc" id="L166">				o.setZone(zone);</span>
+			}
+			
+<span class="nc" id="L169">			shippingOriginService.save(o);</span>
+			
+<span class="nc" id="L171">		} catch (ServiceException e) {</span>
+<span class="nc" id="L172">			LOGGER.error(&quot;Error while getting shipping origin for country [&quot; + address.getCountry() + &quot;]&quot;,e);</span>
+<span class="nc" id="L173">			throw new ServiceRuntimeException(&quot;Error while getting shipping origin for country [&quot; + address.getCountry() + &quot;]&quot;,e);</span>
+<span class="nc" id="L174">		}</span>
+
+
+<span class="nc" id="L177">	}</span>
+
+	private ShippingConfiguration getDbConfig(MerchantStore store) {
+
+		try {
+			//get original configuration
+<span class="nc" id="L183">			ShippingConfiguration config = shippingService.getShippingConfiguration(store);</span>
+<span class="nc bnc" id="L184" title="All 2 branches missed.">			if(config==null) {</span>
+<span class="nc" id="L185">				config = new ShippingConfiguration();</span>
+<span class="nc" id="L186">				config.setShippingType(ShippingType.INTERNATIONAL);</span>
+			}
+
+<span class="nc" id="L189">			return config;</span>
+<span class="nc" id="L190">		} catch (ServiceException e) {</span>
+<span class="nc" id="L191">			LOGGER.error(&quot;Error while getting expedition configuration&quot;, e);</span>
+<span class="nc" id="L192">			throw new ServiceRuntimeException(&quot;Error while getting Expedition configuration for store[&quot; + store.getCode() + &quot;]&quot;, e);</span>
+		}
+		
+	}
+
+	@Override
+	public void createPackage(PackageDetails packaging, MerchantStore store) {
+<span class="nc" id="L199">		Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);</span>
+<span class="nc" id="L200">		Validate.notNull(packaging, &quot;PackageDetails cannot be null&quot;);</span>
+<span class="nc" id="L201">		ShippingConfiguration config = getDbConfig(store);</span>
+		
+<span class="nc bnc" id="L203" title="All 2 branches missed.">		if(this.packageExists(config, packaging)) {</span>
+<span class="nc" id="L204">			throw new OperationNotAllowedException(&quot;Package with unique code [&quot; + packaging.getCode() + &quot;] already exist&quot;);</span>
+		}
+		
+<span class="nc" id="L207">		com.salesmanager.core.model.shipping.Package pack = toPackage(packaging);</span>
+		
+		
+		//need to check if code exists
+<span class="nc" id="L211">		config.getPackages().add(pack);</span>
+<span class="nc" id="L212">		this.saveShippingConfiguration(config, store);</span>
+	
+<span class="nc" id="L214">	}</span>
+	
+	private boolean packageExists(ShippingConfiguration configuration, PackageDetails packageDetails) {
+		
+<span class="nc" id="L218">		Validate.notNull(configuration,&quot;ShippingConfiguration cannot be null&quot;);</span>
+<span class="nc" id="L219">		Validate.notNull(packageDetails, &quot;PackageDetails cannot be null&quot;);</span>
+<span class="nc" id="L220">		Validate.notEmpty(packageDetails.getCode(), &quot;PackageDetails code cannot be empty&quot;);</span>
+		
+<span class="nc" id="L222">		List&lt;com.salesmanager.core.model.shipping.Package&gt; packages = configuration.getPackages().stream().filter(p -&gt; p.getCode().equalsIgnoreCase(packageDetails.getCode())).collect(Collectors.toList());</span>
+		
+<span class="nc bnc" id="L224" title="All 2 branches missed.">		if(packages.isEmpty()) {</span>
+<span class="nc" id="L225">			return false;</span>
+		} else {
+<span class="nc" id="L227">			return true;</span>
+		}
+		
+		
+	}
+	
+	private com.salesmanager.core.model.shipping.Package packageDetails(ShippingConfiguration configuration, String code) {
+		
+<span class="nc" id="L235">		Validate.notNull(configuration,&quot;ShippingConfiguration cannot be null&quot;);</span>
+<span class="nc" id="L236">		Validate.notNull(code, &quot;PackageDetails code cannot be null&quot;);</span>
+
+<span class="nc" id="L238">		List&lt;com.salesmanager.core.model.shipping.Package&gt; packages = configuration.getPackages().stream().filter(p -&gt; p.getCode().equalsIgnoreCase(code)).collect(Collectors.toList());</span>
+		
+<span class="nc bnc" id="L240" title="All 2 branches missed.">		if(!packages.isEmpty()) {</span>
+<span class="nc" id="L241">			return packages.get(0);</span>
+		} else {
+<span class="nc" id="L243">			return null;</span>
+		}
+
+		
+	}
+
+	@Override
+	public PackageDetails getPackage(String code, MerchantStore store) {
+<span class="nc" id="L251">		Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);</span>
+<span class="nc" id="L252">		Validate.notEmpty(code,&quot;Packaging unique code cannot be empty&quot;);</span>
+		
+<span class="nc" id="L254">		ShippingConfiguration config = getDbConfig(store);</span>
+		
+<span class="nc" id="L256">		com.salesmanager.core.model.shipping.Package p = this.packageDetails(config, code);</span>
+		
+<span class="nc bnc" id="L258" title="All 2 branches missed.">		if(p == null) {</span>
+<span class="nc" id="L259">			throw new ResourceNotFoundException(&quot;Package with unique code [&quot; + code + &quot;] not found&quot;);</span>
+		}
+		
+<span class="nc" id="L262">		return toPackageDetails(p);</span>
+	}
+
+	@Override
+	public List&lt;PackageDetails&gt; listPackages(MerchantStore store) {
+<span class="nc" id="L267">		Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);</span>
+<span class="nc" id="L268">		ShippingConfiguration config = getDbConfig(store);</span>
+		
+<span class="nc" id="L270">		return config.getPackages().stream().map(p -&gt; this.toPackageDetails(p)).collect(Collectors.toList());</span>
+
+	}
+
+	@Override
+	public void updatePackage(String code, PackageDetails packaging, MerchantStore store) {
+<span class="nc" id="L276">		Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);</span>
+<span class="nc" id="L277">		Validate.notNull(packaging, &quot;PackageDetails cannot be null&quot;);</span>
+<span class="nc" id="L278">		Validate.notEmpty(code,&quot;Packaging unique code cannot be empty&quot;);</span>
+		
+<span class="nc" id="L280">		ShippingConfiguration config = getDbConfig(store);</span>
+		
+<span class="nc" id="L282">		com.salesmanager.core.model.shipping.Package p = this.packageDetails(config, code);</span>
+		
+<span class="nc bnc" id="L284" title="All 2 branches missed.">		if(p == null) {</span>
+<span class="nc" id="L285">			throw new ResourceNotFoundException(&quot;Package with unique code [&quot; + packaging.getCode() + &quot;] not found&quot;);</span>
+		}
+		
+<span class="nc" id="L288">		com.salesmanager.core.model.shipping.Package pack = toPackage(packaging);</span>
+<span class="nc" id="L289">		pack.setCode(code);</span>
+		
+		//need to check if code exists
+<span class="nc bnc" id="L292" title="All 2 branches missed.">		List&lt;com.salesmanager.core.model.shipping.Package&gt; packs = config.getPackages().stream().filter(pa -&gt; !pa.getCode().equals(code)).collect(Collectors.toList());</span>
+<span class="nc" id="L293">		packs.add(pack);</span>
+		
+<span class="nc" id="L295">		config.setPackages(packs);</span>
+<span class="nc" id="L296">		this.saveShippingConfiguration(config, store);</span>
+		
+<span class="nc" id="L298">	}</span>
+
+	@Override
+	public void deletePackage(String code, MerchantStore store) {
+		
+<span class="nc" id="L303">		Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);</span>
+<span class="nc" id="L304">		Validate.notEmpty(code,&quot;Packaging unique code cannot be empty&quot;);</span>
+		
+<span class="nc" id="L306">		ShippingConfiguration config = getDbConfig(store);</span>
+		
+<span class="nc" id="L308">		List&lt;com.salesmanager.core.model.shipping.Package&gt; packages = config.getPackages();</span>
+		
+<span class="nc" id="L310">		List&lt;com.salesmanager.core.model.shipping.Package&gt; packList = config.getPackages().stream().filter(p -&gt; p.getCode().equalsIgnoreCase(code)).collect(Collectors.toList());</span>
+		
+<span class="nc bnc" id="L312" title="All 2 branches missed.">		if(!packList.isEmpty()) {</span>
+<span class="nc" id="L313">			packages.removeAll(packList);</span>
+<span class="nc" id="L314">			config.setPackages(packages);</span>
+<span class="nc" id="L315">			this.saveShippingConfiguration(config, store);</span>
+		} 
+		
+<span class="nc" id="L318">	}</span>
+	
+	private PackageDetails toPackageDetails(com.salesmanager.core.model.shipping.Package pack) {
+<span class="nc" id="L321">		PackageDetails details = new PackageDetails();</span>
+<span class="nc" id="L322">		details.setCode(pack.getCode());</span>
+<span class="nc" id="L323">		details.setShippingHeight(pack.getBoxHeight());</span>
+<span class="nc" id="L324">		details.setShippingLength(pack.getBoxLength());</span>
+<span class="nc" id="L325">		details.setShippingMaxWeight(pack.getMaxWeight());</span>
+		//details.setShippingQuantity(pack.getShippingQuantity());
+<span class="nc" id="L327">		details.setShippingWeight(pack.getBoxWeight());</span>
+<span class="nc" id="L328">		details.setShippingWidth(pack.getBoxWidth());</span>
+<span class="nc" id="L329">		details.setTreshold(pack.getTreshold());</span>
+<span class="nc" id="L330">		details.setType(pack.getShipPackageType().name());</span>
+<span class="nc" id="L331">		return details;</span>
+	}
+	
+	private com.salesmanager.core.model.shipping.Package toPackage(PackageDetails pack) {
+<span class="nc" id="L335">		com.salesmanager.core.model.shipping.Package details = new com.salesmanager.core.model.shipping.Package();</span>
+<span class="nc" id="L336">		details.setCode(pack.getCode());</span>
+<span class="nc" id="L337">		details.setBoxHeight(pack.getShippingHeight());</span>
+<span class="nc" id="L338">		details.setBoxLength(pack.getShippingLength());</span>
+<span class="nc" id="L339">		details.setMaxWeight(pack.getShippingMaxWeight());</span>
+		//details.setShippingQuantity(pack.getShippingQuantity());
+<span class="nc" id="L341">		details.setBoxWeight(pack.getShippingWeight());</span>
+<span class="nc" id="L342">		details.setBoxWidth(pack.getShippingWidth());</span>
+<span class="nc" id="L343">		details.setTreshold(pack.getTreshold());</span>
+<span class="nc" id="L344">		details.setShipPackageType(ShippingPackageType.valueOf(pack.getType()));</span>
+<span class="nc" id="L345">		return details;</span>
+	}
+
+	@Override
+	public List&lt;ReadableCountry&gt; shipToCountry(MerchantStore store, Language language) {
+		
+		
+		try {
+<span class="nc" id="L353">			List&lt;Country&gt; countries  = shippingService.getShipToCountryList(store, language);</span>
+			
+<span class="nc" id="L355">			List&lt;ReadableCountry&gt; countryList = new ArrayList&lt;ReadableCountry&gt;();</span>
+
+<span class="nc bnc" id="L357" title="All 2 branches missed.">			if(!CollectionUtils.isEmpty(countries)) {</span>
+				
+<span class="nc" id="L359">				countryList = countries.stream()</span>
+<span class="nc" id="L360">				        .map(c -&gt; {</span>
+							try {
+<span class="nc" id="L362">								return convert(c, store, language);</span>
+<span class="nc" id="L363">							} catch (ConversionException e) {</span>
+<span class="nc" id="L364">								throw new ConversionRuntimeException(&quot;Error converting Country to readable country,e&quot;);</span>
+							}
+						})
+<span class="nc" id="L367">						.sorted(Comparator.comparing(ReadableCountry::getName))</span>
+<span class="nc" id="L368">						.collect(Collectors.toList());</span>
+
+			}
+			
+<span class="nc" id="L372">			return countryList;</span>
+<span class="nc" id="L373">		} catch (Exception e) {</span>
+<span class="nc" id="L374">			throw new ServiceRuntimeException(&quot;Error getting shipping country&quot;, e);</span>
+		}
+
+		
+		
+		
+	}
+	
+	ReadableCountry convert(Country country, MerchantStore store, Language lang) throws ConversionException {
+<span class="nc" id="L383">		ReadableCountryPopulator countryPopulator = new ReadableCountryPopulator();</span>
+<span class="nc" id="L384">		return countryPopulator.populate(country, store, lang);</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReadableShopOrderPopulator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.populator.order</a> &gt; <span class="el_source">ReadableShopOrderPopulator.java</span></div><h1>ReadableShopOrderPopulator.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.populator.order;
+
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.core.business.utils.AbstractDataPopulator;
+import com.salesmanager.shop.model.customer.PersistableCustomer;
+import com.salesmanager.shop.model.customer.ReadableCustomer;
+import com.salesmanager.shop.model.customer.address.Address;
+import com.salesmanager.shop.model.order.ReadableShopOrder;
+import com.salesmanager.shop.model.order.ShopOrder;
+
+<span class="nc" id="L13">public class ReadableShopOrderPopulator extends</span>
+		AbstractDataPopulator&lt;ShopOrder, ReadableShopOrder&gt; {
+
+	@Override
+	public ReadableShopOrder populate(ShopOrder source,
+			ReadableShopOrder target, MerchantStore store, Language language)
+			throws ConversionException {
+		
+		//not that much is required
+		
+		
+		//customer
+		
+		try {
+			
+<span class="nc" id="L28">			ReadableCustomer customer = new ReadableCustomer();</span>
+<span class="nc" id="L29">			PersistableCustomer persistableCustomer = source.getCustomer();</span>
+
+
+<span class="nc" id="L32">			customer.setEmailAddress(persistableCustomer.getEmailAddress());</span>
+<span class="nc bnc" id="L33" title="All 2 branches missed.">			if(persistableCustomer.getBilling()!=null) {</span>
+<span class="nc" id="L34">				Address address = new Address();</span>
+<span class="nc" id="L35">				address.setCity(persistableCustomer.getBilling().getCity());</span>
+<span class="nc" id="L36">				address.setCompany(persistableCustomer.getBilling().getCompany());</span>
+<span class="nc" id="L37">				address.setFirstName(persistableCustomer.getBilling().getFirstName());</span>
+<span class="nc" id="L38">				address.setLastName(persistableCustomer.getBilling().getLastName());</span>
+<span class="nc" id="L39">				address.setPostalCode(persistableCustomer.getBilling().getPostalCode());</span>
+<span class="nc" id="L40">				address.setPhone(persistableCustomer.getBilling().getPhone());</span>
+<span class="nc bnc" id="L41" title="All 2 branches missed.">				if(persistableCustomer.getBilling().getCountry()!=null) {</span>
+<span class="nc" id="L42">					address.setCountry(persistableCustomer.getBilling().getCountry());</span>
+				}
+<span class="nc bnc" id="L44" title="All 2 branches missed.">				if(persistableCustomer.getBilling().getZone()!=null) {</span>
+<span class="nc" id="L45">					address.setZone(persistableCustomer.getBilling().getZone());</span>
+				}
+				
+<span class="nc" id="L48">				customer.setBilling(address);</span>
+			}
+			
+<span class="nc bnc" id="L51" title="All 2 branches missed.">			if(persistableCustomer.getDelivery()!=null) {</span>
+<span class="nc" id="L52">				Address address = new Address();</span>
+<span class="nc" id="L53">				address.setCity(persistableCustomer.getDelivery().getCity());</span>
+<span class="nc" id="L54">				address.setCompany(persistableCustomer.getDelivery().getCompany());</span>
+<span class="nc" id="L55">				address.setFirstName(persistableCustomer.getDelivery().getFirstName());</span>
+<span class="nc" id="L56">				address.setLastName(persistableCustomer.getDelivery().getLastName());</span>
+<span class="nc" id="L57">				address.setPostalCode(persistableCustomer.getDelivery().getPostalCode());</span>
+<span class="nc" id="L58">				address.setPhone(persistableCustomer.getDelivery().getPhone());</span>
+<span class="nc bnc" id="L59" title="All 2 branches missed.">				if(persistableCustomer.getDelivery().getCountry()!=null) {</span>
+<span class="nc" id="L60">					address.setCountry(persistableCustomer.getDelivery().getCountry());</span>
+				}
+<span class="nc bnc" id="L62" title="All 2 branches missed.">				if(persistableCustomer.getDelivery().getZone()!=null) {</span>
+<span class="nc" id="L63">					address.setZone(persistableCustomer.getDelivery().getZone());</span>
+				}
+				
+<span class="nc" id="L66">				customer.setDelivery(address);</span>
+			}
+			
+			//TODO if ship to billing enabled, set delivery = billing
+			
+			
+/*			if(persistableCustomer.getAttributes()!=null) {
+				for(PersistableCustomerAttribute attribute : persistableCustomer.getAttributes()) {
+					ReadableCustomerAttribute readableAttribute = new ReadableCustomerAttribute();
+					readableAttribute.setId(attribute.getId());
+					ReadableCustomerOption option = new ReadableCustomerOption();
+					option.setId(attribute.getCustomerOption().getId());
+					option.setCode(attribute.getCustomerOption());
+					
+					CustomerOptionDescription d = new CustomerOptionDescription();
+					d.setDescription(attribute.getCustomerOption().getDescriptionsSettoList().get(0).getDescription());
+					d.setName(attribute.getCustomerOption().getDescriptionsSettoList().get(0).getName());
+					option.setDescription(d);
+					
+					readableAttribute.setCustomerOption(option);
+					
+					ReadableCustomerOptionValue optionValue = new ReadableCustomerOptionValue();
+					optionValue.setId(attribute.getCustomerOptionValue().getId());
+					CustomerOptionValueDescription vd = new CustomerOptionValueDescription();
+					vd.setDescription(attribute.getCustomerOptionValue().getDescriptionsSettoList().get(0).getDescription());
+					vd.setName(attribute.getCustomerOptionValue().getDescriptionsSettoList().get(0).getName());
+					optionValue.setCode(attribute.getCustomerOptionValue().getCode());
+					optionValue.setDescription(vd);
+					
+					
+					readableAttribute.setCustomerOptionValue(optionValue);
+					customer.getAttributes().add(readableAttribute);
+				}
+			}*/
+			
+<span class="nc" id="L101">			target.setCustomer(customer);</span>
+		
+<span class="nc" id="L103">		} catch (Exception e) {</span>
+<span class="nc" id="L104">			throw new ConversionException(e);</span>
+<span class="nc" id="L105">		}</span>
+		
+		
+		
+<span class="nc" id="L109">		return target;</span>
+	}
+
+	@Override
+	protected ReadableShopOrder createTarget() {
+<span class="nc" id="L114">		return null;</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

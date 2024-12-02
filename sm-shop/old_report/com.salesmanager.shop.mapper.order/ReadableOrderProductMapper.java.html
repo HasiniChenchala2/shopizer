@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReadableOrderProductMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.mapper.order</a> &gt; <span class="el_source">ReadableOrderProductMapper.java</span></div><h1>ReadableOrderProductMapper.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.mapper.order;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.inject.Inject;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Validate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Component;
+
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.catalog.pricing.PricingService;
+import com.salesmanager.core.business.services.catalog.product.ProductService;
+import com.salesmanager.core.model.catalog.product.Product;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.order.orderproduct.OrderProduct;
+import com.salesmanager.core.model.order.orderproduct.OrderProductAttribute;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.mapper.Mapper;
+import com.salesmanager.shop.mapper.catalog.product.ReadableProductMapper;
+import com.salesmanager.shop.model.catalog.product.ReadableProduct;
+import com.salesmanager.shop.model.order.ReadableOrderProduct;
+import com.salesmanager.shop.model.order.ReadableOrderProductAttribute;
+import com.salesmanager.shop.store.api.exception.ConversionRuntimeException;
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+import com.salesmanager.shop.utils.ImageFilePath;
+
+@Component
+<span class="fc" id="L33">public class ReadableOrderProductMapper implements Mapper&lt;OrderProduct, ReadableOrderProduct&gt; {</span>
+
+	@Autowired
+	PricingService pricingService;
+
+	@Autowired
+	ProductService productService;
+	
+	@Autowired
+	ReadableProductMapper readableProductMapper;
+
+	@Inject
+	@Qualifier(&quot;img&quot;)
+	private ImageFilePath imageUtils;
+
+	@Override
+	public ReadableOrderProduct convert(OrderProduct source, MerchantStore store, Language language) {
+<span class="nc" id="L50">		ReadableOrderProduct orderProduct = new ReadableOrderProduct();</span>
+<span class="nc" id="L51">		return this.merge(source, orderProduct, store, language);</span>
+	}
+
+	@Override
+	public ReadableOrderProduct merge(OrderProduct source, ReadableOrderProduct target, MerchantStore store,
+			Language language) {
+
+<span class="nc" id="L58">		Validate.notNull(source, &quot;OrderProduct cannot be null&quot;);</span>
+<span class="nc" id="L59">		Validate.notNull(target, &quot;ReadableOrderProduct cannot be null&quot;);</span>
+<span class="nc" id="L60">		Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);</span>
+<span class="nc" id="L61">		Validate.notNull(language, &quot;Language cannot be null&quot;);</span>
+
+<span class="nc" id="L63">		target.setId(source.getId());</span>
+<span class="nc" id="L64">		target.setOrderedQuantity(source.getProductQuantity());</span>
+		try {
+<span class="nc" id="L66">			target.setPrice(pricingService.getDisplayAmount(source.getOneTimeCharge(), store));</span>
+<span class="nc" id="L67">		} catch (Exception e) {</span>
+<span class="nc" id="L68">			throw new ConversionRuntimeException(&quot;Cannot convert price&quot;, e);</span>
+<span class="nc" id="L69">		}</span>
+<span class="nc" id="L70">		target.setProductName(source.getProductName());</span>
+<span class="nc" id="L71">		target.setSku(source.getSku());</span>
+
+		// subtotal = price * quantity
+<span class="nc" id="L74">		BigDecimal subTotal = source.getOneTimeCharge();</span>
+<span class="nc" id="L75">		subTotal = subTotal.multiply(new BigDecimal(source.getProductQuantity()));</span>
+
+		try {
+<span class="nc" id="L78">			String subTotalPrice = pricingService.getDisplayAmount(subTotal, store);</span>
+<span class="nc" id="L79">			target.setSubTotal(subTotalPrice);</span>
+<span class="nc" id="L80">		} catch (Exception e) {</span>
+<span class="nc" id="L81">			throw new ConversionRuntimeException(&quot;Cannot format price&quot;, e);</span>
+<span class="nc" id="L82">		}</span>
+
+<span class="nc bnc" id="L84" title="All 2 branches missed.">		if (source.getOrderAttributes() != null) {</span>
+<span class="nc" id="L85">			List&lt;ReadableOrderProductAttribute&gt; attributes = new ArrayList&lt;ReadableOrderProductAttribute&gt;();</span>
+<span class="nc bnc" id="L86" title="All 2 branches missed.">			for (OrderProductAttribute attr : source.getOrderAttributes()) {</span>
+<span class="nc" id="L87">				ReadableOrderProductAttribute readableAttribute = new ReadableOrderProductAttribute();</span>
+				try {
+<span class="nc" id="L89">					String price = pricingService.getDisplayAmount(attr.getProductAttributePrice(), store);</span>
+<span class="nc" id="L90">					readableAttribute.setAttributePrice(price);</span>
+<span class="nc" id="L91">				} catch (ServiceException e) {</span>
+<span class="nc" id="L92">					throw new ConversionRuntimeException(&quot;Cannot format price&quot;, e);</span>
+<span class="nc" id="L93">				}</span>
+
+<span class="nc" id="L95">				readableAttribute.setAttributeName(attr.getProductAttributeName());</span>
+<span class="nc" id="L96">				readableAttribute.setAttributeValue(attr.getProductAttributeValueName());</span>
+<span class="nc" id="L97">				attributes.add(readableAttribute);</span>
+<span class="nc" id="L98">			}</span>
+<span class="nc" id="L99">			target.setAttributes(attributes);</span>
+		}
+
+<span class="nc" id="L102">		String productSku = source.getSku();</span>
+<span class="nc bnc" id="L103" title="All 2 branches missed.">		if (!StringUtils.isBlank(productSku)) {</span>
+<span class="nc" id="L104">			Product product = null;</span>
+			try {
+<span class="nc" id="L106">				product = productService.getBySku(productSku, store, language);</span>
+<span class="nc" id="L107">			} catch (ServiceException e) {</span>
+<span class="nc" id="L108">				throw new ServiceRuntimeException(e);</span>
+<span class="nc" id="L109">			}</span>
+<span class="nc bnc" id="L110" title="All 2 branches missed.">			if (product != null) {</span>
+				
+				
+<span class="nc" id="L113">				ReadableProduct productProxy = readableProductMapper.convert(product, store, language);</span>
+<span class="nc" id="L114">				target.setProduct(productProxy);</span>
+				
+				/**
+
+				// TODO autowired
+				ReadableProductPopulator populator = new ReadableProductPopulator();
+				populator.setPricingService(pricingService);
+				populator.setimageUtils(imageUtils);
+
+				ReadableProduct productProxy;
+				try {
+					productProxy = populator.populate(product, new ReadableProduct(), store, language);
+					target.setProduct(productProxy);
+				} catch (ConversionException e) {
+					throw new ConversionRuntimeException(&quot;Cannot convert product&quot;, e);
+				}
+
+				Set&lt;ProductImage&gt; images = product.getImages();
+				ProductImage defaultImage = null;
+				if (images != null) {
+					for (ProductImage image : images) {
+						if (defaultImage == null) {
+							defaultImage = image;
+						}
+						if (image.isDefaultImage()) {
+							defaultImage = image;
+						}
+					}
+				}
+				if (defaultImage != null) {
+					target.setImage(defaultImage.getProductImage());
+				}
+				
+				**/
+			}
+		}
+
+<span class="nc" id="L151">		return target;</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

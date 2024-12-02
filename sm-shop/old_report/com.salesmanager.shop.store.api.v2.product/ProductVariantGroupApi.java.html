@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ProductVariantGroupApi.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.api.v2.product</a> &gt; <span class="el_source">ProductVariantGroupApi.java</span></div><h1>ProductVariantGroupApi.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.api.v2.product;
+
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import javax.validation.Valid;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.constants.Constants;
+import com.salesmanager.shop.model.catalog.product.product.variantGroup.PersistableProductVariantGroup;
+import com.salesmanager.shop.model.catalog.product.product.variantGroup.ReadableProductVariantGroup;
+import com.salesmanager.shop.model.entity.Entity;
+import com.salesmanager.shop.model.entity.ReadableEntityList;
+import com.salesmanager.shop.store.api.exception.UnauthorizedException;
+import com.salesmanager.shop.store.controller.product.facade.ProductVariantGroupFacade;
+import com.salesmanager.shop.store.controller.user.facade.UserFacade;
+
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiImplicitParams;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.SwaggerDefinition;
+import io.swagger.annotations.Tag;
+import springfox.documentation.annotations.ApiIgnore;
+
+@Controller
+@RequestMapping(&quot;/api/v2&quot;)
+@Api(tags = { &quot;Product instances group api&quot; })
+@SwaggerDefinition(tags = {
+		@Tag(name = &quot;Product instances group allows attaching property and images to a group of instances&quot;, description = &quot;Manage product instances group&quot;) })
+<span class="fc" id="L49">public class ProductVariantGroupApi {</span>
+
+	@Autowired
+	private ProductVariantGroupFacade productVariantGroupFacade;
+
+	@Autowired
+	private UserFacade userFacade;
+
+	@ResponseStatus(HttpStatus.CREATED)
+	@PostMapping(value = { &quot;/private/product/productVariantGroup&quot; })
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;string&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;string&quot;, defaultValue = &quot;en&quot;) })
+	public @ResponseBody Entity create(
+			@Valid @RequestBody PersistableProductVariantGroup instanceGroup,
+			@ApiIgnore MerchantStore merchantStore, @ApiIgnore Language language) {
+
+<span class="nc" id="L65">		String authenticatedUser = userFacade.authenticatedUser();</span>
+<span class="nc bnc" id="L66" title="All 2 branches missed.">		if (authenticatedUser == null) {</span>
+<span class="nc" id="L67">			throw new UnauthorizedException();</span>
+		}
+
+<span class="nc" id="L70">		userFacade.authorizedGroup(authenticatedUser, Stream.of(Constants.GROUP_SUPERADMIN, Constants.GROUP_ADMIN,</span>
+<span class="nc" id="L71">				Constants.GROUP_ADMIN_CATALOGUE, Constants.GROUP_ADMIN_RETAIL).collect(Collectors.toList()));</span>
+
+<span class="nc" id="L73">		Long id = productVariantGroupFacade.create(instanceGroup, merchantStore, language);</span>
+
+<span class="nc" id="L75">		return new Entity(id);</span>
+
+	}
+
+	@ResponseStatus(HttpStatus.OK)
+	@PutMapping(value = { &quot;/private/product/productVariantGroup/{id}&quot; })
+	@ApiOperation(httpMethod = &quot;PUT&quot;, value = &quot;Update product instance group&quot;, notes = &quot;&quot;, produces = &quot;application/json&quot;, response = Void.class)
+	public @ResponseBody void update(@PathVariable Long id,
+			@Valid @RequestBody PersistableProductVariantGroup instance, 
+			@ApiIgnore MerchantStore merchantStore,
+			@ApiIgnore Language language) {
+
+<span class="nc" id="L87">		String authenticatedUser = userFacade.authenticatedUser();</span>
+<span class="nc bnc" id="L88" title="All 2 branches missed.">		if (authenticatedUser == null) {</span>
+<span class="nc" id="L89">			throw new UnauthorizedException();</span>
+		}
+
+<span class="nc" id="L92">		userFacade.authorizedGroup(authenticatedUser, Stream.of(Constants.GROUP_SUPERADMIN, Constants.GROUP_ADMIN,</span>
+<span class="nc" id="L93">				Constants.GROUP_ADMIN_CATALOGUE, Constants.GROUP_ADMIN_RETAIL).collect(Collectors.toList()));</span>
+
+<span class="nc" id="L95">		productVariantGroupFacade.update(id, instance, merchantStore, language);</span>
+<span class="nc" id="L96">	}</span>
+
+	@ResponseStatus(HttpStatus.OK)
+	@GetMapping(value = { &quot;/private/product/productVariantGroup/{id}&quot; })
+	@ApiOperation(httpMethod = &quot;GET&quot;, value = &quot;Get product instance group&quot;, notes = &quot;&quot;, produces = &quot;application/json&quot;, response = Void.class)
+	public @ResponseBody ReadableProductVariantGroup get(
+			@PathVariable Long id, @ApiIgnore MerchantStore merchantStore,
+			@ApiIgnore Language language) {
+
+<span class="nc" id="L105">		String authenticatedUser = userFacade.authenticatedUser();</span>
+<span class="nc bnc" id="L106" title="All 2 branches missed.">		if (authenticatedUser == null) {</span>
+<span class="nc" id="L107">			throw new UnauthorizedException();</span>
+		}
+
+<span class="nc" id="L110">		userFacade.authorizedGroup(authenticatedUser, Stream.of(Constants.GROUP_SUPERADMIN, Constants.GROUP_ADMIN,</span>
+<span class="nc" id="L111">				Constants.GROUP_ADMIN_CATALOGUE, Constants.GROUP_ADMIN_RETAIL).collect(Collectors.toList()));</span>
+
+<span class="nc" id="L113">		return productVariantGroupFacade.get(id, merchantStore, language);</span>
+	}
+
+	// delete
+
+	@ResponseStatus(HttpStatus.OK)
+	@DeleteMapping(value = { &quot;/private/product/productVariantGroup/{id}&quot; })
+	@ApiOperation(httpMethod = &quot;DELETE&quot;, value = &quot;Delete product instance group&quot;, notes = &quot;&quot;, produces = &quot;application/json&quot;, response = Void.class)
+	public @ResponseBody void delete(@PathVariable Long id, @ApiIgnore MerchantStore merchantStore,
+			@ApiIgnore Language language) {
+
+<span class="nc" id="L124">		String authenticatedUser = userFacade.authenticatedUser();</span>
+<span class="nc bnc" id="L125" title="All 2 branches missed.">		if (authenticatedUser == null) {</span>
+<span class="nc" id="L126">			throw new UnauthorizedException();</span>
+		}
+
+<span class="nc" id="L129">		userFacade.authorizedGroup(authenticatedUser, Stream.of(Constants.GROUP_SUPERADMIN, Constants.GROUP_ADMIN,</span>
+<span class="nc" id="L130">				Constants.GROUP_ADMIN_CATALOGUE, Constants.GROUP_ADMIN_RETAIL).collect(Collectors.toList()));</span>
+
+<span class="nc" id="L132">		productVariantGroupFacade.delete(id, id, merchantStore);</span>
+<span class="nc" id="L133">	}</span>
+
+	// list
+	@ResponseStatus(HttpStatus.OK)
+	@GetMapping(value = { &quot;/private/product/{id}/productVariantGroup&quot; })
+	@ApiOperation(httpMethod = &quot;GET&quot;, value = &quot;Delete product instance group&quot;, notes = &quot;&quot;, produces = &quot;application/json&quot;, response = Void.class)
+	public @ResponseBody ReadableEntityList&lt;ReadableProductVariantGroup&gt; list(
+			@PathVariable final Long id,
+			@ApiIgnore MerchantStore merchantStore,
+			@ApiIgnore Language language,
+			@RequestParam(value = &quot;page&quot;, required = false, defaultValue = &quot;0&quot;) Integer page,
+	@RequestParam(value = &quot;count&quot;, required = false, defaultValue = &quot;10&quot;) Integer count) {
+
+<span class="nc" id="L146">		String authenticatedUser = userFacade.authenticatedUser();</span>
+<span class="nc bnc" id="L147" title="All 2 branches missed.">		if (authenticatedUser == null) {</span>
+<span class="nc" id="L148">			throw new UnauthorizedException();</span>
+		}
+
+<span class="nc" id="L151">		userFacade.authorizedGroup(authenticatedUser, Stream.of(Constants.GROUP_SUPERADMIN, Constants.GROUP_ADMIN,</span>
+<span class="nc" id="L152">				Constants.GROUP_ADMIN_CATALOGUE, Constants.GROUP_ADMIN_RETAIL).collect(Collectors.toList()));</span>
+
+<span class="nc" id="L154">		return productVariantGroupFacade.list(id, merchantStore, language, page, count);</span>
+	}
+
+	// add image
+	@ResponseStatus(HttpStatus.CREATED)
+	@RequestMapping(value = { &quot;/private/product/productVariantGroup/{id}/image&quot; }, consumes = {
+			MediaType.MULTIPART_FORM_DATA_VALUE }, method = RequestMethod.POST)
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	public void addImage(
+			@PathVariable Long id, 
+			@RequestParam(value = &quot;file&quot;, required = true) MultipartFile file,
+			@RequestParam(value = &quot;order&quot;, required = false, defaultValue = &quot;0&quot;) Integer position,
+			@ApiIgnore MerchantStore merchantStore, 
+			@ApiIgnore Language language) {
+
+<span class="nc" id="L170">		String authenticatedUser = userFacade.authenticatedUser();</span>
+<span class="nc bnc" id="L171" title="All 2 branches missed.">		if (authenticatedUser == null) {</span>
+<span class="nc" id="L172">			throw new UnauthorizedException();</span>
+		}
+
+<span class="nc" id="L175">		userFacade.authorizedGroup(authenticatedUser, Stream.of(Constants.GROUP_SUPERADMIN, Constants.GROUP_ADMIN,</span>
+<span class="nc" id="L176">				Constants.GROUP_ADMIN_CATALOGUE, Constants.GROUP_ADMIN_RETAIL).collect(Collectors.toList()));</span>
+
+<span class="nc" id="L178">		productVariantGroupFacade.addImage(file, id, merchantStore, language);</span>
+
+<span class="nc" id="L180">	}</span>
+
+	// remove image
+	@ResponseStatus(HttpStatus.OK)
+	@RequestMapping(value = {
+			&quot;/private/product/productVariantGroup/{id}/image/{imageId}&quot; }, method = RequestMethod.DELETE)
+	public void removeImage(@PathVariable Long id, @PathVariable Long imageId, @ApiIgnore MerchantStore merchantStore,
+			@ApiIgnore Language language) {
+
+<span class="nc" id="L189">		String authenticatedUser = userFacade.authenticatedUser();</span>
+<span class="nc bnc" id="L190" title="All 2 branches missed.">		if (authenticatedUser == null) {</span>
+<span class="nc" id="L191">			throw new UnauthorizedException();</span>
+		}
+
+<span class="nc" id="L194">		userFacade.authorizedGroup(authenticatedUser, Stream.of(Constants.GROUP_SUPERADMIN, Constants.GROUP_ADMIN,</span>
+<span class="nc" id="L195">				Constants.GROUP_ADMIN_CATALOGUE, Constants.GROUP_ADMIN_RETAIL).collect(Collectors.toList()));</span>
+
+<span class="nc" id="L197">		productVariantGroupFacade.removeImage(imageId, id, merchantStore);</span>
+
+<span class="nc" id="L199">	}</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

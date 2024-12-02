@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>QueryFilter.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.model.filter</a> &gt; <span class="el_source">QueryFilter.java</span></div><h1>QueryFilter.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.model.filter;
+
+/**
+ * Used in Category and Search to filter display based on other
+ * entities such as Manufacturer
+ * @author Carl Samson
+ *
+ */
+<span class="nc" id="L9">public class QueryFilter {</span>
+	
+	/**
+	 * used when filtering on an entity code (example property)
+	 */
+	private String filterCode;
+	/**
+	 * used when filtering on an entity id
+	 */
+	private Long filterId;
+	private QueryFilterType filterType;
+	public String getFilterCode() {
+<span class="nc" id="L21">		return filterCode;</span>
+	}
+	public void setFilterCode(String filterCode) {
+<span class="nc" id="L24">		this.filterCode = filterCode;</span>
+<span class="nc" id="L25">	}</span>
+	public Long getFilterId() {
+<span class="nc" id="L27">		return filterId;</span>
+	}
+	public void setFilterId(Long filterId) {
+<span class="nc" id="L30">		this.filterId = filterId;</span>
+<span class="nc" id="L31">	}</span>
+	public QueryFilterType getFilterType() {
+<span class="nc" id="L33">		return filterType;</span>
+	}
+	public void setFilterType(QueryFilterType filterType) {
+<span class="nc" id="L36">		this.filterType = filterType;</span>
+<span class="nc" id="L37">	}</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

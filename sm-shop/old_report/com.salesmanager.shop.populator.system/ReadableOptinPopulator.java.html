@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReadableOptinPopulator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.populator.system</a> &gt; <span class="el_source">ReadableOptinPopulator.java</span></div><h1>ReadableOptinPopulator.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.populator.system;
+
+import org.apache.commons.lang3.Validate;
+
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.utils.AbstractDataPopulator;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.core.model.system.optin.Optin;
+import com.salesmanager.shop.model.system.ReadableOptin;
+
+<span class="nc" id="L12">public class ReadableOptinPopulator extends AbstractDataPopulator&lt;Optin, ReadableOptin&gt; {</span>
+
+	@Override
+	public ReadableOptin populate(Optin source, ReadableOptin target, MerchantStore store, Language language)
+			throws ConversionException {
+<span class="nc" id="L17">		Validate.notNull(store,&quot;MerchantStore cannot be null&quot;);</span>
+<span class="nc" id="L18">		Validate.notNull(source,&quot;Optin cannot be null&quot;);</span>
+		
+<span class="nc bnc" id="L20" title="All 2 branches missed.">		if(target==null) {</span>
+<span class="nc" id="L21">			target = new ReadableOptin();</span>
+		}
+		
+<span class="nc" id="L24">		target.setCode(source.getCode());</span>
+<span class="nc" id="L25">		target.setDescription(source.getDescription());</span>
+<span class="nc" id="L26">		target.setEndDate(source.getEndDate());</span>
+<span class="nc" id="L27">		target.setId(source.getId());</span>
+<span class="nc" id="L28">		target.setOptinType(source.getOptinType().name());</span>
+<span class="nc" id="L29">		target.setStartDate(source.getStartDate());</span>
+<span class="nc" id="L30">		target.setStore(store.getCode());</span>
+
+<span class="nc" id="L32">		return target;</span>
+	}
+
+	@Override
+	protected ReadableOptin createTarget() {
+		// TODO Auto-generated method stub
+<span class="nc" id="L38">		return null;</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

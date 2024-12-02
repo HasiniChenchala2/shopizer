@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ServicesAuthenticationSuccessHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.security</a> &gt; <span class="el_source">ServicesAuthenticationSuccessHandler.java</span></div><h1>ServicesAuthenticationSuccessHandler.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.security;
+
+import java.io.IOException;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.springframework.security.core.Authentication;
+import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
+import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
+import org.springframework.security.web.savedrequest.RequestCache;
+import org.springframework.security.web.savedrequest.SavedRequest;
+import org.springframework.util.StringUtils;
+
+<span class="fc" id="L16">public class ServicesAuthenticationSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {</span>
+	
+<span class="fc" id="L18">	private RequestCache requestCache = new HttpSessionRequestCache();</span>
+
+    @Override
+    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws ServletException, IOException {
+<span class="nc" id="L22">        SavedRequest savedRequest = requestCache.getRequest(request, response);</span>
+
+<span class="nc bnc" id="L24" title="All 2 branches missed.">        if (savedRequest == null) {</span>
+<span class="nc" id="L25">            clearAuthenticationAttributes(request);</span>
+<span class="nc" id="L26">            return;</span>
+        }
+<span class="nc" id="L28">        String targetUrlParam = getTargetUrlParameter();</span>
+<span class="nc bnc" id="L29" title="All 6 branches missed.">        if (isAlwaysUseDefaultTargetUrl() || (targetUrlParam != null &amp;&amp; StringUtils.hasText(request.getParameter(targetUrlParam)))) {</span>
+<span class="nc" id="L30">            requestCache.removeRequest(request, response);</span>
+<span class="nc" id="L31">            clearAuthenticationAttributes(request);</span>
+<span class="nc" id="L32">            return;</span>
+        }
+
+<span class="nc" id="L35">        clearAuthenticationAttributes(request);</span>
+<span class="nc" id="L36">    }</span>
+
+    public void setRequestCache(RequestCache requestCache) {
+<span class="nc" id="L39">        this.requestCache = requestCache;</span>
+<span class="nc" id="L40">    }</span>
+    
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

@@ -1,0 +1,290 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ProductFacadeV2Impl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.facade.product</a> &gt; <span class="el_source">ProductFacadeV2Impl.java</span></div><h1>ProductFacadeV2Impl.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.facade.product;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import javax.inject.Inject;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.Validate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Profile;
+import org.springframework.data.domain.Page;
+import org.springframework.stereotype.Service;
+
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.catalog.category.CategoryService;
+import com.salesmanager.core.business.services.catalog.pricing.PricingService;
+import com.salesmanager.core.business.services.catalog.product.ProductService;
+import com.salesmanager.core.business.services.catalog.product.attribute.ProductAttributeService;
+import com.salesmanager.core.business.services.catalog.product.availability.ProductAvailabilityService;
+import com.salesmanager.core.business.services.catalog.product.relationship.ProductRelationshipService;
+import com.salesmanager.core.business.services.catalog.product.variant.ProductVariantService;
+import com.salesmanager.core.model.catalog.product.Product;
+import com.salesmanager.core.model.catalog.product.ProductCriteria;
+import com.salesmanager.core.model.catalog.product.relationship.ProductRelationship;
+import com.salesmanager.core.model.catalog.product.relationship.ProductRelationshipType;
+import com.salesmanager.core.model.catalog.product.variant.ProductVariant;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.mapper.catalog.product.ReadableProductMapper;
+import com.salesmanager.shop.mapper.catalog.product.ReadableProductVariantMapper;
+import com.salesmanager.shop.model.catalog.product.ReadableProduct;
+import com.salesmanager.shop.model.catalog.product.ReadableProductList;
+import com.salesmanager.shop.model.catalog.product.product.variant.ReadableProductVariant;
+import com.salesmanager.shop.populator.catalog.ReadableProductPopulator;
+import com.salesmanager.shop.store.api.exception.ResourceNotFoundException;
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+import com.salesmanager.shop.store.controller.product.facade.ProductFacade;
+import com.salesmanager.shop.utils.ImageFilePath;
+import com.salesmanager.shop.utils.LocaleUtils;
+
+
+@Service(&quot;productFacadeV2&quot;)
+@Profile({ &quot;default&quot;, &quot;cloud&quot;, &quot;gcp&quot;, &quot;aws&quot;, &quot;mysql&quot; , &quot;local&quot; })
+<span class="fc" id="L48">public class ProductFacadeV2Impl implements ProductFacade {</span>
+	
+
+	@Autowired
+	private ProductService productService;
+	
+	@Inject
+	private CategoryService categoryService;
+	
+	@Inject
+	private ProductRelationshipService productRelationshipService;
+	
+	@Autowired
+	private ReadableProductMapper readableProductMapper;
+	
+	@Autowired
+	private ProductVariantService productVariantService;
+	
+	@Autowired
+	private ReadableProductVariantMapper readableProductVariantMapper;
+	
+	@Autowired
+	private ProductAvailabilityService productAvailabilityService;
+	
+	@Autowired
+	private ProductAttributeService productAttributeService;
+	
+	@Inject
+	private PricingService pricingService;
+	
+	@Inject
+	@Qualifier(&quot;img&quot;)
+	private ImageFilePath imageUtils;
+
+
+	@Override
+	public Product getProduct(Long id, MerchantStore store) {
+		//same as v1
+<span class="nc" id="L86">		return productService.findOne(id, store);</span>
+	}
+
+	@Override
+	public ReadableProduct getProductByCode(MerchantStore store, String sku, Language language) {
+
+		
+<span class="fc" id="L93">		Product product = null;</span>
+		try {
+<span class="fc" id="L95">			product = productService.getBySku(sku, store, language);</span>
+<span class="nc" id="L96">		} catch (ServiceException e) {</span>
+<span class="nc" id="L97">			throw new ServiceRuntimeException(e);</span>
+<span class="fc" id="L98">		}</span>
+
+<span class="pc bpc" id="L100" title="1 of 2 branches missed.">		if (product == null) {</span>
+<span class="nc" id="L101">			throw new ResourceNotFoundException(&quot;Product [&quot; + sku + &quot;] not found for merchant [&quot; + store.getCode() + &quot;]&quot;);</span>
+		}
+		
+<span class="pc bpc" id="L104" title="1 of 2 branches missed.">		if (product.getMerchantStore().getId() != store.getId()) {</span>
+<span class="nc" id="L105">			throw new ResourceNotFoundException(&quot;Product [&quot; + sku + &quot;] not found for merchant [&quot; + store.getCode() + &quot;]&quot;);</span>
+		}
+		
+
+<span class="fc" id="L109">		ReadableProduct readableProduct = readableProductMapper.convert(product, store, language);</span>
+
+<span class="fc" id="L111">		return readableProduct;</span>
+		
+	}
+	
+	private ReadableProductVariant productVariant(ProductVariant instance, MerchantStore store, Language language) {
+		
+<span class="nc" id="L117">		return readableProductVariantMapper.convert(instance, store, language);</span>
+		
+	}
+
+	@Override
+	public ReadableProduct getProduct(MerchantStore store, String sku, Language language) throws Exception {
+<span class="nc" id="L123">		return this.getProductByCode(store, sku, language);</span>
+	}
+
+	@Override
+	public ReadableProduct getProductBySeUrl(MerchantStore store, String friendlyUrl, Language language)
+			throws Exception {
+		
+<span class="nc" id="L130">		Product product = productService.getBySeUrl(store, friendlyUrl, LocaleUtils.getLocale(language));</span>
+
+<span class="nc bnc" id="L132" title="All 2 branches missed.">		if (product == null) {</span>
+<span class="nc" id="L133">			throw new ResourceNotFoundException(&quot;Product [&quot; + friendlyUrl + &quot;] not found for merchant [&quot; + store.getCode() + &quot;]&quot;);</span>
+		}
+		
+<span class="nc" id="L136">		ReadableProduct readableProduct = readableProductMapper.convert(product, store, language);</span>
+
+		//get all instances for this product group by option
+		//limit to 15 searches
+<span class="nc" id="L140">		List&lt;ProductVariant&gt; instances = productVariantService.getByProductId(store, product, language);</span>
+		
+		//the above get all possible images
+<span class="nc" id="L143">		List&lt;ReadableProductVariant&gt; readableInstances = instances.stream().map(p -&gt; this.productVariant(p, store, language)).collect(Collectors.toList());</span>
+<span class="nc" id="L144">		readableProduct.setVariants(readableInstances);</span>
+		
+<span class="nc" id="L146">		return readableProduct;</span>
+		
+	}
+
+	/**
+	 * Filters on otion, optionValues and other criterias
+	 */
+
+	@Override
+	public ReadableProductList getProductListsByCriterias(MerchantStore store, Language language,
+			ProductCriteria criterias) throws Exception {
+<span class="nc" id="L157">		Validate.notNull(criterias, &quot;ProductCriteria must be set for this product&quot;);</span>
+
+		/** This is for category **/
+<span class="nc bnc" id="L160" title="All 2 branches missed.">		if (CollectionUtils.isNotEmpty(criterias.getCategoryIds())) {</span>
+
+<span class="nc bnc" id="L162" title="All 2 branches missed.">			if (criterias.getCategoryIds().size() == 1) {</span>
+
+<span class="nc" id="L164">				com.salesmanager.core.model.catalog.category.Category category = categoryService</span>
+<span class="nc" id="L165">						.getById(criterias.getCategoryIds().get(0));</span>
+
+<span class="nc bnc" id="L167" title="All 2 branches missed.">				if (category != null) {</span>
+<span class="nc" id="L168">					String lineage = new StringBuilder().append(category.getLineage())</span>
+<span class="nc" id="L169">							.toString();</span>
+
+<span class="nc" id="L171">					List&lt;com.salesmanager.core.model.catalog.category.Category&gt; categories = categoryService</span>
+<span class="nc" id="L172">							.getListByLineage(store, lineage);</span>
+
+<span class="nc" id="L174">					List&lt;Long&gt; ids = new ArrayList&lt;Long&gt;();</span>
+<span class="nc bnc" id="L175" title="All 4 branches missed.">					if (categories != null &amp;&amp; categories.size() &gt; 0) {</span>
+<span class="nc bnc" id="L176" title="All 2 branches missed.">						for (com.salesmanager.core.model.catalog.category.Category c : categories) {</span>
+<span class="nc" id="L177">							ids.add(c.getId());</span>
+<span class="nc" id="L178">						}</span>
+					}
+<span class="nc" id="L180">					ids.add(category.getId());</span>
+<span class="nc" id="L181">					criterias.setCategoryIds(ids);</span>
+				}
+			}
+		}
+
+		
+<span class="nc" id="L187">		Page&lt;Product&gt; modelProductList = productService.listByStore(store, language, criterias, criterias.getStartPage(), criterias.getMaxCount());</span>
+		
+<span class="nc" id="L189">		List&lt;Product&gt; products = modelProductList.getContent();</span>
+<span class="nc" id="L190">		ReadableProductList productList = new ReadableProductList();</span>
+
+		
+		/**
+		 * ReadableProductMapper
+		 */
+		
+<span class="nc" id="L197">		List&lt;ReadableProduct&gt; readableProducts = products.stream().map(p -&gt; readableProductMapper.convert(p, store, language))</span>
+<span class="nc" id="L198">				.sorted(Comparator.comparing(ReadableProduct::getSortOrder)).collect(Collectors.toList());</span>
+
+
+<span class="nc" id="L201">		productList.setRecordsTotal(modelProductList.getTotalElements());</span>
+<span class="nc" id="L202">		productList.setNumber(modelProductList.getNumberOfElements());</span>
+<span class="nc" id="L203">		productList.setProducts(readableProducts);</span>
+<span class="nc" id="L204">		productList.setTotalPages(modelProductList.getTotalPages());</span>
+
+<span class="nc" id="L206">		return productList;</span>
+	}
+
+	@Override
+	public List&lt;ReadableProduct&gt; relatedItems(MerchantStore store, Product product, Language language)
+			throws Exception {
+		//same as v1
+<span class="nc" id="L213">		ReadableProductPopulator populator = new ReadableProductPopulator();</span>
+<span class="nc" id="L214">		populator.setPricingService(pricingService);</span>
+<span class="nc" id="L215">		populator.setimageUtils(imageUtils);</span>
+
+<span class="nc" id="L217">		List&lt;ProductRelationship&gt; relatedItems = productRelationshipService.getByType(store, product,</span>
+				ProductRelationshipType.RELATED_ITEM);
+<span class="nc bnc" id="L219" title="All 4 branches missed.">		if (relatedItems != null &amp;&amp; relatedItems.size() &gt; 0) {</span>
+<span class="nc" id="L220">			List&lt;ReadableProduct&gt; items = new ArrayList&lt;ReadableProduct&gt;();</span>
+<span class="nc bnc" id="L221" title="All 2 branches missed.">			for (ProductRelationship relationship : relatedItems) {</span>
+<span class="nc" id="L222">				Product relatedProduct = relationship.getRelatedProduct();</span>
+<span class="nc" id="L223">				ReadableProduct proxyProduct = populator.populate(relatedProduct, new ReadableProduct(), store,</span>
+						language);
+<span class="nc" id="L225">				items.add(proxyProduct);</span>
+<span class="nc" id="L226">			}</span>
+<span class="nc" id="L227">			return items;</span>
+		}
+<span class="nc" id="L229">		return null;</span>
+	}
+
+
+	/**
+	@Override
+	public ReadableProductPrice getProductPrice(Long id, ProductPriceRequest priceRequest, MerchantStore store,
+			Language language) {
+
+		
+		Validate.notNull(id, &quot;Product id cannot be null&quot;);
+		Validate.notNull(priceRequest, &quot;Product price request cannot be null&quot;);
+		Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);
+		Validate.notNull(language, &quot;Language cannot be null&quot;);
+		
+		try {
+			Product model = productService.findOne(id, store);
+			
+			List&lt;ProductAttribute&gt; attributes = null;
+			
+			if(!CollectionUtils.isEmpty(priceRequest.getOptions())) {
+				List&lt;Long&gt; attrinutesIds = priceRequest.getOptions().stream().map(p -&gt; p.getId()).collect(Collectors.toList());
+				
+				attributes = productAttributeService.getByAttributeIds(store, model, attrinutesIds);      
+				
+				for(ProductAttribute attribute : attributes) {
+					if(attribute.getProduct().getId().longValue()!= id.longValue()) {
+						//throw unauthorized
+						throw new OperationNotAllowedException(&quot;Attribute with id [&quot; + attribute.getId() + &quot;] is not attached to product id [&quot; + id + &quot;]&quot;);
+					}
+				}
+			}
+			
+			if(!StringUtils.isBlank(priceRequest.getSku())) {
+				 //change default availability with sku (instance availability)
+				List&lt;ProductAvailability&gt; availabilityList = productAvailabilityService.getBySku(priceRequest.getSku(), store);
+				if(CollectionUtils.isNotEmpty(availabilityList)) {
+					model.setAvailabilities(new HashSet&lt;ProductAvailability&gt;(availabilityList));
+				}
+			}
+			
+			FinalPrice price;
+		
+			//attributes can be null;
+			price = pricingService.calculateProductPrice(model, attributes);
+	    	ReadableProductPrice readablePrice = new ReadableProductPrice();
+	    	ReadableFinalPricePopulator populator = new ReadableFinalPricePopulator();
+	    	populator.setPricingService(pricingService);
+	    	
+	    	
+	    	return populator.populate(price, readablePrice, store, language);
+    	
+		} catch (Exception e) {
+			throw new ServiceRuntimeException(&quot;An error occured while getting product price&quot;,e);
+		}
+		
+
+	}
+	**/
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

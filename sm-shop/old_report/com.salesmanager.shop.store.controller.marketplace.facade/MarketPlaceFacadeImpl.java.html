@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MarketPlaceFacadeImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.controller.marketplace.facade</a> &gt; <span class="el_source">MarketPlaceFacadeImpl.java</span></div><h1>MarketPlaceFacadeImpl.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.controller.marketplace.facade;
+
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.shop.store.api.exception.ConversionRuntimeException;
+import com.salesmanager.shop.store.api.exception.ResourceNotFoundException;
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+import java.util.Optional;
+import javax.inject.Inject;
+
+import org.springframework.stereotype.Component;
+
+import com.salesmanager.core.business.services.system.optin.OptinService;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.core.model.system.optin.Optin;
+import com.salesmanager.core.model.system.optin.OptinType;
+import com.salesmanager.shop.model.marketplace.ReadableMarketPlace;
+import com.salesmanager.shop.model.store.ReadableMerchantStore;
+import com.salesmanager.shop.model.system.ReadableOptin;
+import com.salesmanager.shop.populator.system.ReadableOptinPopulator;
+import com.salesmanager.shop.store.controller.store.facade.StoreFacade;
+
+@Component
+<span class="fc" id="L25">public class MarketPlaceFacadeImpl implements MarketPlaceFacade {</span>
+
+	@Inject
+	private StoreFacade storeFacade;
+
+	@Inject
+	private OptinService optinService;
+
+	@Override
+	public ReadableMarketPlace get(String store, Language lang) {
+<span class="nc" id="L35">		ReadableMerchantStore readableStore = storeFacade.getByCode(store, lang);</span>
+<span class="nc" id="L36">    return createReadableMarketPlace(readableStore);</span>
+	}
+
+  private ReadableMarketPlace createReadableMarketPlace(ReadableMerchantStore readableStore) {
+    //TODO add info from Entity
+<span class="nc" id="L41">    ReadableMarketPlace marketPlace = new ReadableMarketPlace();</span>
+<span class="nc" id="L42">    marketPlace.setStore(readableStore);</span>
+<span class="nc" id="L43">    return marketPlace;</span>
+  }
+
+  @Override
+	public ReadableOptin findByMerchantAndType(MerchantStore store, OptinType type) {
+<span class="nc" id="L48">		Optin optin = getOptinByMerchantAndType(store, type);</span>
+<span class="nc" id="L49">    return convertOptinToReadableOptin(store, optin);</span>
+	}
+
+  private Optin getOptinByMerchantAndType(MerchantStore store, OptinType type) {
+	  try{
+<span class="nc" id="L54">      return Optional.ofNullable(optinService.getOptinByMerchantAndType(store, type))</span>
+<span class="nc" id="L55">          .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Option not found&quot;));</span>
+<span class="nc" id="L56">    } catch (ServiceException e) {</span>
+<span class="nc" id="L57">	    throw new ServiceRuntimeException(e);</span>
+    }
+
+  }
+
+  private ReadableOptin convertOptinToReadableOptin(MerchantStore store, Optin optin) {
+	  try{
+<span class="nc" id="L64">      ReadableOptinPopulator populator = new ReadableOptinPopulator();</span>
+<span class="nc" id="L65">      return populator.populate(optin, null, store, null);</span>
+<span class="nc" id="L66">    } catch (ConversionException e) {</span>
+<span class="nc" id="L67">	    throw new ConversionRuntimeException(e);</span>
+    }
+
+  }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

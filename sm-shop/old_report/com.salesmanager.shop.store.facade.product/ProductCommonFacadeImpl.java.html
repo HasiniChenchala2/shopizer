@@ -1,0 +1,478 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ProductCommonFacadeImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.facade.product</a> &gt; <span class="el_source">ProductCommonFacadeImpl.java</span></div><h1>ProductCommonFacadeImpl.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.facade.product;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import javax.inject.Inject;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Validate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Service;
+
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.catalog.pricing.PricingService;
+import com.salesmanager.core.business.services.catalog.product.ProductService;
+import com.salesmanager.core.business.services.catalog.product.review.ProductReviewService;
+import com.salesmanager.core.business.services.customer.CustomerService;
+import com.salesmanager.core.business.services.reference.language.LanguageService;
+import com.salesmanager.core.model.catalog.category.Category;
+import com.salesmanager.core.model.catalog.product.Product;
+import com.salesmanager.core.model.catalog.product.availability.ProductAvailability;
+import com.salesmanager.core.model.catalog.product.manufacturer.Manufacturer;
+import com.salesmanager.core.model.catalog.product.price.ProductPrice;
+import com.salesmanager.core.model.catalog.product.review.ProductReview;
+import com.salesmanager.core.model.catalog.product.variant.ProductVariant;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.mapper.catalog.product.PersistableProductMapper;
+import com.salesmanager.shop.model.catalog.product.LightPersistableProduct;
+import com.salesmanager.shop.model.catalog.product.PersistableProductReview;
+import com.salesmanager.shop.model.catalog.product.ProductPriceEntity;
+import com.salesmanager.shop.model.catalog.product.ReadableProduct;
+import com.salesmanager.shop.model.catalog.product.ReadableProductReview;
+import com.salesmanager.shop.model.catalog.product.product.PersistableProduct;
+import com.salesmanager.shop.model.catalog.product.product.ProductSpecification;
+import com.salesmanager.shop.populator.catalog.PersistableProductReviewPopulator;
+import com.salesmanager.shop.populator.catalog.ReadableProductPopulator;
+import com.salesmanager.shop.populator.catalog.ReadableProductReviewPopulator;
+import com.salesmanager.shop.store.api.exception.ConversionRuntimeException;
+import com.salesmanager.shop.store.api.exception.OperationNotAllowedException;
+import com.salesmanager.shop.store.api.exception.ResourceNotFoundException;
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+import com.salesmanager.shop.store.controller.product.facade.ProductCommonFacade;
+import com.salesmanager.shop.utils.DateUtil;
+import com.salesmanager.shop.utils.ImageFilePath;
+
+
+/**
+ * Version 1 Product management
+ * Version 2 Recommends using productVariant
+ * @author carlsamson
+ *
+ */
+@Service(&quot;productCommonFacade&quot;)
+<span class="fc" id="L59">public class ProductCommonFacadeImpl implements ProductCommonFacade {</span>
+
+
+	@Inject
+	private LanguageService languageService;
+
+	@Inject
+	private ProductService productService;
+
+	@Inject
+	private PricingService pricingService;
+
+	@Inject
+	private CustomerService customerService;
+
+	@Inject
+	private ProductReviewService productReviewService;
+	
+	@Autowired
+	private PersistableProductMapper persistableProductMapper;
+
+	@Inject
+	@Qualifier(&quot;img&quot;)
+	private ImageFilePath imageUtils;
+
+	@Override
+	public Long saveProduct(MerchantStore store, PersistableProduct product, Language language) {
+
+<span class="fc" id="L87">		String manufacturer = Manufacturer.DEFAULT_MANUFACTURER;</span>
+<span class="pc bpc" id="L88" title="1 of 2 branches missed.">		if (product.getProductSpecifications() != null) {</span>
+<span class="fc" id="L89">			manufacturer = product.getProductSpecifications().getManufacturer();</span>
+		} else {
+<span class="nc" id="L91">			ProductSpecification specifications = new ProductSpecification();</span>
+<span class="nc" id="L92">			specifications.setManufacturer(manufacturer);</span>
+		}
+
+<span class="fc" id="L95">		Product target = null;</span>
+<span class="pc bpc" id="L96" title="2 of 4 branches missed.">		if (product.getId() != null &amp;&amp; product.getId().longValue() &gt; 0) {</span>
+<span class="nc" id="L97">			target = productService.getById(product.getId());</span>
+		} else {
+<span class="fc" id="L99">			target = new Product();</span>
+		}
+
+		try {
+			
+<span class="fc" id="L104">			target = persistableProductMapper.merge(product, target, store, language);</span>
+<span class="fc" id="L105">			target = productService.saveProduct(target);</span>
+
+
+<span class="fc" id="L108">			return target.getId();</span>
+<span class="nc" id="L109">		} catch (Exception e) {</span>
+<span class="nc" id="L110">			throw new ServiceRuntimeException(e);</span>
+		}
+
+	}
+
+	public void updateProduct(MerchantStore store, PersistableProduct product, Language language) {
+
+<span class="nc" id="L117">		Validate.notNull(product, &quot;Product must not be null&quot;);</span>
+<span class="nc" id="L118">		Validate.notNull(product.getId(), &quot;Product id must not be null&quot;);</span>
+
+		// get original product
+<span class="nc" id="L121">		Product productModel = productService.getById(product.getId());</span>
+
+
+<span class="nc" id="L124">	}</span>
+
+	@Override
+	public ReadableProduct getProduct(MerchantStore store, Long id, Language language) {
+
+<span class="nc" id="L129">		Product product = productService.findOne(id, store);</span>
+<span class="nc bnc" id="L130" title="All 2 branches missed.">		if (product == null) {</span>
+<span class="nc" id="L131">			throw new ResourceNotFoundException(&quot;Product [&quot; + id + &quot;] not found&quot;);</span>
+		}
+
+<span class="nc bnc" id="L134" title="All 2 branches missed.">		if (product.getMerchantStore().getId() != store.getId()) {</span>
+<span class="nc" id="L135">			throw new ResourceNotFoundException(&quot;Product [&quot; + id + &quot;] not found for store [&quot; + store.getId() + &quot;]&quot;);</span>
+		}
+
+<span class="nc" id="L138">		ReadableProduct readableProduct = new ReadableProduct();</span>
+<span class="nc" id="L139">		ReadableProductPopulator populator = new ReadableProductPopulator();</span>
+<span class="nc" id="L140">		populator.setPricingService(pricingService);</span>
+<span class="nc" id="L141">		populator.setimageUtils(imageUtils);</span>
+		try {
+<span class="nc" id="L143">			readableProduct = populator.populate(product, readableProduct, store, language);</span>
+<span class="nc" id="L144">		} catch (ConversionException e) {</span>
+<span class="nc" id="L145">			throw new ConversionRuntimeException(&quot;Error converting product [&quot; + id + &quot;]&quot;,e);</span>
+<span class="nc" id="L146">		}</span>
+
+<span class="nc" id="L148">		return readableProduct;</span>
+	}
+
+
+	@Override
+	public ReadableProduct updateProductPrice(ReadableProduct product, ProductPriceEntity price, Language language)
+			throws Exception {
+
+<span class="nc" id="L156">		Product persistable = productService.getById(product.getId());</span>
+
+<span class="nc bnc" id="L158" title="All 2 branches missed.">		if (persistable == null) {</span>
+<span class="nc" id="L159">			throw new Exception(&quot;product is null for id &quot; + product.getId());</span>
+		}
+
+<span class="nc" id="L162">		java.util.Set&lt;ProductAvailability&gt; availabilities = persistable.getAvailabilities();</span>
+<span class="nc bnc" id="L163" title="All 2 branches missed.">		for (ProductAvailability availability : availabilities) {</span>
+<span class="nc" id="L164">			ProductPrice productPrice = availability.defaultPrice();</span>
+<span class="nc" id="L165">			productPrice.setProductPriceAmount(price.getPrice());</span>
+<span class="nc bnc" id="L166" title="All 2 branches missed.">			if (price.isDiscounted()) {</span>
+<span class="nc" id="L167">				productPrice.setProductPriceSpecialAmount(price.getDiscountedPrice());</span>
+<span class="nc bnc" id="L168" title="All 2 branches missed.">				if (!StringUtils.isBlank(price.getDiscountStartDate())) {</span>
+<span class="nc" id="L169">					Date startDate = DateUtil.getDate(price.getDiscountStartDate());</span>
+<span class="nc" id="L170">					productPrice.setProductPriceSpecialStartDate(startDate);</span>
+				}
+<span class="nc bnc" id="L172" title="All 2 branches missed.">				if (!StringUtils.isBlank(price.getDiscountEndDate())) {</span>
+<span class="nc" id="L173">					Date endDate = DateUtil.getDate(price.getDiscountEndDate());</span>
+<span class="nc" id="L174">					productPrice.setProductPriceSpecialEndDate(endDate);</span>
+				}
+			}
+
+<span class="nc" id="L178">		}</span>
+
+<span class="nc" id="L180">		productService.update(persistable);</span>
+
+<span class="nc" id="L182">		ReadableProduct readableProduct = new ReadableProduct();</span>
+
+<span class="nc" id="L184">		ReadableProductPopulator populator = new ReadableProductPopulator();</span>
+
+<span class="nc" id="L186">		populator.setPricingService(pricingService);</span>
+<span class="nc" id="L187">		populator.setimageUtils(imageUtils);</span>
+<span class="nc" id="L188">		populator.populate(persistable, readableProduct, persistable.getMerchantStore(), language);</span>
+
+<span class="nc" id="L190">		return readableProduct;</span>
+	}
+
+	@Override
+	public ReadableProduct updateProductQuantity(ReadableProduct product, int quantity, Language language)
+			throws Exception {
+<span class="nc" id="L196">		Product persistable = productService.getById(product.getId());</span>
+
+<span class="nc bnc" id="L198" title="All 2 branches missed.">		if (persistable == null) {</span>
+<span class="nc" id="L199">			throw new Exception(&quot;product is null for id &quot; + product.getId());</span>
+		}
+
+<span class="nc" id="L202">		java.util.Set&lt;ProductAvailability&gt; availabilities = persistable.getAvailabilities();</span>
+<span class="nc bnc" id="L203" title="All 2 branches missed.">		for (ProductAvailability availability : availabilities) {</span>
+<span class="nc" id="L204">			availability.setProductQuantity(quantity);</span>
+<span class="nc" id="L205">		}</span>
+
+<span class="nc" id="L207">		productService.saveProduct(persistable);</span>
+
+<span class="nc" id="L209">		ReadableProduct readableProduct = new ReadableProduct();</span>
+
+<span class="nc" id="L211">		ReadableProductPopulator populator = new ReadableProductPopulator();</span>
+
+<span class="nc" id="L213">		populator.setPricingService(pricingService);</span>
+<span class="nc" id="L214">		populator.setimageUtils(imageUtils);</span>
+<span class="nc" id="L215">		populator.populate(persistable, readableProduct, persistable.getMerchantStore(), language);</span>
+
+<span class="nc" id="L217">		return readableProduct;</span>
+	}
+
+	@Override
+	public void deleteProduct(Product product) throws Exception {
+<span class="nc" id="L222">		productService.delete(product);</span>
+
+<span class="nc" id="L224">	}</span>
+
+
+	@Override
+	public ReadableProduct addProductToCategory(Category category, Product product, Language language) {
+
+<span class="nc" id="L230">		Validate.notNull(category, &quot;Category cannot be null&quot;);</span>
+<span class="nc" id="L231">		Validate.notNull(product, &quot;Product cannot be null&quot;);</span>
+
+		// not alloweed if category already attached
+<span class="nc" id="L234">		List&lt;Category&gt; assigned = product.getCategories().stream()</span>
+<span class="nc bnc" id="L235" title="All 2 branches missed.">				.filter(cat -&gt; cat.getId().longValue() == category.getId().longValue()).collect(Collectors.toList());</span>
+
+<span class="nc bnc" id="L237" title="All 2 branches missed.">		if (assigned.size() &gt; 0) {</span>
+<span class="nc" id="L238">			throw new OperationNotAllowedException(&quot;Category with id [&quot; + category.getId()</span>
+<span class="nc" id="L239">					+ &quot;] already attached to product [&quot; + product.getId() + &quot;]&quot;);</span>
+		}
+
+<span class="nc" id="L242">		product.getCategories().add(category);</span>
+<span class="nc" id="L243">		ReadableProduct readableProduct = new ReadableProduct();</span>
+		
+		try {
+
+<span class="nc" id="L247">			productService.saveProduct(product);</span>
+	
+<span class="nc" id="L249">			ReadableProductPopulator populator = new ReadableProductPopulator();</span>
+	
+<span class="nc" id="L251">			populator.setPricingService(pricingService);</span>
+<span class="nc" id="L252">			populator.setimageUtils(imageUtils);</span>
+<span class="nc" id="L253">			populator.populate(product, readableProduct, product.getMerchantStore(), language);</span>
+		
+<span class="nc" id="L255">		} catch(Exception e) {</span>
+<span class="nc" id="L256">			throw new RuntimeException(&quot;Exception when adding product [&quot; + product.getId() + &quot;] to category [&quot; + category.getId() + &quot;]&quot;,e);</span>
+<span class="nc" id="L257">		}</span>
+
+<span class="nc" id="L259">		return readableProduct;</span>
+
+	}
+
+	@Override
+	public ReadableProduct removeProductFromCategory(Category category, Product product, Language language)
+			throws Exception {
+
+<span class="nc" id="L267">		Validate.notNull(category, &quot;Category cannot be null&quot;);</span>
+<span class="nc" id="L268">		Validate.notNull(product, &quot;Product cannot be null&quot;);</span>
+
+<span class="nc" id="L270">		product.getCategories().remove(category);</span>
+<span class="nc" id="L271">		productService.saveProduct(product);</span>
+
+<span class="nc" id="L273">		ReadableProduct readableProduct = new ReadableProduct();</span>
+
+<span class="nc" id="L275">		ReadableProductPopulator populator = new ReadableProductPopulator();</span>
+
+<span class="nc" id="L277">		populator.setPricingService(pricingService);</span>
+<span class="nc" id="L278">		populator.setimageUtils(imageUtils);</span>
+<span class="nc" id="L279">		populator.populate(product, readableProduct, product.getMerchantStore(), language);</span>
+
+<span class="nc" id="L281">		return readableProduct;</span>
+	}
+
+	@Override
+	public ReadableProduct getProductByCode(MerchantStore store, String uniqueCode, Language language)
+			throws Exception {
+
+<span class="nc" id="L288">		Product product = productService.getBySku(uniqueCode, store, language);</span>
+
+<span class="nc" id="L290">		ReadableProduct readableProduct = new ReadableProduct();</span>
+
+<span class="nc" id="L292">		ReadableProductPopulator populator = new ReadableProductPopulator();</span>
+
+<span class="nc" id="L294">		populator.setPricingService(pricingService);</span>
+<span class="nc" id="L295">		populator.setimageUtils(imageUtils);</span>
+<span class="nc" id="L296">		populator.populate(product, readableProduct, product.getMerchantStore(), language);</span>
+
+<span class="nc" id="L298">		return readableProduct;</span>
+	}
+
+	@Override
+	public void saveOrUpdateReview(PersistableProductReview review, MerchantStore store, Language language)
+			throws Exception {
+<span class="nc" id="L304">		PersistableProductReviewPopulator populator = new PersistableProductReviewPopulator();</span>
+<span class="nc" id="L305">		populator.setLanguageService(languageService);</span>
+<span class="nc" id="L306">		populator.setCustomerService(customerService);</span>
+<span class="nc" id="L307">		populator.setProductService(productService);</span>
+
+<span class="nc" id="L309">		com.salesmanager.core.model.catalog.product.review.ProductReview rev = new com.salesmanager.core.model.catalog.product.review.ProductReview();</span>
+<span class="nc" id="L310">		populator.populate(review, rev, store, language);</span>
+
+<span class="nc bnc" id="L312" title="All 2 branches missed.">		if (review.getId() == null) {</span>
+<span class="nc" id="L313">			productReviewService.create(rev);</span>
+		} else {
+<span class="nc" id="L315">			productReviewService.update(rev);</span>
+		}
+
+<span class="nc" id="L318">		review.setId(rev.getId());</span>
+
+<span class="nc" id="L320">	}</span>
+
+	@Override
+	public void deleteReview(ProductReview review, MerchantStore store, Language language) throws Exception {
+<span class="nc" id="L324">		productReviewService.delete(review);</span>
+
+<span class="nc" id="L326">	}</span>
+
+	@Override
+	public List&lt;ReadableProductReview&gt; getProductReviews(Product product, MerchantStore store, Language language)
+			throws Exception {
+
+<span class="nc" id="L332">		List&lt;ProductReview&gt; reviews = productReviewService.getByProduct(product);</span>
+
+<span class="nc" id="L334">		ReadableProductReviewPopulator populator = new ReadableProductReviewPopulator();</span>
+
+<span class="nc" id="L336">		List&lt;ReadableProductReview&gt; productReviews = new ArrayList&lt;ReadableProductReview&gt;();</span>
+
+<span class="nc bnc" id="L338" title="All 2 branches missed.">		for (ProductReview review : reviews) {</span>
+<span class="nc" id="L339">			ReadableProductReview readableReview = new ReadableProductReview();</span>
+<span class="nc" id="L340">			populator.populate(review, readableReview, store, language);</span>
+<span class="nc" id="L341">			productReviews.add(readableReview);</span>
+<span class="nc" id="L342">		}</span>
+
+<span class="nc" id="L344">		return productReviews;</span>
+	}
+
+
+	@Override
+	public void update(Long productId, LightPersistableProduct product, MerchantStore merchant, Language language) {
+		// Get product
+<span class="nc" id="L351">		Product modified = productService.findOne(productId, merchant);</span>
+
+		// Update product with minimal set
+<span class="nc" id="L354">		modified.setAvailable(product.isAvailable());</span>
+
+<span class="nc bnc" id="L356" title="All 2 branches missed.">		for (ProductAvailability availability : modified.getAvailabilities()) {</span>
+<span class="nc" id="L357">			availability.setProductQuantity(product.getQuantity());</span>
+<span class="nc bnc" id="L358" title="All 2 branches missed.">			if (!StringUtils.isBlank(product.getPrice())) {</span>
+				// set default price
+<span class="nc bnc" id="L360" title="All 2 branches missed.">				for (ProductPrice price : availability.getPrices()) {</span>
+<span class="nc bnc" id="L361" title="All 2 branches missed.">					if (price.isDefaultPrice()) {</span>
+						try {
+<span class="nc" id="L363">							price.setProductPriceAmount(pricingService.getAmount(product.getPrice()));</span>
+<span class="nc" id="L364">						} catch (ServiceException e) {</span>
+<span class="nc" id="L365">							throw new ServiceRuntimeException(&quot;Invalid product price format&quot;);</span>
+<span class="nc" id="L366">						}</span>
+					}
+<span class="nc" id="L368">				}</span>
+			}
+<span class="nc" id="L370">		}</span>
+
+		try {
+<span class="nc" id="L373">			productService.save(modified);</span>
+<span class="nc" id="L374">		} catch (ServiceException e) {</span>
+<span class="nc" id="L375">			throw new ServiceRuntimeException(&quot;Cannot update product &quot;, e);</span>
+<span class="nc" id="L376">		}</span>
+
+<span class="nc" id="L378">	}</span>
+
+	@Override
+	public boolean exists(String sku, MerchantStore store) {
+
+<span class="nc" id="L383">		return productService.exists(sku, store);</span>
+	}
+
+
+	@Override
+	public void deleteProduct(Long id, MerchantStore store) {
+
+<span class="nc" id="L390">		Validate.notNull(id, &quot;Product id cannot be null&quot;);</span>
+<span class="nc" id="L391">		Validate.notNull(store, &quot;store cannot be null&quot;);</span>
+
+<span class="nc" id="L393">		Product p = productService.getById(id);</span>
+
+<span class="nc bnc" id="L395" title="All 2 branches missed.">		if (p == null) {</span>
+<span class="nc" id="L396">			throw new ResourceNotFoundException(&quot;Product with id [&quot; + id + &quot; not found&quot;);</span>
+		}
+
+<span class="nc bnc" id="L399" title="All 2 branches missed.">		if (p.getMerchantStore().getId().intValue() != store.getId().intValue()) {</span>
+<span class="nc" id="L400">			throw new ResourceNotFoundException(</span>
+<span class="nc" id="L401">					&quot;Product with id [&quot; + id + &quot; not found for store [&quot; + store.getCode() + &quot;]&quot;);</span>
+		}
+
+		try {
+<span class="nc" id="L405">			productService.delete(p);</span>
+<span class="nc" id="L406">		} catch (ServiceException e) {</span>
+<span class="nc" id="L407">			throw new ServiceRuntimeException(&quot;Error while deleting ptoduct with id [&quot; + id + &quot;]&quot;, e);</span>
+<span class="nc" id="L408">		}</span>
+
+<span class="nc" id="L410">	}</span>
+
+
+
+	@Override
+	public Product getProduct(Long id, MerchantStore store) {
+<span class="nc" id="L416">		return productService.findOne(id, store);</span>
+	}
+
+	@Override
+	public void update(String sku, LightPersistableProduct product, MerchantStore merchant, Language language) {
+		// Get product
+<span class="nc" id="L422">		Product modified = null;</span>
+		try {
+<span class="nc" id="L424">			modified = productService.getBySku(sku, merchant, language);</span>
+<span class="nc" id="L425">		} catch (ServiceException e) {</span>
+<span class="nc" id="L426">			throw new ServiceRuntimeException(e);</span>
+<span class="nc" id="L427">		}</span>
+		
+<span class="nc" id="L429">		ProductVariant instance = modified.getVariants().stream()</span>
+<span class="nc" id="L430">				  .filter(inst -&gt; sku.equals(inst.getSku()))</span>
+<span class="nc" id="L431">				  .findAny()</span>
+<span class="nc" id="L432">				  .orElse(null);</span>
+		
+<span class="nc bnc" id="L434" title="All 2 branches missed.">		if(instance!=null) {</span>
+<span class="nc" id="L435">			instance.setAvailable(product.isAvailable());</span>
+			
+<span class="nc bnc" id="L437" title="All 2 branches missed.">			for (ProductAvailability availability : instance.getAvailabilities()) {</span>
+<span class="nc" id="L438">				this.setAvailability(availability, product);</span>
+<span class="nc" id="L439">			}</span>
+		} else {
+			// Update product with minimal set
+<span class="nc" id="L442">			modified.setAvailable(product.isAvailable());</span>
+			
+<span class="nc bnc" id="L444" title="All 2 branches missed.">			for (ProductAvailability availability : modified.getAvailabilities()) {</span>
+<span class="nc" id="L445">				this.setAvailability(availability, product);</span>
+<span class="nc" id="L446">			}</span>
+		}
+
+		try {
+<span class="nc" id="L450">			productService.saveProduct(modified);</span>
+<span class="nc" id="L451">		} catch (ServiceException e) {</span>
+<span class="nc" id="L452">			throw new ServiceRuntimeException(&quot;Cannot update product &quot;, e);</span>
+<span class="nc" id="L453">		}</span>
+		
+<span class="nc" id="L455">	}</span>
+	
+	/**
+	 * edit availability
+	 */
+	private void setAvailability(ProductAvailability availability, LightPersistableProduct product) {
+<span class="nc" id="L461">		availability.setProductQuantity(product.getQuantity());</span>
+<span class="nc bnc" id="L462" title="All 2 branches missed.">		if (!StringUtils.isBlank(product.getPrice())) {</span>
+			// set default price
+<span class="nc bnc" id="L464" title="All 2 branches missed.">			for (ProductPrice price : availability.getPrices()) {</span>
+<span class="nc bnc" id="L465" title="All 2 branches missed.">				if (price.isDefaultPrice()) {</span>
+					try {
+<span class="nc" id="L467">						price.setProductPriceAmount(pricingService.getAmount(product.getPrice()));</span>
+<span class="nc" id="L468">					} catch (ServiceException e) {</span>
+<span class="nc" id="L469">						throw new ServiceRuntimeException(&quot;Invalid product price format&quot;);</span>
+<span class="nc" id="L470">					}</span>
+				}
+<span class="nc" id="L472">			}</span>
+		}
+<span class="nc" id="L474">	}</span>
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

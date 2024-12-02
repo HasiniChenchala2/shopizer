@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ManufacturerFacadeImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.facade.manufacturer</a> &gt; <span class="el_source">ManufacturerFacadeImpl.java</span></div><h1>ManufacturerFacadeImpl.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.facade.manufacturer;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
+import javax.inject.Inject;
+import org.jsoup.helper.Validate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.stereotype.Service;
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.catalog.category.CategoryService;
+import com.salesmanager.core.business.services.catalog.product.manufacturer.ManufacturerService;
+import com.salesmanager.core.business.services.reference.language.LanguageService;
+import com.salesmanager.core.model.catalog.category.Category;
+import com.salesmanager.core.model.catalog.product.manufacturer.Manufacturer;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.mapper.Mapper;
+import com.salesmanager.shop.model.catalog.manufacturer.PersistableManufacturer;
+import com.salesmanager.shop.model.catalog.manufacturer.ReadableManufacturer;
+import com.salesmanager.shop.model.catalog.manufacturer.ReadableManufacturerList;
+import com.salesmanager.shop.model.entity.ListCriteria;
+import com.salesmanager.shop.populator.manufacturer.PersistableManufacturerPopulator;
+import com.salesmanager.shop.populator.manufacturer.ReadableManufacturerPopulator;
+import com.salesmanager.shop.store.api.exception.ResourceNotFoundException;
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+import com.salesmanager.shop.store.api.exception.UnauthorizedException;
+import com.salesmanager.shop.store.controller.manufacturer.facade.ManufacturerFacade;
+
+@Service(&quot;manufacturerFacade&quot;)
+<span class="fc" id="L33">public class ManufacturerFacadeImpl implements ManufacturerFacade {</span>
+
+  @Inject
+  private Mapper&lt;Manufacturer, ReadableManufacturer&gt; readableManufacturerConverter;
+
+
+  @Autowired
+  private ManufacturerService manufacturerService;
+  
+  @Autowired
+  private CategoryService categoryService;
+  
+  @Inject
+  private LanguageService languageService;
+
+  @Override
+  public List&lt;ReadableManufacturer&gt; getByProductInCategory(MerchantStore store, Language language,
+      Long categoryId) {
+<span class="fc" id="L51">    Validate.notNull(store,&quot;MerchantStore cannot be null&quot;);</span>
+<span class="fc" id="L52">    Validate.notNull(language, &quot;Language cannot be null&quot;);</span>
+<span class="fc" id="L53">    Validate.notNull(categoryId,&quot;Category id cannot be null&quot;);</span>
+    
+<span class="fc" id="L55">    Category category = categoryService.getById(categoryId, store.getId());</span>
+    
+<span class="pc bpc" id="L57" title="1 of 2 branches missed.">    if(category == null) {</span>
+<span class="nc" id="L58">      throw new ResourceNotFoundException(&quot;Category with id [&quot; + categoryId + &quot;] not found&quot;);</span>
+    }
+    
+<span class="pc bpc" id="L61" title="1 of 2 branches missed.">    if(category.getMerchantStore().getId().longValue() != store.getId().longValue()) {</span>
+<span class="nc" id="L62">      throw new UnauthorizedException(&quot;Merchant [&quot; + store.getCode() + &quot;] not authorized&quot;);</span>
+    }
+    
+    try {
+<span class="fc" id="L66">      List&lt;Manufacturer&gt; manufacturers = manufacturerService.listByProductsInCategory(store, category, language);</span>
+      
+<span class="fc" id="L68">      List&lt;ReadableManufacturer&gt; manufacturersList = manufacturers.stream()</span>
+<span class="fc" id="L69">    	.sorted(new Comparator&lt;Manufacturer&gt;() {</span>
+    	            @Override
+    	            public int compare(final Manufacturer object1, final Manufacturer object2) {
+<span class="fc" id="L72">    	                return object1.getCode().compareTo(object2.getCode());</span>
+    	            }
+    	 })
+<span class="fc" id="L75">        .map(manuf -&gt; readableManufacturerConverter.convert(manuf, store, language))</span>
+<span class="fc" id="L76">        .collect(Collectors.toList());</span>
+      
+<span class="fc" id="L78">      return manufacturersList;</span>
+<span class="nc" id="L79">    } catch (ServiceException e) {</span>
+<span class="nc" id="L80">      throw new ServiceRuntimeException(e);</span>
+    }
+
+  }
+
+  @Override
+  public void saveOrUpdateManufacturer(PersistableManufacturer manufacturer, MerchantStore store,
+      Language language) throws Exception {
+
+<span class="fc" id="L89">    PersistableManufacturerPopulator populator = new PersistableManufacturerPopulator();</span>
+<span class="fc" id="L90">    populator.setLanguageService(languageService);</span>
+
+
+<span class="fc" id="L93">    Manufacturer manuf = new Manufacturer();</span>
+  
+<span class="pc bpc" id="L95" title="2 of 4 branches missed.">    if(manufacturer.getId() != null &amp;&amp; manufacturer.getId().longValue() &gt; 0) {</span>
+<span class="nc" id="L96">    	manuf = manufacturerService.getById(manufacturer.getId());</span>
+<span class="nc bnc" id="L97" title="All 2 branches missed.">    	if(manuf == null) {</span>
+<span class="nc" id="L98">    		throw new ResourceNotFoundException(&quot;Manufacturer with id [&quot; + manufacturer.getId() + &quot;] not found&quot;);</span>
+    	}
+    	
+<span class="nc bnc" id="L101" title="All 2 branches missed.">    	if(manuf.getMerchantStore().getId().intValue() != store.getId().intValue()) {</span>
+<span class="nc" id="L102">    		throw new ResourceNotFoundException(&quot;Manufacturer with id [&quot; + manufacturer.getId() + &quot;] not found for store [&quot; + store.getId() + &quot;]&quot;);</span>
+    	}
+    }
+
+<span class="fc" id="L106">    populator.populate(manufacturer, manuf, store, language);</span>
+
+<span class="fc" id="L108">    manufacturerService.saveOrUpdate(manuf);</span>
+
+<span class="fc" id="L110">    manufacturer.setId(manuf.getId());</span>
+
+<span class="fc" id="L112">  }</span>
+
+  @Override
+  public void deleteManufacturer(Manufacturer manufacturer, MerchantStore store, Language language)
+      throws Exception {
+<span class="nc" id="L117">    manufacturerService.delete(manufacturer);</span>
+
+<span class="nc" id="L119">  }</span>
+
+  @Override
+  public ReadableManufacturer getManufacturer(Long id, MerchantStore store, Language language)
+      throws Exception {
+<span class="nc" id="L124">    Manufacturer manufacturer = manufacturerService.getById(id);</span>
+    
+    
+
+<span class="nc bnc" id="L128" title="All 2 branches missed.">    if (manufacturer == null) {</span>
+<span class="nc" id="L129">      throw new ResourceNotFoundException(&quot;Manufacturer [&quot; + id + &quot;] not found&quot;);</span>
+    }
+    
+<span class="nc bnc" id="L132" title="All 2 branches missed.">    if(manufacturer.getMerchantStore().getId() != store.getId()) {</span>
+<span class="nc" id="L133">      throw new ResourceNotFoundException(&quot;Manufacturer [&quot; + id + &quot;] not found for store [&quot; + store.getId() + &quot;]&quot;);</span>
+    }
+
+<span class="nc" id="L136">    ReadableManufacturer readableManufacturer = new ReadableManufacturer();</span>
+
+<span class="nc" id="L138">    ReadableManufacturerPopulator populator = new ReadableManufacturerPopulator();</span>
+<span class="nc" id="L139">    readableManufacturer = populator.populate(manufacturer, readableManufacturer, store, language);</span>
+
+
+<span class="nc" id="L142">    return readableManufacturer;</span>
+  }
+
+  @Override
+  public ReadableManufacturerList getAllManufacturers(MerchantStore store, Language language, ListCriteria criteria, int page, int count) {
+
+<span class="nc" id="L148">    ReadableManufacturerList readableList = new ReadableManufacturerList();</span>
+    try {
+      /**
+       * Is this a pageable request
+       */
+
+<span class="nc" id="L154">      List&lt;Manufacturer&gt; manufacturers = null;</span>
+<span class="nc bnc" id="L155" title="All 4 branches missed.">      if(page == 0 &amp;&amp; count == 0) {</span>
+    	//need total count
+<span class="nc" id="L157">        int total = manufacturerService.count(store);</span>
+
+<span class="nc bnc" id="L159" title="All 2 branches missed.">        if(language != null) {</span>
+<span class="nc" id="L160">          manufacturers = manufacturerService.listByStore(store, language);</span>
+        } else {
+<span class="nc" id="L162">          manufacturers = manufacturerService.listByStore(store);</span>
+        }
+<span class="nc" id="L164">        readableList.setRecordsTotal(total);</span>
+<span class="nc" id="L165">        readableList.setNumber(manufacturers.size());</span>
+<span class="nc" id="L166">      } else {</span>
+
+<span class="nc" id="L168">        Page&lt;Manufacturer&gt; m = null;</span>
+<span class="nc bnc" id="L169" title="All 2 branches missed.">        if(language != null) {</span>
+<span class="nc" id="L170">          m = manufacturerService.listByStore(store, language, criteria.getName(), page, count);</span>
+        } else {
+<span class="nc" id="L172">          m = manufacturerService.listByStore(store, criteria.getName(), page, count);</span>
+        }
+<span class="nc" id="L174">        manufacturers = m.getContent();</span>
+<span class="nc" id="L175">        readableList.setTotalPages(m.getTotalPages());</span>
+<span class="nc" id="L176">        readableList.setRecordsTotal(m.getTotalElements());</span>
+<span class="nc" id="L177">        readableList.setNumber(m.getNumber());</span>
+      }
+
+      
+<span class="nc" id="L181">      ReadableManufacturerPopulator populator = new ReadableManufacturerPopulator();</span>
+<span class="nc" id="L182">      List&lt;ReadableManufacturer&gt; returnList = new ArrayList&lt;ReadableManufacturer&gt;();</span>
+  
+<span class="nc bnc" id="L184" title="All 2 branches missed.">      for (Manufacturer m : manufacturers) {</span>
+<span class="nc" id="L185">        ReadableManufacturer readableManufacturer = new ReadableManufacturer();</span>
+<span class="nc" id="L186">        populator.populate(m, readableManufacturer, store, language);</span>
+<span class="nc" id="L187">        returnList.add(readableManufacturer);</span>
+<span class="nc" id="L188">      }</span>
+
+<span class="nc" id="L190">      readableList.setManufacturers(returnList);</span>
+<span class="nc" id="L191">      return readableList;</span>
+      
+<span class="nc" id="L193">    } catch (Exception e) {</span>
+<span class="nc" id="L194">      throw new ServiceRuntimeException(&quot;Error while get manufacturers&quot;,e);</span>
+    }
+  }
+
+
+  @Override
+  public boolean manufacturerExist(MerchantStore store, String manufacturerCode) {
+<span class="nc" id="L201">    Validate.notNull(store,&quot;Store must not be null&quot;);</span>
+<span class="nc" id="L202">    Validate.notNull(manufacturerCode,&quot;Manufacturer code must not be null&quot;);</span>
+<span class="nc" id="L203">    boolean exists = false;</span>
+<span class="nc" id="L204">    Manufacturer manufacturer = manufacturerService.getByCode(store, manufacturerCode);</span>
+<span class="nc bnc" id="L205" title="All 2 branches missed.">    if(manufacturer!=null) {</span>
+<span class="nc" id="L206">      exists = true;</span>
+    }
+<span class="nc" id="L208">    return exists;</span>
+  }
+
+@Override
+public ReadableManufacturerList listByStore(MerchantStore store, Language language, ListCriteria criteria, int page,
+		int count) {
+	
+<span class="nc" id="L215">	ReadableManufacturerList readableList = new ReadableManufacturerList();</span>
+
+    try {
+        /**
+         * Is this a pageable request
+         */
+
+<span class="nc" id="L222">        List&lt;Manufacturer&gt; manufacturers = null;</span>
+
+<span class="nc" id="L224">        Page&lt;Manufacturer&gt; m = null;</span>
+<span class="nc bnc" id="L225" title="All 2 branches missed.">        if(language != null) {</span>
+<span class="nc" id="L226">            m = manufacturerService.listByStore(store, language, criteria.getName(), page, count);</span>
+        } else {
+<span class="nc" id="L228">            m = manufacturerService.listByStore(store, criteria.getName(), page, count);</span>
+        }
+        
+<span class="nc" id="L231">        manufacturers = m.getContent();</span>
+<span class="nc" id="L232">        readableList.setTotalPages(m.getTotalPages());</span>
+<span class="nc" id="L233">        readableList.setRecordsTotal(m.getTotalElements());</span>
+<span class="nc" id="L234">        readableList.setNumber(m.getContent().size());</span>
+
+
+        
+<span class="nc" id="L238">        ReadableManufacturerPopulator populator = new ReadableManufacturerPopulator();</span>
+<span class="nc" id="L239">        List&lt;ReadableManufacturer&gt; returnList = new ArrayList&lt;ReadableManufacturer&gt;();</span>
+    
+<span class="nc bnc" id="L241" title="All 2 branches missed.">        for (Manufacturer mf : manufacturers) {</span>
+<span class="nc" id="L242">          ReadableManufacturer readableManufacturer = new ReadableManufacturer();</span>
+<span class="nc" id="L243">          populator.populate(mf, readableManufacturer, store, language);</span>
+<span class="nc" id="L244">          returnList.add(readableManufacturer);</span>
+<span class="nc" id="L245">        }</span>
+
+<span class="nc" id="L247">        readableList.setManufacturers(returnList);</span>
+<span class="nc" id="L248">        return readableList;</span>
+        
+<span class="nc" id="L250">      } catch (Exception e) {</span>
+<span class="nc" id="L251">        throw new ServiceRuntimeException(&quot;Error while get manufacturers&quot;,e);</span>
+      }
+	
+}
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

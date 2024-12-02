@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DocumentationConfiguration.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.application.config</a> &gt; <span class="el_source">DocumentationConfiguration.java</span></div><h1>DocumentationConfiguration.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.application.config;
+
+import static io.swagger.models.auth.In.HEADER;
+import static java.util.Collections.singletonList;
+import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.bind.annotation.RequestMethod;
+
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
+
+import springfox.documentation.RequestHandler;
+import springfox.documentation.builders.RequestHandlerSelectors;
+import springfox.documentation.builders.ResponseMessageBuilder;
+import springfox.documentation.schema.ModelRef;
+import springfox.documentation.service.ApiInfo;
+import springfox.documentation.service.ApiKey;
+import springfox.documentation.service.AuthorizationScope;
+import springfox.documentation.service.Contact;
+import springfox.documentation.service.ResponseMessage;
+import springfox.documentation.service.SecurityReference;
+import springfox.documentation.service.SecurityScheme;
+import springfox.documentation.service.VendorExtension;
+import springfox.documentation.spi.DocumentationType;
+import springfox.documentation.spi.service.contexts.SecurityContext;
+import springfox.documentation.spring.web.plugins.Docket;
+import springfox.documentation.swagger2.annotations.EnableSwagger2;
+
+@Configuration
+@EnableSwagger2
+<span class="fc" id="L41">public class DocumentationConfiguration {</span>
+
+<span class="fc" id="L43">	public static final Contact DEFAULT_CONTACT = new Contact(&quot;Shopizer&quot;, &quot;https://www.shopizer.com&quot;, &quot;&quot;);</span>
+	
+	private static final String HOST = &quot;localhost:8080&quot;;
+
+	/**
+	 * http://localhost:8080/swagger-ui.html#/ http://localhost:8080/v2/api-docs
+	 */
+
+	@Bean
+	public Docket api() {
+
+<span class="fc" id="L54">		final List&lt;ResponseMessage&gt; getMessages = new ArrayList&lt;ResponseMessage&gt;();</span>
+<span class="fc" id="L55">		getMessages.add(new ResponseMessageBuilder().code(500).message(&quot;500 message&quot;)</span>
+<span class="fc" id="L56">				.responseModel(new ModelRef(&quot;Error&quot;)).build());</span>
+<span class="fc" id="L57">		getMessages.add(new ResponseMessageBuilder().code(403).message(&quot;Forbidden&quot;).build());</span>
+<span class="fc" id="L58">		getMessages.add(new ResponseMessageBuilder().code(401).message(&quot;Unauthorized&quot;).build());</span>
+
+<span class="fc" id="L60">		Set&lt;String&gt; produces = new HashSet&lt;&gt;();</span>
+<span class="fc" id="L61">		produces.add(&quot;application/json&quot;);</span>
+
+<span class="fc" id="L63">		Set&lt;String&gt; consumes = new HashSet&lt;&gt;();</span>
+<span class="fc" id="L64">		consumes.add(&quot;application/json&quot;);</span>
+
+<span class="fc" id="L66">		return new Docket(DocumentationType.SWAGGER_2)</span>
+<span class="fc" id="L67">				.host(HOST)</span>
+<span class="fc" id="L68">				.select()</span>
+<span class="fc" id="L69">				.apis(requestHandlers()).build()</span>
+<span class="fc" id="L70">				.securitySchemes(Collections.singletonList(new ApiKey(&quot;JWT&quot;, AUTHORIZATION, HEADER.name())))</span>
+<span class="fc" id="L71">		        .securityContexts(singletonList(</span>
+<span class="fc" id="L72">		            SecurityContext.builder()</span>
+<span class="fc" id="L73">		                .securityReferences(</span>
+<span class="fc" id="L74">		                    singletonList(SecurityReference.builder()</span>
+<span class="fc" id="L75">		                        .reference(&quot;JWT&quot;)</span>
+<span class="fc" id="L76">		                        .scopes(new AuthorizationScope[0])</span>
+<span class="fc" id="L77">		                        .build()</span>
+		                    )
+		                )
+<span class="fc" id="L80">		                .build())</span>
+		        )
+<span class="fc" id="L82">				.produces(produces).consumes(consumes).globalResponseMessage(RequestMethod.GET, getMessages)</span>
+<span class="fc" id="L83">	            .globalResponseMessage(RequestMethod.GET, getMessages);</span>
+
+	}
+	
+	final Predicate&lt;RequestHandler&gt; requestHandlers() {
+		
+<span class="fc" id="L89">		   Set&lt;Predicate&lt;RequestHandler&gt;&gt; matchers = new HashSet&lt;Predicate&lt;RequestHandler&gt;&gt;();</span>
+<span class="fc" id="L90">		   matchers.add(RequestHandlerSelectors.basePackage(&quot;com.salesmanager.shop.store.api.v1&quot;));</span>
+<span class="fc" id="L91">		   matchers.add(RequestHandlerSelectors.basePackage(&quot;com.salesmanager.shop.store.api.v2&quot;));</span>
+		   
+<span class="fc" id="L93">		   return Predicates.or(matchers);</span>
+
+	}
+
+	@SuppressWarnings(&quot;rawtypes&quot;)
+	private ApiInfo apiInfo() {
+<span class="nc" id="L99">		return new ApiInfo(&quot;Shopizer REST API&quot;,</span>
+				&quot;API for Shopizer e-commerce. Contains public end points as well as private end points requiring basic authentication and remote authentication based on jwt bearer token. URL patterns containing /private/** use bearer token; those are authorized customer and administrators administration actions.&quot;,
+				&quot;1.0&quot;, &quot;urn:tos&quot;, DEFAULT_CONTACT, &quot;Apache 2.0&quot;, &quot;http://www.apache.org/licenses/LICENSE-2.0&quot;,
+				new ArrayList&lt;VendorExtension&gt;());
+
+	}
+
+	private static ArrayList&lt;? extends SecurityScheme&gt; securitySchemes() {
+<span class="nc" id="L107">		return (ArrayList&lt;? extends SecurityScheme&gt;) Stream.of(new ApiKey(&quot;Bearer&quot;, &quot;Authorization&quot;, &quot;header&quot;))</span>
+<span class="nc" id="L108">				.collect(Collectors.toList());</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

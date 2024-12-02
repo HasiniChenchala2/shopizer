@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CustomerFacadeImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.facade.customer</a> &gt; <span class="el_source">CustomerFacadeImpl.java</span></div><h1>CustomerFacadeImpl.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.facade.customer;
+
+import java.security.Principal;
+import java.util.Date;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
+import javax.inject.Inject;
+
+import org.jsoup.helper.Validate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.modules.email.Email;
+import com.salesmanager.core.business.services.customer.CustomerService;
+import com.salesmanager.core.business.services.reference.language.LanguageService;
+import com.salesmanager.core.business.services.system.EmailService;
+import com.salesmanager.core.model.common.CredentialsReset;
+import com.salesmanager.core.model.customer.Customer;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.constants.EmailConstants;
+import com.salesmanager.shop.store.api.exception.GenericRuntimeException;
+import com.salesmanager.shop.store.api.exception.ResourceNotFoundException;
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+import com.salesmanager.shop.store.api.exception.UnauthorizedException;
+import com.salesmanager.shop.store.controller.customer.facade.v1.CustomerFacade;
+import com.salesmanager.shop.utils.DateUtil;
+import com.salesmanager.shop.utils.EmailUtils;
+import com.salesmanager.shop.utils.FilePathUtils;
+import com.salesmanager.shop.utils.ImageFilePath;
+import com.salesmanager.shop.utils.LabelUtils;
+
+@Service(&quot;customerFacadev1&quot;)
+<span class="fc" id="L41">public class CustomerFacadeImpl implements CustomerFacade {</span>
+
+	@Autowired
+	private com.salesmanager.shop.store.controller.customer.facade.CustomerFacade customerFacade;
+
+	@Autowired
+	private CustomerService customerService;
+
+	@Autowired
+	private FilePathUtils filePathUtils;
+
+	@Autowired
+	private LanguageService lamguageService;
+
+	@Autowired
+	private EmailUtils emailUtils;
+
+	@Autowired
+	private EmailService emailService;
+
+	@Autowired
+	@Qualifier(&quot;img&quot;)
+	private ImageFilePath imageUtils;
+
+	@Inject
+	private LabelUtils messages;
+
+	@Inject
+	private PasswordEncoder passwordEncoder;
+
+	private static final String resetCustomerLink = &quot;customer/%s/reset/%s&quot;; // front
+																			// url
+
+	private static final String ACCOUNT_PASSWORD_RESET_TPL = &quot;email_template_password_reset_request_customer.ftl&quot;;
+
+	private static final String RESET_PASSWORD_LINK = &quot;RESET_PASSWORD_LINK&quot;;
+
+	private static final String RESET_PASSWORD_TEXT = &quot;RESET_PASSWORD_TEXT&quot;;
+
+	@Override
+	public void authorize(Customer customer, Principal principal) {
+
+<span class="nc" id="L83">		Validate.notNull(customer, &quot;Customer cannot be null&quot;);</span>
+<span class="nc" id="L84">		Validate.notNull(principal, &quot;Principal cannot be null&quot;);</span>
+
+<span class="nc bnc" id="L86" title="All 2 branches missed.">		if (!principal.getName().equals(customer.getNick())) {</span>
+<span class="nc" id="L87">			throw new UnauthorizedException(</span>
+<span class="nc" id="L88">					&quot;User [&quot; + principal.getName() + &quot;] unauthorized for customer [&quot; + customer.getId() + &quot;]&quot;);</span>
+		}
+
+<span class="nc" id="L91">	}</span>
+
+	@Override
+	public void requestPasswordReset(String customerName, String customerContextPath, MerchantStore store,
+			Language language) {
+
+		try {
+			// get customer by user name
+<span class="nc" id="L99">			Customer customer = customerService.getByNick(customerName, store.getId());</span>
+
+<span class="nc bnc" id="L101" title="All 2 branches missed.">			if (customer == null) {</span>
+<span class="nc" id="L102">				throw new ResourceNotFoundException(</span>
+<span class="nc" id="L103">						&quot;Customer [&quot; + customerName + &quot;] not found for store [&quot; + store.getCode() + &quot;]&quot;);</span>
+			}
+
+			// generates unique token
+<span class="nc" id="L107">			String token = UUID.randomUUID().toString();</span>
+
+<span class="nc" id="L109">			Date expiry = DateUtil.addDaysToCurrentDate(2);</span>
+
+<span class="nc" id="L111">			CredentialsReset credsRequest = new CredentialsReset();</span>
+<span class="nc" id="L112">			credsRequest.setCredentialsRequest(token);</span>
+<span class="nc" id="L113">			credsRequest.setCredentialsRequestExpiry(expiry);</span>
+<span class="nc" id="L114">			customer.setCredentialsResetRequest(credsRequest);</span>
+
+<span class="nc" id="L116">			customerService.saveOrUpdate(customer);</span>
+
+			// reset password link
+			// this will build http | https ://domain/contextPath
+<span class="nc" id="L120">			String baseUrl = filePathUtils.buildBaseUrl(customerContextPath, store);</span>
+
+			// need to add link to controller receiving user reset password
+			// request
+<span class="nc" id="L124">			String customerResetLink = new StringBuilder().append(baseUrl)</span>
+<span class="nc" id="L125">					.append(String.format(resetCustomerLink, store.getCode(), token)).toString();</span>
+
+<span class="nc" id="L127">			resetPasswordRequest(customer, customerResetLink, store, lamguageService.toLocale(language, store));</span>
+
+<span class="nc" id="L129">		} catch (Exception e) {</span>
+<span class="nc" id="L130">			throw new ServiceRuntimeException(&quot;Error while executing resetPassword request&quot;, e);</span>
+<span class="nc" id="L131">		}</span>
+
+		/**
+		 * User sends username (unique in the system)
+		 * 
+		 * UserNameEntity will be the following { userName: &quot;test@test.com&quot; }
+		 * 
+		 * The system retrieves user using userName (username is unique) if user
+		 * exists, system sends an email with reset password link
+		 * 
+		 * How to retrieve a User from userName
+		 * 
+		 * userFacade.findByUserName
+		 * 
+		 * How to send an email
+		 * 
+		 * 
+		 * How to generate a token
+		 * 
+		 * Generate random token
+		 * 
+		 * Calculate token expiration date
+		 * 
+		 * Now + 48 hours
+		 * 
+		 * Update User in the database with token
+		 * 
+		 * Send reset token email
+		 */
+
+<span class="nc" id="L161">	}</span>
+
+	@Async
+	private void resetPasswordRequest(Customer customer, String resetLink, MerchantStore store, Locale locale)
+			throws Exception {
+		try {
+
+			// creation of a user, send an email
+<span class="nc" id="L169">			String[] storeEmail = { store.getStoreEmailAddress() };</span>
+
+<span class="nc" id="L171">			Map&lt;String, String&gt; templateTokens = emailUtils.createEmailObjectsMap(imageUtils.getContextPath(), store,</span>
+					messages, locale);
+<span class="nc" id="L173">			templateTokens.put(EmailConstants.LABEL_HI, messages.getMessage(&quot;label.generic.hi&quot;, locale));</span>
+<span class="nc" id="L174">			templateTokens.put(EmailConstants.EMAIL_CUSTOMER_FIRSTNAME, customer.getBilling().getFirstName());</span>
+<span class="nc" id="L175">			templateTokens.put(RESET_PASSWORD_LINK, resetLink);</span>
+<span class="nc" id="L176">			templateTokens.put(RESET_PASSWORD_TEXT,</span>
+<span class="nc" id="L177">					messages.getMessage(&quot;email.reset.password.text&quot;, new String[] { store.getStorename() }, locale));</span>
+<span class="nc" id="L178">			templateTokens.put(EmailConstants.LABEL_LINK_TITLE,</span>
+<span class="nc" id="L179">					messages.getMessage(&quot;email.link.reset.password.title&quot;, locale));</span>
+<span class="nc" id="L180">			templateTokens.put(EmailConstants.LABEL_LINK, messages.getMessage(&quot;email.link&quot;, locale));</span>
+<span class="nc" id="L181">			templateTokens.put(EmailConstants.EMAIL_CONTACT_OWNER,</span>
+<span class="nc" id="L182">					messages.getMessage(&quot;email.contactowner&quot;, storeEmail, locale));</span>
+
+<span class="nc" id="L184">			Email email = new Email();</span>
+<span class="nc" id="L185">			email.setFrom(store.getStorename());</span>
+<span class="nc" id="L186">			email.setFromEmail(store.getStoreEmailAddress());</span>
+<span class="nc" id="L187">			email.setSubject(messages.getMessage(&quot;email.link.reset.password.title&quot;, locale));</span>
+<span class="nc" id="L188">			email.setTo(customer.getEmailAddress());</span>
+<span class="nc" id="L189">			email.setTemplateName(ACCOUNT_PASSWORD_RESET_TPL);</span>
+<span class="nc" id="L190">			email.setTemplateTokens(templateTokens);</span>
+
+<span class="nc" id="L192">			emailService.sendHtmlEmail(store, email);</span>
+
+<span class="nc" id="L194">		} catch (Exception e) {</span>
+<span class="nc" id="L195">			throw new Exception(&quot;Cannot send email to customer&quot;, e);</span>
+<span class="nc" id="L196">		}</span>
+<span class="nc" id="L197">	}</span>
+
+	@Override
+	public void verifyPasswordRequestToken(String token, String store) {
+<span class="nc" id="L201">		Validate.notNull(token, &quot;ResetPassword token cannot be null&quot;);</span>
+<span class="nc" id="L202">		Validate.notNull(store, &quot;Store code cannot be null&quot;);</span>
+
+<span class="nc" id="L204">		verifyCustomerLink(token, store);</span>
+<span class="nc" id="L205">		return;</span>
+	}
+
+	@Override
+	public void resetPassword(String password, String token, String store) {
+<span class="nc" id="L210">		Validate.notNull(token, &quot;ResetPassword token cannot be null&quot;);</span>
+<span class="nc" id="L211">		Validate.notNull(store, &quot;Store code cannot be null&quot;);</span>
+<span class="nc" id="L212">		Validate.notNull(password, &quot;New password cannot be null&quot;);</span>
+
+<span class="nc" id="L214">		Customer customer = verifyCustomerLink(token, store);// reverify</span>
+<span class="nc" id="L215">		customer.setPassword(passwordEncoder.encode(password));</span>
+		try {
+<span class="nc" id="L217">			customerService.save(customer);</span>
+<span class="nc" id="L218">		} catch (ServiceException e) {</span>
+<span class="nc" id="L219">			throw new ServiceRuntimeException(&quot;Error while saving customer&quot;,e);</span>
+<span class="nc" id="L220">		}</span>
+
+<span class="nc" id="L222">	}</span>
+
+	private Customer verifyCustomerLink(String token, String store) {
+
+<span class="nc" id="L226">		Customer customer = null;</span>
+		try {
+<span class="nc" id="L228">			customer = customerService.getByPasswordResetToken(store, token);</span>
+<span class="nc bnc" id="L229" title="All 2 branches missed.">			if (customer == null) {</span>
+<span class="nc" id="L230">				throw new ResourceNotFoundException(</span>
+						&quot;Customer not fount for store [&quot; + store + &quot;] and token [&quot; + token + &quot;]&quot;);
+			}
+
+<span class="nc" id="L234">		} catch (Exception e) {</span>
+<span class="nc" id="L235">			throw new ServiceRuntimeException(&quot;Cannot verify customer token&quot;, e);</span>
+<span class="nc" id="L236">		}</span>
+
+<span class="nc" id="L238">		Date tokenExpiry = customer.getCredentialsResetRequest().getCredentialsRequestExpiry();</span>
+
+<span class="nc bnc" id="L240" title="All 2 branches missed.">		if (tokenExpiry == null) {</span>
+<span class="nc" id="L241">			throw new GenericRuntimeException(&quot;No expiry date configured for token [&quot; + token + &quot;]&quot;);</span>
+		}
+
+<span class="nc bnc" id="L244" title="All 2 branches missed.">		if (!DateUtil.dateBeforeEqualsDate(new Date(), tokenExpiry)) {</span>
+<span class="nc" id="L245">			throw new GenericRuntimeException(&quot;Ttoken [&quot; + token + &quot;] has expired&quot;);</span>
+		}
+
+<span class="nc" id="L248">		return customer;</span>
+
+	}
+
+	@Override
+	public boolean customerExists(String userName, MerchantStore store) {
+<span class="nc" id="L254">	    return Optional.ofNullable(customerService.getByNick(userName, store.getId()))</span>
+<span class="nc" id="L255">	            .isPresent();</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

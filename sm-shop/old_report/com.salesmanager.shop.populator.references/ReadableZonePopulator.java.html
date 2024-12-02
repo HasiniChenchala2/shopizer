@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReadableZonePopulator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.populator.references</a> &gt; <span class="el_source">ReadableZonePopulator.java</span></div><h1>ReadableZonePopulator.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.populator.references;
+
+import org.apache.commons.collections4.CollectionUtils;
+
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.utils.AbstractDataPopulator;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.core.model.reference.zone.Zone;
+import com.salesmanager.core.model.reference.zone.ZoneDescription;
+import com.salesmanager.shop.model.references.ReadableZone;
+
+<span class="nc" id="L13">public class ReadableZonePopulator extends AbstractDataPopulator&lt;Zone, ReadableZone&gt; {</span>
+
+	@Override
+	public ReadableZone populate(Zone source, ReadableZone target, MerchantStore store, Language language)
+			throws ConversionException {
+<span class="nc bnc" id="L18" title="All 2 branches missed.">		if(target==null) {</span>
+<span class="nc" id="L19">			target = new ReadableZone();</span>
+		}
+		
+<span class="nc" id="L22">		target.setId(source.getId());</span>
+<span class="nc" id="L23">		target.setCode(source.getCode());</span>
+<span class="nc" id="L24">		target.setCountryCode(source.getCountry().getIsoCode());</span>
+		
+<span class="nc bnc" id="L26" title="All 2 branches missed.">		if(!CollectionUtils.isEmpty(source.getDescriptions())) {</span>
+<span class="nc bnc" id="L27" title="All 2 branches missed.">			for(ZoneDescription d : source.getDescriptions()) {</span>
+<span class="nc bnc" id="L28" title="All 2 branches missed.">				if(d.getLanguage().getId() == language.getId()) {</span>
+<span class="nc" id="L29">					target.setName(d.getName());</span>
+<span class="nc" id="L30">					continue;</span>
+				}
+<span class="nc" id="L32">			}</span>
+		}
+		
+<span class="nc" id="L35">		return target;</span>
+		
+	}
+
+	@Override
+	protected ReadableZone createTarget() {
+		// TODO Auto-generated method stub
+<span class="nc" id="L42">		return null;</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

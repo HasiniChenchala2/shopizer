@@ -1,0 +1,304 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReadableShoppingCartMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.mapper.cart</a> &gt; <span class="el_source">ReadableShoppingCartMapper.java</span></div><h1>ReadableShoppingCartMapper.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.mapper.cart;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Validate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Component;
+
+import com.salesmanager.core.business.constants.Constants;
+import com.salesmanager.core.business.services.catalog.pricing.PricingService;
+import com.salesmanager.core.business.services.catalog.product.attribute.ProductAttributeService;
+import com.salesmanager.core.business.services.catalog.product.variant.ProductVariantService;
+import com.salesmanager.core.business.services.shoppingcart.ShoppingCartCalculationService;
+import com.salesmanager.core.model.catalog.product.attribute.ProductAttribute;
+import com.salesmanager.core.model.catalog.product.attribute.ProductOption;
+import com.salesmanager.core.model.catalog.product.attribute.ProductOptionDescription;
+import com.salesmanager.core.model.catalog.product.attribute.ProductOptionValue;
+import com.salesmanager.core.model.catalog.product.attribute.ProductOptionValueDescription;
+import com.salesmanager.core.model.catalog.product.variant.ProductVariantImage;
+import com.salesmanager.core.model.catalog.product.variant.ProductVariant;
+import com.salesmanager.core.model.content.FileContentType;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.order.OrderSummary;
+import com.salesmanager.core.model.order.OrderTotalSummary;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.core.model.shoppingcart.ShoppingCart;
+import com.salesmanager.shop.mapper.Mapper;
+import com.salesmanager.shop.mapper.catalog.ReadableMinimalProductMapper;
+import com.salesmanager.shop.mapper.catalog.ReadableProductVariationMapper;
+import com.salesmanager.shop.model.catalog.product.ReadableImage;
+import com.salesmanager.shop.model.order.total.ReadableOrderTotal;
+import com.salesmanager.shop.model.shoppingcart.ReadableShoppingCart;
+import com.salesmanager.shop.model.shoppingcart.ReadableShoppingCartAttribute;
+import com.salesmanager.shop.model.shoppingcart.ReadableShoppingCartAttributeOption;
+import com.salesmanager.shop.model.shoppingcart.ReadableShoppingCartAttributeOptionValue;
+import com.salesmanager.shop.model.shoppingcart.ReadableShoppingCartItem;
+import com.salesmanager.shop.store.api.exception.ConversionRuntimeException;
+import com.salesmanager.shop.utils.ImageFilePath;
+
+@Component
+<span class="fc" id="L57">public class ReadableShoppingCartMapper implements Mapper&lt;ShoppingCart, ReadableShoppingCart&gt; {</span>
+
+<span class="fc" id="L59">	private static final Logger LOG = LoggerFactory.getLogger(ReadableShoppingCartMapper.class);</span>
+
+	@Autowired
+	private ShoppingCartCalculationService shoppingCartCalculationService;
+
+	@Autowired
+	private PricingService pricingService;
+
+	@Autowired
+	private ProductAttributeService productAttributeService;
+	
+	@Autowired
+	private ProductVariantService productVariantService;
+
+	@Autowired
+	private ReadableMinimalProductMapper readableMinimalProductMapper;
+	
+	@Autowired
+	private ReadableProductVariationMapper readableProductVariationMapper;
+
+	@Autowired
+	@Qualifier(&quot;img&quot;)
+	private ImageFilePath imageUtils;
+
+	@Override
+	public ReadableShoppingCart convert(ShoppingCart source, MerchantStore store, Language language) {
+<span class="fc" id="L85">		ReadableShoppingCart destination = new ReadableShoppingCart();</span>
+<span class="fc" id="L86">		return this.merge(source, destination, store, language);</span>
+	}
+	
+	private ReadableImage image(ProductVariantImage instanceImage, MerchantStore store, Language language) {
+<span class="nc" id="L90">		ReadableImage img = new ReadableImage();</span>
+<span class="nc" id="L91">		img.setDefaultImage(instanceImage.isDefaultImage());</span>
+<span class="nc" id="L92">		img.setId(instanceImage.getId());</span>
+<span class="nc" id="L93">		img.setImageName(instanceImage.getProductImage());</span>
+<span class="nc" id="L94">		img.setImageUrl(imageUtils.buildCustomTypeImageUtils(store, img.getImageName(), FileContentType.VARIANT));</span>
+<span class="nc" id="L95">		return img;</span>
+	}
+
+	@Override
+	public ReadableShoppingCart merge(ShoppingCart source, ReadableShoppingCart destination, MerchantStore store,
+			Language language) {
+<span class="fc" id="L101">		Validate.notNull(source, &quot;ShoppingCart cannot be null&quot;);</span>
+<span class="fc" id="L102">		Validate.notNull(destination, &quot;ReadableShoppingCart cannot be null&quot;);</span>
+<span class="fc" id="L103">		Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);</span>
+<span class="fc" id="L104">		Validate.notNull(language, &quot;Language cannot be null&quot;);</span>
+
+<span class="fc" id="L106">		destination.setCode(source.getShoppingCartCode());</span>
+<span class="fc" id="L107">		int cartQuantity = 0;</span>
+
+<span class="fc" id="L109">		destination.setCustomer(source.getCustomerId());</span>
+
+		try {
+
+<span class="pc bpc" id="L113" title="1 of 2 branches missed.">			if (!StringUtils.isBlank(source.getPromoCode())) {</span>
+<span class="nc" id="L114">				Date promoDateAdded = source.getPromoAdded();// promo valid 1 day</span>
+<span class="nc bnc" id="L115" title="All 2 branches missed.">				if (promoDateAdded == null) {</span>
+<span class="nc" id="L116">					promoDateAdded = new Date();</span>
+				}
+<span class="nc" id="L118">				Instant instant = promoDateAdded.toInstant();</span>
+<span class="nc" id="L119">				ZonedDateTime zdt = instant.atZone(ZoneId.systemDefault());</span>
+<span class="nc" id="L120">				LocalDate date = zdt.toLocalDate();</span>
+				// date added &lt; date + 1 day
+<span class="nc" id="L122">				LocalDate tomorrow = LocalDate.now().plusDays(1);</span>
+<span class="nc bnc" id="L123" title="All 2 branches missed.">				if (date.isBefore(tomorrow)) {</span>
+<span class="nc" id="L124">					destination.setPromoCode(source.getPromoCode());</span>
+				}
+			}
+
+<span class="fc" id="L128">			Set&lt;com.salesmanager.core.model.shoppingcart.ShoppingCartItem&gt; items = source.getLineItems();</span>
+
+<span class="pc bpc" id="L130" title="1 of 2 branches missed.">			if (items != null) {</span>
+
+<span class="fc bfc" id="L132" title="All 2 branches covered.">				for (com.salesmanager.core.model.shoppingcart.ShoppingCartItem item : items) {</span>
+<span class="fc" id="L133">					ReadableShoppingCartItem shoppingCartItem = new ReadableShoppingCartItem();</span>
+<span class="fc" id="L134">					readableMinimalProductMapper.merge(item.getProduct(), shoppingCartItem, store, language);</span>
+					
+					//variation
+<span class="pc bpc" id="L137" title="1 of 2 branches missed.">					if(item.getVariant() != null) {</span>
+<span class="nc" id="L138">						Optional&lt;ProductVariant&gt; productVariant = productVariantService.getById(item.getVariant(), store);</span>
+<span class="nc bnc" id="L139" title="All 2 branches missed.">						if(productVariant.isEmpty()) {</span>
+<span class="nc" id="L140">							throw new ConversionRuntimeException(&quot;An error occured during shopping cart [&quot; + source.getShoppingCartCode() + &quot;] conversion, productVariant [&quot; + item.getVariant() + &quot;] not found&quot;);</span>
+						}
+<span class="nc" id="L142">						shoppingCartItem.setVariant(readableProductVariationMapper.convert(productVariant.get().getVariation(), store, language));</span>
+<span class="nc bnc" id="L143" title="All 2 branches missed.">						if(productVariant.get().getVariationValue() != null) {</span>
+<span class="nc" id="L144">							shoppingCartItem.setVariantValue(readableProductVariationMapper.convert(productVariant.get().getVariationValue(), store, language));</span>
+						}
+						
+<span class="nc bnc" id="L147" title="All 2 branches missed.">						if(productVariant.get().getProductVariantGroup() != null) {</span>
+<span class="nc" id="L148">							Set&lt;String&gt; nameSet = new HashSet&lt;&gt;();</span>
+<span class="nc" id="L149">							List&lt;ReadableImage&gt; instanceImages = productVariant.get().getProductVariantGroup().getImages()</span>
+<span class="nc" id="L150">									.stream().map(i -&gt; this.image(i, store, language))</span>
+<span class="nc" id="L151">									.filter(e -&gt; nameSet.add(e.getImageUrl()))</span>
+<span class="nc" id="L152">									.collect(Collectors.toList());</span>
+<span class="nc" id="L153">							shoppingCartItem.setImages(instanceImages);</span>
+						}
+					}
+					
+					
+					
+
+<span class="fc" id="L160">					shoppingCartItem.setPrice(item.getItemPrice());</span>
+<span class="fc" id="L161">					shoppingCartItem.setFinalPrice(pricingService.getDisplayAmount(item.getItemPrice(), store));</span>
+
+<span class="fc" id="L163">					shoppingCartItem.setQuantity(item.getQuantity());</span>
+
+<span class="fc" id="L165">					cartQuantity = cartQuantity + item.getQuantity();</span>
+
+<span class="fc" id="L167">					BigDecimal subTotal = pricingService.calculatePriceQuantity(item.getItemPrice(),</span>
+<span class="fc" id="L168">							item.getQuantity());</span>
+
+					// calculate sub total (price * quantity)
+<span class="fc" id="L171">					shoppingCartItem.setSubTotal(subTotal);</span>
+
+<span class="fc" id="L173">					shoppingCartItem.setDisplaySubTotal(pricingService.getDisplayAmount(subTotal, store));</span>
+
+<span class="fc" id="L175">					Set&lt;com.salesmanager.core.model.shoppingcart.ShoppingCartAttributeItem&gt; attributes = item</span>
+<span class="fc" id="L176">							.getAttributes();</span>
+<span class="pc bpc" id="L177" title="1 of 2 branches missed.">					if (attributes != null) {</span>
+<span class="nc bnc" id="L178" title="All 2 branches missed.">						for (com.salesmanager.core.model.shoppingcart.ShoppingCartAttributeItem attribute : attributes) {</span>
+
+<span class="nc" id="L180">							ProductAttribute productAttribute = productAttributeService</span>
+<span class="nc" id="L181">									.getById(attribute.getProductAttributeId());</span>
+
+<span class="nc bnc" id="L183" title="All 2 branches missed.">							if (productAttribute == null) {</span>
+<span class="nc" id="L184">								LOG.warn(&quot;Product attribute with ID &quot; + attribute.getId()</span>
+<span class="nc" id="L185">										+ &quot; not found, skipping cart attribute &quot; + attribute.getId());</span>
+<span class="nc" id="L186">								continue;</span>
+							}
+
+<span class="nc" id="L189">							ReadableShoppingCartAttribute cartAttribute = new ReadableShoppingCartAttribute();</span>
+
+<span class="nc" id="L191">							cartAttribute.setId(attribute.getId());</span>
+
+<span class="nc" id="L193">							ProductOption option = productAttribute.getProductOption();</span>
+<span class="nc" id="L194">							ProductOptionValue optionValue = productAttribute.getProductOptionValue();</span>
+
+<span class="nc" id="L196">							List&lt;ProductOptionDescription&gt; optionDescriptions = option.getDescriptionsSettoList();</span>
+<span class="nc" id="L197">							List&lt;ProductOptionValueDescription&gt; optionValueDescriptions = optionValue</span>
+<span class="nc" id="L198">									.getDescriptionsSettoList();</span>
+
+<span class="nc" id="L200">							String optName = null;</span>
+<span class="nc" id="L201">							String optValue = null;</span>
+<span class="nc bnc" id="L202" title="All 2 branches missed.">							if (!CollectionUtils.isEmpty(optionDescriptions)</span>
+<span class="nc bnc" id="L203" title="All 2 branches missed.">									&amp;&amp; !CollectionUtils.isEmpty(optionValueDescriptions)) {</span>
+
+<span class="nc" id="L205">								optName = optionDescriptions.get(0).getName();</span>
+<span class="nc" id="L206">								optValue = optionValueDescriptions.get(0).getName();</span>
+
+<span class="nc bnc" id="L208" title="All 2 branches missed.">								for (ProductOptionDescription optionDescription : optionDescriptions) {</span>
+<span class="nc bnc" id="L209" title="All 2 branches missed.">									if (optionDescription.getLanguage() != null &amp;&amp; optionDescription.getLanguage()</span>
+<span class="nc bnc" id="L210" title="All 2 branches missed.">											.getId().intValue() == language.getId().intValue()) {</span>
+<span class="nc" id="L211">										optName = optionDescription.getName();</span>
+<span class="nc" id="L212">										break;</span>
+									}
+<span class="nc" id="L214">								}</span>
+
+<span class="nc bnc" id="L216" title="All 2 branches missed.">								for (ProductOptionValueDescription optionValueDescription : optionValueDescriptions) {</span>
+<span class="nc bnc" id="L217" title="All 2 branches missed.">									if (optionValueDescription.getLanguage() != null &amp;&amp; optionValueDescription</span>
+<span class="nc bnc" id="L218" title="All 2 branches missed.">											.getLanguage().getId().intValue() == language.getId().intValue()) {</span>
+<span class="nc" id="L219">										optValue = optionValueDescription.getName();</span>
+<span class="nc" id="L220">										break;</span>
+									}
+<span class="nc" id="L222">								}</span>
+
+							}
+
+<span class="nc bnc" id="L226" title="All 2 branches missed.">							if (optName != null) {</span>
+<span class="nc" id="L227">								ReadableShoppingCartAttributeOption attributeOption = new ReadableShoppingCartAttributeOption();</span>
+<span class="nc" id="L228">								attributeOption.setCode(option.getCode());</span>
+<span class="nc" id="L229">								attributeOption.setId(option.getId());</span>
+<span class="nc" id="L230">								attributeOption.setName(optName);</span>
+<span class="nc" id="L231">								cartAttribute.setOption(attributeOption);</span>
+							}
+
+<span class="nc bnc" id="L234" title="All 2 branches missed.">							if (optValue != null) {</span>
+<span class="nc" id="L235">								ReadableShoppingCartAttributeOptionValue attributeOptionValue = new ReadableShoppingCartAttributeOptionValue();</span>
+<span class="nc" id="L236">								attributeOptionValue.setCode(optionValue.getCode());</span>
+<span class="nc" id="L237">								attributeOptionValue.setId(optionValue.getId());</span>
+<span class="nc" id="L238">								attributeOptionValue.setName(optValue);</span>
+<span class="nc" id="L239">								cartAttribute.setOptionValue(attributeOptionValue);</span>
+							}
+<span class="nc" id="L241">							shoppingCartItem.getCartItemattributes().add(cartAttribute);</span>
+<span class="nc" id="L242">						}</span>
+
+					}
+<span class="fc" id="L245">					destination.getProducts().add(shoppingCartItem);</span>
+<span class="fc" id="L246">				}</span>
+			}
+
+			// Calculate totals using shoppingCartService
+			// OrderSummary contains ShoppingCart items
+
+<span class="fc" id="L252">			OrderSummary summary = new OrderSummary();</span>
+<span class="fc" id="L253">			List&lt;com.salesmanager.core.model.shoppingcart.ShoppingCartItem&gt; productsList = new ArrayList&lt;com.salesmanager.core.model.shoppingcart.ShoppingCartItem&gt;();</span>
+<span class="fc" id="L254">			productsList.addAll(source.getLineItems());</span>
+<span class="fc" id="L255">			summary.setProducts(productsList);</span>
+
+			// OrdetTotalSummary contains all calculations
+
+<span class="fc" id="L259">			OrderTotalSummary orderSummary = shoppingCartCalculationService.calculate(source, store, language);</span>
+
+<span class="pc bpc" id="L261" title="1 of 2 branches missed.">			if (CollectionUtils.isNotEmpty(orderSummary.getTotals())) {</span>
+
+<span class="fc" id="L263">				if (orderSummary.getTotals().stream()</span>
+<span class="pc bpc" id="L264" title="1 of 2 branches missed.">						.filter(t -&gt; Constants.OT_DISCOUNT_TITLE.equals(t.getOrderTotalCode())).count() == 0) {</span>
+					// no promo coupon applied
+<span class="fc" id="L266">					destination.setPromoCode(null);</span>
+
+				}
+
+<span class="fc" id="L270">				List&lt;ReadableOrderTotal&gt; totals = new ArrayList&lt;ReadableOrderTotal&gt;();</span>
+<span class="fc bfc" id="L271" title="All 2 branches covered.">				for (com.salesmanager.core.model.order.OrderTotal t : orderSummary.getTotals()) {</span>
+<span class="fc" id="L272">					ReadableOrderTotal total = new ReadableOrderTotal();</span>
+<span class="fc" id="L273">					total.setCode(t.getOrderTotalCode());</span>
+<span class="fc" id="L274">					total.setValue(t.getValue());</span>
+<span class="fc" id="L275">					total.setText(t.getText());</span>
+<span class="fc" id="L276">					totals.add(total);</span>
+<span class="fc" id="L277">				}</span>
+<span class="fc" id="L278">				destination.setTotals(totals);</span>
+			}
+
+<span class="fc" id="L281">			destination.setSubtotal(orderSummary.getSubTotal());</span>
+<span class="fc" id="L282">			destination.setDisplaySubTotal(pricingService.getDisplayAmount(orderSummary.getSubTotal(), store));</span>
+
+<span class="fc" id="L284">			destination.setTotal(orderSummary.getTotal());</span>
+<span class="fc" id="L285">			destination.setDisplayTotal(pricingService.getDisplayAmount(orderSummary.getTotal(), store));</span>
+
+<span class="fc" id="L287">			destination.setQuantity(cartQuantity);</span>
+<span class="fc" id="L288">			destination.setId(source.getId());</span>
+
+<span class="pc bpc" id="L290" title="1 of 2 branches missed.">			if (source.getOrderId() != null) {</span>
+<span class="nc" id="L291">				destination.setOrder(source.getOrderId());</span>
+			}
+
+<span class="nc" id="L294">		} catch (Exception e) {</span>
+<span class="nc" id="L295">			throw new ConversionRuntimeException(&quot;An error occured while converting ReadableShoppingCart&quot;, e);</span>
+<span class="fc" id="L296">		}</span>
+
+<span class="fc" id="L298">		return destination;</span>
+	}
+	
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

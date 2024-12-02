@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JWTTokenUtil.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.security</a> &gt; <span class="el_source">JWTTokenUtil.java</span></div><h1>JWTTokenUtil.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.security;
+
+import java.io.Serializable;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Function;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Component;
+
+import com.salesmanager.shop.store.security.user.JWTUser;
+import com.salesmanager.shop.utils.DateUtil;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+
+/**
+ * Used for managing token based authentication for customer and user
+ * @author c.samson
+ *
+ */
+@Component
+<span class="fc" id="L27">public class JWTTokenUtil implements Serializable {</span>
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	
+	
+	    static final int GRACE_PERIOD = 200;
+	
+	
+	
+	 	static final String CLAIM_KEY_USERNAME = &quot;sub&quot;;
+	    static final String CLAIM_KEY_AUDIENCE = &quot;aud&quot;;
+	    static final String CLAIM_KEY_CREATED = &quot;iat&quot;;
+
+	    static final String AUDIENCE_UNKNOWN = &quot;unknown&quot;;
+	    static final String AUDIENCE_API = &quot;api&quot;;
+	    static final String AUDIENCE_WEB = &quot;web&quot;;
+	    static final String AUDIENCE_MOBILE = &quot;mobile&quot;;
+	    static final String AUDIENCE_TABLET = &quot;tablet&quot;;
+
+
+	    @Value(&quot;${jwt.secret}&quot;)
+	    private String secret;
+
+	    @Value(&quot;${jwt.expiration}&quot;)
+	    private Long expiration;
+
+	    public String getUsernameFromToken(String token) {
+<span class="fc" id="L57">	        return getClaimFromToken(token, Claims::getSubject);</span>
+	    }
+
+	    public Date getIssuedAtDateFromToken(String token) {
+<span class="fc" id="L61">	        return getClaimFromToken(token, Claims::getIssuedAt);</span>
+	    }
+
+	    public Date getExpirationDateFromToken(String token) {
+<span class="fc" id="L65">	        return getClaimFromToken(token, Claims::getExpiration);</span>
+	    }
+
+	    public String getAudienceFromToken(String token) {
+<span class="nc" id="L69">	        return getClaimFromToken(token, Claims::getAudience);</span>
+	    }
+
+	    public &lt;T&gt; T getClaimFromToken(String token, Function&lt;Claims, T&gt; claimsResolver) {
+<span class="fc" id="L73">	        final Claims claims = getAllClaimsFromToken(token);</span>
+<span class="fc" id="L74">	        return claimsResolver.apply(claims);</span>
+	    }
+
+	    private Claims getAllClaimsFromToken(String token) {
+<span class="fc" id="L78">	        return Jwts.parser()</span>
+<span class="fc" id="L79">	                .setSigningKey(secret)</span>
+<span class="fc" id="L80">	                .parseClaimsJws(token)</span>
+<span class="fc" id="L81">	                .getBody();</span>
+	    }
+
+	    private Boolean isTokenExpired(String token) {
+<span class="fc" id="L85">	        final Date expiration = getExpirationDateFromToken(token);</span>
+<span class="fc" id="L86">	        return expiration.before(DateUtil.getDate());</span>
+	    }
+	    
+	    private Boolean isTokenExpiredWithGrace(String token) {
+<span class="nc" id="L90">	            Date expiration = getExpirationDateFromToken(token);</span>
+<span class="nc" id="L91">	            expiration = addSeconds(expiration,GRACE_PERIOD);</span>
+<span class="nc" id="L92">	            return expiration.before(DateUtil.getDate());</span>
+	    }
+
+	    private Boolean isCreatedBeforeLastPasswordReset(Date created, Date lastPasswordReset) {
+<span class="pc bpc" id="L96" title="3 of 4 branches missed.">	        return (lastPasswordReset != null &amp;&amp; created.before(lastPasswordReset));</span>
+	    }
+	    
+	    private Boolean isCreatedBeforeLastPasswordResetWithGrace(Date created, Date lastPasswordReset) {
+<span class="nc bnc" id="L100" title="All 4 branches missed.">	        return (lastPasswordReset != null &amp;&amp; created.before(addSeconds(lastPasswordReset,GRACE_PERIOD)));</span>
+	    }
+	    
+	    private Date addSeconds(Date date, Integer seconds) {
+<span class="nc" id="L104">	      Calendar cal = Calendar.getInstance();</span>
+<span class="nc" id="L105">	      cal.setTime(date);</span>
+<span class="nc" id="L106">	      cal.add(Calendar.SECOND, seconds);</span>
+<span class="nc" id="L107">	      return cal.getTime();</span>
+	    }
+
+	    private String generateAudience() {
+<span class="fc" id="L111">	        return AUDIENCE_API;</span>
+	    }
+
+	    private Boolean ignoreTokenExpiration(String token) {
+<span class="nc" id="L115">	        String audience = getAudienceFromToken(token);</span>
+<span class="nc bnc" id="L116" title="All 4 branches missed.">	        return (AUDIENCE_TABLET.equals(audience) || AUDIENCE_MOBILE.equals(audience));</span>
+	    }
+
+	    public String generateToken(UserDetails userDetails) {
+<span class="fc" id="L120">	        Map&lt;String, Object&gt; claims = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L121">	        return doGenerateToken(claims, userDetails.getUsername(), generateAudience());</span>
+	    }
+
+	    private String doGenerateToken(Map&lt;String, Object&gt; claims, String subject, String audience) {
+<span class="fc" id="L125">	        final Date createdDate = DateUtil.getDate();</span>
+<span class="fc" id="L126">	        final Date expirationDate = calculateExpirationDate(createdDate);</span>
+
+<span class="fc" id="L128">	        System.out.println(&quot;doGenerateToken &quot; + createdDate);</span>
+
+<span class="fc" id="L130">	        return Jwts.builder()</span>
+<span class="fc" id="L131">	                .setClaims(claims)</span>
+<span class="fc" id="L132">	                .setSubject(subject)</span>
+<span class="fc" id="L133">	                .setAudience(audience)</span>
+<span class="fc" id="L134">	                .setIssuedAt(createdDate)</span>
+<span class="fc" id="L135">	                .setExpiration(expirationDate)</span>
+<span class="fc" id="L136">	                .signWith(SignatureAlgorithm.HS512, secret)</span>
+<span class="fc" id="L137">	                .compact();</span>
+	    }
+	    
+        public Boolean canTokenBeRefreshedWithGrace(String token, Date lastPasswordReset) {
+<span class="nc" id="L141">          final Date created = getIssuedAtDateFromToken(token);</span>
+<span class="nc" id="L142">          boolean t = isCreatedBeforeLastPasswordResetWithGrace(created, lastPasswordReset);</span>
+<span class="nc" id="L143">          boolean u = isTokenExpiredWithGrace(token);</span>
+<span class="nc" id="L144">          boolean v =  ignoreTokenExpiration(token);</span>
+<span class="nc" id="L145">          System.out.println(t + &quot; &quot; +  u + &quot; &quot; + v);</span>
+<span class="nc bnc" id="L146" title="All 2 branches missed.">          System.out.println(!isCreatedBeforeLastPasswordResetWithGrace(created, lastPasswordReset)</span>
+<span class="nc bnc" id="L147" title="All 4 branches missed.">                  &amp;&amp; (!isTokenExpiredWithGrace(token) || ignoreTokenExpiration(token)));</span>
+          //return !isCreatedBeforeLastPasswordResetWithGrace(created, lastPasswordReset)
+          //        &amp;&amp; (!isTokenExpired(token) || ignoreTokenExpiration(token));
+<span class="nc" id="L150">          return true;</span>
+        }	    
+
+	    public Boolean canTokenBeRefreshed(String token, Date lastPasswordReset) {
+<span class="nc" id="L154">	        final Date created = getIssuedAtDateFromToken(token);</span>
+<span class="nc bnc" id="L155" title="All 2 branches missed.">	        return !isCreatedBeforeLastPasswordReset(created, lastPasswordReset)</span>
+<span class="nc bnc" id="L156" title="All 4 branches missed.">	                &amp;&amp; (!isTokenExpired(token) || ignoreTokenExpiration(token));</span>
+	    }
+
+	    public String refreshToken(String token) {
+<span class="nc" id="L160">	        final Date createdDate = DateUtil.getDate();</span>
+<span class="nc" id="L161">	        final Date expirationDate = calculateExpirationDate(createdDate);</span>
+
+<span class="nc" id="L163">	        final Claims claims = getAllClaimsFromToken(token);</span>
+<span class="nc" id="L164">	        claims.setIssuedAt(createdDate);</span>
+<span class="nc" id="L165">	        claims.setExpiration(expirationDate);</span>
+
+<span class="nc" id="L167">	        return Jwts.builder()</span>
+<span class="nc" id="L168">	                .setClaims(claims)</span>
+<span class="nc" id="L169">	                .signWith(SignatureAlgorithm.HS512, secret)</span>
+<span class="nc" id="L170">	                .compact();</span>
+	    }
+
+	    public Boolean validateToken(String token, UserDetails userDetails) {
+<span class="fc" id="L174">	        JWTUser user = (JWTUser) userDetails;</span>
+<span class="fc" id="L175">	        final String username = getUsernameFromToken(token);</span>
+<span class="fc" id="L176">	        final Date created = getIssuedAtDateFromToken(token);</span>
+	        //final Date expiration = getExpirationDateFromToken(token);
+	        
+<span class="fc" id="L179">	        boolean usernameEquals = username.equals(user.getUsername());</span>
+<span class="fc" id="L180">	        boolean isTokenExpired = isTokenExpired(token);</span>
+<span class="fc" id="L181">	        boolean isTokenCreatedBeforeLastPasswordReset = isCreatedBeforeLastPasswordReset(created, user.getLastPasswordResetDate());</span>
+	        
+<span class="pc bpc" id="L183" title="3 of 6 branches missed.">	        return (</span>
+
+	        		usernameEquals &amp;&amp; !isTokenExpired &amp;&amp; !isTokenCreatedBeforeLastPasswordReset
+	        );
+	    }
+
+	    private Date calculateExpirationDate(Date createdDate) {
+<span class="fc" id="L190">	        return new Date(createdDate.getTime() + expiration * 1000);</span>
+	    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CountryFacadeImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.controller.country.facade</a> &gt; <span class="el_source">CountryFacadeImpl.java</span></div><h1>CountryFacadeImpl.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.controller.country.facade;
+
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.reference.country.CountryService;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.country.Country;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.model.references.ReadableCountry;
+import com.salesmanager.shop.populator.references.ReadableCountryPopulator;
+import com.salesmanager.shop.store.api.exception.ConversionRuntimeException;
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+import java.util.List;
+import java.util.stream.Collectors;
+import javax.inject.Inject;
+import org.springframework.stereotype.Service;
+
+@Service
+<span class="fc" id="L19">public class CountryFacadeImpl implements CountryFacade {</span>
+
+  @Inject
+  private CountryService countryService;
+
+  @Override
+  public List&lt;ReadableCountry&gt; getListCountryZones(Language language, MerchantStore merchantStore) {
+<span class="nc" id="L26">    return getListOfCountryZones(language)</span>
+<span class="nc" id="L27">        .stream()</span>
+<span class="nc" id="L28">        .map(country -&gt; convertToReadableCountry(country, language, merchantStore))</span>
+<span class="nc" id="L29">        .collect(Collectors.toList());</span>
+  }
+
+  private ReadableCountry convertToReadableCountry(Country country, Language language, MerchantStore merchantStore) {
+    try{
+<span class="nc" id="L34">      ReadableCountryPopulator populator = new ReadableCountryPopulator();</span>
+<span class="nc" id="L35">      return populator.populate(country, new ReadableCountry(), merchantStore, language);</span>
+<span class="nc" id="L36">    } catch (ConversionException e) {</span>
+<span class="nc" id="L37">      throw new ConversionRuntimeException(e);</span>
+    }
+  }
+
+  private List&lt;Country&gt; getListOfCountryZones(Language language) {
+    try{
+<span class="nc" id="L43">      return countryService.listCountryZones(language);</span>
+<span class="nc" id="L44">    } catch (ServiceException e) {</span>
+<span class="nc" id="L45">      throw new ServiceRuntimeException(e);</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

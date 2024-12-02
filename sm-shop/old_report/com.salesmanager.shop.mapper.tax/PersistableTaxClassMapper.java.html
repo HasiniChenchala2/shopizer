@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PersistableTaxClassMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.mapper.tax</a> &gt; <span class="el_source">PersistableTaxClassMapper.java</span></div><h1>PersistableTaxClassMapper.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.mapper.tax;
+
+import org.apache.commons.lang3.Validate;
+import org.springframework.stereotype.Component;
+
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.core.model.tax.taxclass.TaxClass;
+import com.salesmanager.shop.mapper.Mapper;
+import com.salesmanager.shop.model.tax.PersistableTaxClass;
+
+@Component
+<span class="fc" id="L13">public class PersistableTaxClassMapper implements Mapper&lt;PersistableTaxClass, TaxClass&gt; {</span>
+
+	@Override
+	public TaxClass convert(PersistableTaxClass source, MerchantStore store, Language language) {
+<span class="fc" id="L17">		Validate.notNull(source, &quot;PersistableTaxClass cannot be null&quot;);</span>
+<span class="fc" id="L18">		Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);</span>
+<span class="fc" id="L19">		TaxClass taxClass = new TaxClass();</span>
+<span class="fc" id="L20">		taxClass.setMerchantStore(store);</span>
+<span class="fc" id="L21">		taxClass.setTitle(source.getName());</span>
+<span class="fc" id="L22">		taxClass.setId(source.getId());</span>
+<span class="fc" id="L23">		return this.merge(source, taxClass, store, language);</span>
+	}
+
+	@Override
+	public TaxClass merge(PersistableTaxClass source, TaxClass destination, MerchantStore store, Language language) {
+<span class="fc" id="L28">		Validate.notNull(source, &quot;PersistableTaxClass cannot be null&quot;);</span>
+<span class="fc" id="L29">		Validate.notNull(destination, &quot;TaxClass cannot be null&quot;);</span>
+<span class="fc" id="L30">		Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);</span>
+		
+<span class="fc" id="L32">		destination.setCode(source.getCode());</span>
+<span class="pc bpc" id="L33" title="2 of 4 branches missed.">		if(source.getId()!=null &amp;&amp; source.getId().longValue() &gt; 0) {</span>
+<span class="nc" id="L34">			destination.setId(source.getId());</span>
+		}
+<span class="fc" id="L36">		destination.setMerchantStore(store);</span>
+<span class="fc" id="L37">		destination.setTitle(source.getName());</span>
+		
+<span class="fc" id="L39">		return destination;</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

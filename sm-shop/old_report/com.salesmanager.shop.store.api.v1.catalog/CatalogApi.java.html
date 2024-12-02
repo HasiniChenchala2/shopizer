@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CatalogApi.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.api.v1.catalog</a> &gt; <span class="el_source">CatalogApi.java</span></div><h1>CatalogApi.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.api.v1.catalog;
+
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.model.catalog.catalog.PersistableCatalog;
+import com.salesmanager.shop.model.catalog.catalog.PersistableCatalogCategoryEntry;
+import com.salesmanager.shop.model.catalog.catalog.ReadableCatalog;
+import com.salesmanager.shop.model.catalog.catalog.ReadableCatalogCategoryEntry;
+import com.salesmanager.shop.model.entity.EntityExists;
+import com.salesmanager.shop.model.entity.ReadableEntityList;
+import com.salesmanager.shop.store.api.exception.ResourceNotFoundException;
+import com.salesmanager.shop.store.controller.catalog.facade.CatalogFacade;
+import io.swagger.annotations.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import springfox.documentation.annotations.ApiIgnore;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.validation.Valid;
+import java.util.Optional;
+
+@RestController
+@RequestMapping(value = &quot;/api/v1&quot;)
+@Api(tags = {&quot;Catalog management resource (Catalog Management Api)&quot;})
+@SwaggerDefinition(tags = {
+    @Tag(name = &quot;Catalog management resource&quot;, description = &quot;Manage catalogs and attached products&quot;)
+})
+<span class="fc" id="L33">public class CatalogApi {</span>
+
+<span class="fc" id="L35">  private static final Logger LOGGER = LoggerFactory.getLogger(CatalogApi.class);</span>
+
+  @Autowired
+  private CatalogFacade catalogFacade;
+
+
+  @GetMapping(value = &quot;/private/catalogs&quot;)
+  @ResponseStatus(HttpStatus.OK)
+  @ApiOperation(httpMethod = &quot;GET&quot;, value = &quot;Get catalogs by merchant&quot;, notes = &quot;&quot;,
+      response = ReadableEntityList.class)
+  @ApiImplicitParams({
+      @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+      @ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;)})
+  public ReadableEntityList&lt;ReadableCatalog&gt; getCatalogs(
+      @ApiIgnore MerchantStore merchantStore, @ApiIgnore Language language,
+      Optional&lt;String&gt; code,
+      @RequestParam(value = &quot;page&quot;, required = false, defaultValue=&quot;0&quot;) Integer page,
+      @RequestParam(value = &quot;count&quot;, required = false, defaultValue=&quot;10&quot;) Integer count) {
+
+<span class="nc" id="L54">      return catalogFacade.getListCatalogs(code, merchantStore, language, page, count);</span>
+
+  }
+
+
+  @ResponseStatus(HttpStatus.OK)
+  @GetMapping(value = {&quot;/private/catalog/unique&quot;}, produces = MediaType.APPLICATION_JSON_VALUE)
+  @ApiImplicitParams({
+    @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;string&quot;, defaultValue = &quot;DEFAULT&quot;),
+    @ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;string&quot;, defaultValue = &quot;en&quot;)
+  })
+  @ApiOperation(httpMethod = &quot;GET&quot;, value = &quot;Check if catalog code already exists&quot;, notes = &quot;&quot;,
+      response = EntityExists.class)
+  public ResponseEntity&lt;EntityExists&gt; exists(
+      @RequestParam(value = &quot;code&quot;) String code,
+      @ApiIgnore MerchantStore merchantStore,
+      @ApiIgnore Language language) {
+<span class="nc" id="L71">      boolean existByCode = catalogFacade.uniqueCatalog(code, merchantStore);</span>
+<span class="nc" id="L72">      return new ResponseEntity&lt;EntityExists&gt;(new EntityExists(existByCode), HttpStatus.OK);</span>
+  }
+
+
+  @PostMapping(value = &quot;/private/catalog&quot;)
+  @ResponseStatus(HttpStatus.OK)
+  @ApiOperation(httpMethod = &quot;POST&quot;, value = &quot;Create catalog&quot;, notes = &quot;&quot;,
+      response = Void.class)
+  @ApiImplicitParams({
+      @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+      @ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;)})
+  public ReadableCatalog createCatalog(
+      @RequestBody @Valid PersistableCatalog catalog,
+      @ApiIgnore MerchantStore merchantStore, @ApiIgnore Language language) {
+
+<span class="nc" id="L87">	  return catalogFacade.saveCatalog(catalog, merchantStore, language);</span>
+
+  }
+
+  @PatchMapping(value = &quot;/private/catalog/{id}&quot;)
+  @ResponseStatus(HttpStatus.OK)
+  @ApiOperation(httpMethod = &quot;PATCH&quot;, value = &quot;Update catalog&quot;, notes = &quot;&quot;,
+      response = Void.class)
+  @ApiImplicitParams({
+      @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+      @ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;)})
+  public void updateCatalog(
+	  @PathVariable Long id,
+      @RequestBody @Valid PersistableCatalog catalog,
+      @ApiIgnore MerchantStore merchantStore, @ApiIgnore Language language) {
+
+<span class="nc" id="L103">	  catalog.setId(id);</span>
+<span class="nc" id="L104">	  catalogFacade.updateCatalog(id, catalog, merchantStore, language);</span>
+
+<span class="nc" id="L106">  }</span>
+
+  @GetMapping(value = &quot;/private/catalog/{id}&quot;)
+  @ResponseStatus(HttpStatus.OK)
+  @ApiOperation(httpMethod = &quot;GET&quot;, value = &quot;Get catalog&quot;, notes = &quot;&quot;,
+      response = Void.class)
+  @ApiImplicitParams({
+      @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+      @ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;)})
+  public ReadableCatalog getCatalog(
+	  @PathVariable Long id,
+      @ApiIgnore MerchantStore merchantStore, @ApiIgnore Language language) {
+
+<span class="nc" id="L119">	  return catalogFacade.getCatalog(id, merchantStore, language);</span>
+
+  }
+
+
+
+  @DeleteMapping(value = &quot;/private/catalog/{id}&quot;)
+  @ApiOperation(httpMethod = &quot;DELETE&quot;, value = &quot;Deletes a catalog&quot;, notes = &quot;&quot;,
+  response = Void.class)
+  @ApiImplicitParams({
+      @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+      @ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;)})
+  public void deleteCatalog(
+      @PathVariable Long id,
+      @ApiIgnore MerchantStore merchantStore,
+      @ApiIgnore Language language) {
+
+<span class="nc" id="L136">	  catalogFacade.deleteCatalog(id, merchantStore, language);</span>
+<span class="nc" id="L137">  }</span>
+
+  @PostMapping(value = &quot;/private/catalog/{id}&quot;)
+  @ResponseStatus(HttpStatus.OK)
+  @ApiOperation(httpMethod = &quot;POST&quot;, value = &quot;Add catalog entry to catalog&quot;, notes = &quot;&quot;,
+      response = ReadableCatalogCategoryEntry.class)
+  @ApiImplicitParams({
+      @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+      @ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;)})
+  public ReadableCatalogCategoryEntry addCatalogEntry(
+      @PathVariable Long id,
+	  @RequestBody @Valid PersistableCatalogCategoryEntry catalogEntry,
+      @ApiIgnore MerchantStore merchantStore, @ApiIgnore Language language) {
+
+
+
+<span class="nc" id="L153">	  ReadableCatalog c = catalogFacade.getCatalog(id, merchantStore, language);</span>
+
+<span class="nc bnc" id="L155" title="All 2 branches missed.">	  if(c == null) {</span>
+<span class="nc" id="L156">		  throw new ResourceNotFoundException(&quot;Catalog id [&quot; + id + &quot;] not found&quot;);</span>
+	  }
+
+<span class="nc" id="L159">	  catalogEntry.setCatalog(c.getCode());</span>
+<span class="nc" id="L160">	  return catalogFacade.addCatalogEntry(catalogEntry, merchantStore, language);</span>
+
+
+  }
+
+  @DeleteMapping(value = &quot;/private/catalog/{id}/entry/{entryId}&quot;)
+  @ResponseStatus(HttpStatus.OK)
+  @ApiOperation(httpMethod = &quot;DELETE&quot;, value = &quot;Remove catalog entry from catalog&quot;, notes = &quot;&quot;,
+      response = Void.class)
+  @ApiImplicitParams({
+      @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+      @ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;)})
+  public void removeCatalogEntry(
+      @PathVariable Long id,
+      @PathVariable Long entryId,
+      @ApiIgnore MerchantStore merchantStore, @ApiIgnore Language language) {
+
+
+<span class="nc" id="L178">	  catalogFacade.removeCatalogEntry(id, entryId, merchantStore, language);</span>
+
+
+
+<span class="nc" id="L182">  }</span>
+
+  @GetMapping(value = &quot;/private/catalog/{id}/entry&quot;)
+  @ResponseStatus(HttpStatus.OK)
+  @ApiOperation(httpMethod = &quot;GET&quot;, value = &quot;Get catalog entry by catalog&quot;, notes = &quot;&quot;,
+      response = ReadableEntityList.class)
+  @ApiImplicitParams({
+      @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+      @ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;)})
+  public ReadableEntityList&lt;ReadableCatalogCategoryEntry&gt; getCatalogEntry(
+	  @PathVariable(value=&quot;id&quot;) Long id,
+      @ApiIgnore MerchantStore merchantStore,
+      @ApiIgnore Language language,
+      @RequestParam(value = &quot;page&quot;, required = false, defaultValue=&quot;0&quot;) Integer page,
+      @RequestParam(value = &quot;count&quot;, required = false, defaultValue=&quot;10&quot;) Integer count,
+      HttpServletRequest request) {
+
+<span class="nc" id="L199">	  return catalogFacade.listCatalogEntry(catalogEntryFilter(request), id, merchantStore, language, page, count);</span>
+
+
+  }
+
+  private Optional&lt;String&gt; catalogFilter(HttpServletRequest request) {
+
+<span class="nc" id="L206">	    return Optional.ofNullable((String)request.getAttribute(&quot;code&quot;));</span>
+  }
+
+  private Optional&lt;String&gt; catalogEntryFilter(HttpServletRequest request) {
+
+<span class="nc" id="L211">	    return Optional.ofNullable((String)request.getAttribute(&quot;name&quot;));</span>
+}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

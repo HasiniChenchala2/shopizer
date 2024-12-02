@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReadableMerchantStorePopulator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.populator.store</a> &gt; <span class="el_source">ReadableMerchantStorePopulator.java</span></div><h1>ReadableMerchantStorePopulator.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.populator.store;
+
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Validate;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
+
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.reference.country.CountryService;
+import com.salesmanager.core.business.services.reference.language.LanguageService;
+import com.salesmanager.core.business.services.reference.zone.ZoneService;
+import com.salesmanager.core.business.utils.AbstractDataPopulator;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.country.Country;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.core.model.reference.zone.Zone;
+import com.salesmanager.shop.model.content.ReadableImage;
+import com.salesmanager.shop.model.entity.ReadableAudit;
+import com.salesmanager.shop.model.references.MeasureUnit;
+import com.salesmanager.shop.model.references.ReadableAddress;
+import com.salesmanager.shop.model.references.ReadableLanguage;
+import com.salesmanager.shop.model.references.WeightUnit;
+import com.salesmanager.shop.model.store.ReadableMerchantStore;
+import com.salesmanager.shop.utils.DateUtil;
+import com.salesmanager.shop.utils.ImageFilePath;
+
+/**
+ * Populates MerchantStore core entity model object
+ * @author carlsamson
+ *
+ */
+@Component
+<span class="fc" id="L42">public class ReadableMerchantStorePopulator extends</span>
+		AbstractDataPopulator&lt;MerchantStore, ReadableMerchantStore&gt; {
+	
+<span class="fc" id="L45">	protected final Log logger = LogFactory.getLog(getClass());</span>
+	
+	@Autowired
+	private CountryService countryService;
+	@Autowired
+	private ZoneService zoneService;
+	@Autowired
+	@Qualifier(&quot;img&quot;)
+	private ImageFilePath filePath;
+	@Autowired
+	private LanguageService languageService;
+
+
+
+	@Override
+	public ReadableMerchantStore populate(MerchantStore source,
+			ReadableMerchantStore target, MerchantStore store, Language language)
+			throws ConversionException {
+<span class="fc" id="L63">		Validate.notNull(countryService,&quot;Must use setter for countryService&quot;);</span>
+<span class="fc" id="L64">		Validate.notNull(zoneService,&quot;Must use setter for zoneService&quot;);</span>
+		
+<span class="pc bpc" id="L66" title="1 of 2 branches missed.">		if(target == null) {</span>
+<span class="nc" id="L67">			target = new ReadableMerchantStore();</span>
+		}
+		
+<span class="fc" id="L70">		target.setId(source.getId());</span>
+<span class="fc" id="L71">		target.setCode(source.getCode());</span>
+<span class="pc bpc" id="L72" title="1 of 2 branches missed.">		if(source.getDefaultLanguage() != null) {</span>
+<span class="fc" id="L73">			target.setDefaultLanguage(source.getDefaultLanguage().getCode());</span>
+		}
+
+<span class="fc" id="L76">		target.setCurrency(source.getCurrency().getCode());</span>
+<span class="fc" id="L77">		target.setPhone(source.getStorephone());</span>
+		
+<span class="fc" id="L79">		ReadableAddress address = new ReadableAddress();</span>
+<span class="fc" id="L80">		address.setAddress(source.getStoreaddress());</span>
+<span class="fc" id="L81">		address.setCity(source.getStorecity());</span>
+<span class="pc bpc" id="L82" title="1 of 2 branches missed.">		if(source.getCountry()!=null) {</span>
+			try {
+<span class="fc" id="L84">				address.setCountry(source.getCountry().getIsoCode());</span>
+<span class="fc" id="L85">				Country c =countryService.getCountriesMap(language).get(source.getCountry().getIsoCode());</span>
+<span class="pc bpc" id="L86" title="1 of 2 branches missed.">				if(c!=null) {</span>
+<span class="fc" id="L87">					address.setCountry(c.getIsoCode());</span>
+				}
+<span class="nc" id="L89">			} catch (ServiceException e) {</span>
+<span class="nc" id="L90">				logger.error(&quot;Cannot get Country&quot;, e);</span>
+<span class="fc" id="L91">			}</span>
+		}
+		
+<span class="pc bpc" id="L94" title="1 of 2 branches missed.">		if(source.getParent() != null) {</span>
+<span class="nc" id="L95">		  ReadableMerchantStore parent = populate(source.getParent(),</span>
+            new ReadableMerchantStore(), source, language);
+<span class="nc" id="L97">		  target.setParent(parent);</span>
+		}
+		
+<span class="pc bpc" id="L100" title="1 of 2 branches missed.">		if(target.getParent() == null) {</span>
+<span class="fc" id="L101">			target.setRetailer(true);</span>
+		} else {
+<span class="nc bnc" id="L103" title="All 2 branches missed.">			target.setRetailer(source.isRetailer()!=null?source.isRetailer().booleanValue():false);	</span>
+		}
+		
+		
+<span class="fc" id="L107">		target.setDimension(MeasureUnit.valueOf(source.getSeizeunitcode()));</span>
+<span class="fc" id="L108">		target.setWeight(WeightUnit.valueOf(source.getWeightunitcode()));</span>
+		
+<span class="pc bpc" id="L110" title="1 of 2 branches missed.">		if(source.getZone()!=null) {</span>
+<span class="fc" id="L111">			address.setStateProvince(source.getZone().getCode());</span>
+			try {
+<span class="fc" id="L113">				Zone z = zoneService.getZones(language).get(source.getZone().getCode());</span>
+<span class="fc" id="L114">				address.setStateProvince(z.getCode());</span>
+<span class="nc" id="L115">			} catch (ServiceException e) {</span>
+<span class="nc" id="L116">				logger.error(&quot;Cannot get Zone&quot;, e);</span>
+<span class="fc" id="L117">			}</span>
+		}
+		
+		
+<span class="pc bpc" id="L121" title="1 of 2 branches missed.">		if(!StringUtils.isBlank(source.getStorestateprovince())) {</span>
+<span class="nc" id="L122">			address.setStateProvince(source.getStorestateprovince());</span>
+		}
+		
+<span class="pc bpc" id="L125" title="1 of 2 branches missed.">		if(!StringUtils.isBlank(source.getStoreLogo())) {</span>
+<span class="nc" id="L126">			ReadableImage image = new ReadableImage();</span>
+<span class="nc" id="L127">			image.setName(source.getStoreLogo());</span>
+<span class="nc bnc" id="L128" title="All 2 branches missed.">			if(filePath!=null) {</span>
+<span class="nc" id="L129">				image.setPath(filePath.buildStoreLogoFilePath(source));</span>
+			}
+<span class="nc" id="L131">			target.setLogo(image);</span>
+		}
+		
+<span class="fc" id="L134">		address.setPostalCode(source.getStorepostalcode());</span>
+
+<span class="fc" id="L136">		target.setAddress(address);</span>
+		
+<span class="fc" id="L138">		target.setCurrencyFormatNational(source.isCurrencyFormatNational());</span>
+<span class="fc" id="L139">		target.setEmail(source.getStoreEmailAddress());</span>
+<span class="fc" id="L140">		target.setName(source.getStorename());</span>
+<span class="fc" id="L141">		target.setId(source.getId());</span>
+<span class="fc" id="L142">		target.setInBusinessSince(DateUtil.formatDate(source.getInBusinessSince()));</span>
+<span class="fc" id="L143">		target.setUseCache(source.isUseCache());</span>
+
+<span class="pc bpc" id="L145" title="1 of 2 branches missed.">		if(!CollectionUtils.isEmpty(source.getLanguages())) {</span>
+<span class="fc" id="L146">			List&lt;ReadableLanguage&gt; supported = new ArrayList&lt;ReadableLanguage&gt;();</span>
+<span class="fc bfc" id="L147" title="All 2 branches covered.">			for(Language lang : source.getLanguages()) {</span>
+				try {
+<span class="fc" id="L149">					Language langObject = languageService.getLanguagesMap().get(lang.getCode());</span>
+<span class="pc bpc" id="L150" title="1 of 2 branches missed.">					if(langObject != null) {</span>
+<span class="fc" id="L151">						ReadableLanguage l = new ReadableLanguage();</span>
+<span class="fc" id="L152">						l.setId(langObject.getId());</span>
+<span class="fc" id="L153">						l.setCode(langObject.getCode());</span>
+<span class="fc" id="L154">						supported.add(l);</span>
+					}
+					
+<span class="nc" id="L157">				} catch (ServiceException e) {</span>
+<span class="nc" id="L158">					logger.error(&quot;Cannot get Language [&quot; + lang.getId() + &quot;]&quot;);</span>
+<span class="fc" id="L159">				}</span>
+				
+<span class="fc" id="L161">			}</span>
+<span class="fc" id="L162">			target.setSupportedLanguages(supported);</span>
+		}
+		
+<span class="pc bpc" id="L165" title="1 of 2 branches missed.">		if(source.getAuditSection()!=null) {</span>
+<span class="nc" id="L166">			ReadableAudit audit = new ReadableAudit();</span>
+<span class="nc bnc" id="L167" title="All 2 branches missed.">			if(source.getAuditSection().getDateCreated()!=null) {</span>
+<span class="nc" id="L168">				audit.setCreated(DateUtil.formatDate(source.getAuditSection().getDateCreated()));</span>
+			}
+<span class="nc bnc" id="L170" title="All 2 branches missed.">			if(source.getAuditSection().getDateModified()!=null) {</span>
+<span class="nc" id="L171">				audit.setModified(DateUtil.formatDate(source.getAuditSection().getDateCreated()));</span>
+			}
+<span class="nc" id="L173">			audit.setUser(source.getAuditSection().getModifiedBy());</span>
+<span class="nc" id="L174">			target.setReadableAudit(audit);</span>
+		}
+
+<span class="fc" id="L177">		return target;</span>
+	}
+
+	@Override
+	protected ReadableMerchantStore createTarget() {
+		// TODO Auto-generated method stub
+<span class="nc" id="L183">		return null;</span>
+	}
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

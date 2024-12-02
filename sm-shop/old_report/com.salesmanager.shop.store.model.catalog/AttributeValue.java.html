@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AttributeValue.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.model.catalog</a> &gt; <span class="el_source">AttributeValue.java</span></div><h1>AttributeValue.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.model.catalog;
+
+import java.io.Serializable;
+
+import com.salesmanager.shop.model.entity.ShopEntity;
+
+<span class="nc" id="L7">public class AttributeValue extends ShopEntity implements Serializable {</span>
+	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+<span class="nc" id="L13">	private String name = null;</span>
+<span class="nc" id="L14">	private String description = null;</span>
+	private boolean defaultAttribute;
+	private String image;
+	private String price;
+	private int sortOrder;
+
+	public String getName() {
+<span class="nc" id="L21">		return name;</span>
+	}
+	public void setName(String name) {
+<span class="nc" id="L24">		this.name = name;</span>
+<span class="nc" id="L25">	}</span>
+	public boolean isDefaultAttribute() {
+<span class="nc" id="L27">		return defaultAttribute;</span>
+	}
+	public void setDefaultAttribute(boolean defaultAttribute) {
+<span class="nc" id="L30">		this.defaultAttribute = defaultAttribute;</span>
+<span class="nc" id="L31">	}</span>
+	public String getImage() {
+<span class="nc" id="L33">		return image;</span>
+	}
+	public void setImage(String image) {
+<span class="nc" id="L36">		this.image = image;</span>
+<span class="nc" id="L37">	}</span>
+	public String getPrice() {
+<span class="nc" id="L39">		return price;</span>
+	}
+	public void setPrice(String price) {
+<span class="nc" id="L42">		this.price = price;</span>
+<span class="nc" id="L43">	}</span>
+	public String getDescription() {
+<span class="nc" id="L45">		return description;</span>
+	}
+	public void setDescription(String description) {
+<span class="nc" id="L48">		this.description = description;</span>
+<span class="nc" id="L49">	}</span>
+	public int getSortOrder() {
+<span class="nc" id="L51">		return sortOrder;</span>
+	}
+	public void setSortOrder(int sortOrder) {
+<span class="nc" id="L54">		this.sortOrder = sortOrder;</span>
+<span class="nc" id="L55">	}</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

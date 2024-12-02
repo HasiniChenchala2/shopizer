@@ -1,0 +1,931 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ContentFacadeImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.facade.content</a> &gt; <span class="el_source">ContentFacadeImpl.java</span></div><h1>ContentFacadeImpl.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.facade.content;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import javax.inject.Inject;
+
+import org.apache.commons.lang3.StringUtils;
+import org.jsoup.helper.Validate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.domain.Page;
+import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
+
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.content.ContentService;
+import com.salesmanager.core.business.services.reference.language.LanguageService;
+import com.salesmanager.core.model.content.Content;
+import com.salesmanager.core.model.content.ContentDescription;
+import com.salesmanager.core.model.content.ContentType;
+import com.salesmanager.core.model.content.FileContentType;
+import com.salesmanager.core.model.content.InputContentFile;
+import com.salesmanager.core.model.content.OutputContentFile;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.model.content.ContentDescriptionEntity;
+import com.salesmanager.shop.model.content.ContentFile;
+import com.salesmanager.shop.model.content.ContentFolder;
+import com.salesmanager.shop.model.content.ContentImage;
+import com.salesmanager.shop.model.content.ReadableContentEntity;
+import com.salesmanager.shop.model.content.ReadableContentFull;
+import com.salesmanager.shop.model.content.box.PersistableContentBox;
+import com.salesmanager.shop.model.content.box.ReadableContentBox;
+import com.salesmanager.shop.model.content.box.ReadableContentBoxFull;
+import com.salesmanager.shop.model.content.page.PersistableContentPage;
+import com.salesmanager.shop.model.content.page.ReadableContentPage;
+import com.salesmanager.shop.model.content.page.ReadableContentPageFull;
+import com.salesmanager.shop.model.entity.ReadableEntityList;
+import com.salesmanager.shop.store.api.exception.ConstraintException;
+import com.salesmanager.shop.store.api.exception.ResourceNotFoundException;
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+import com.salesmanager.shop.store.controller.content.facade.ContentFacade;
+import com.salesmanager.shop.utils.FilePathUtils;
+import com.salesmanager.shop.utils.ImageFilePath;
+
+@Component(&quot;contentFacade&quot;)
+<span class="fc" id="L55">public class ContentFacadeImpl implements ContentFacade {</span>
+
+<span class="fc" id="L57">	private static final Logger LOGGER = LoggerFactory.getLogger(ContentFacade.class);</span>
+
+	public static final String FILE_CONTENT_DELIMETER = &quot;/&quot;;
+
+	@Inject
+	private ContentService contentService;
+
+	@Inject
+	private LanguageService languageService;
+
+	@Inject
+	@Qualifier(&quot;img&quot;)
+	private ImageFilePath imageUtils;
+
+	@Inject
+	private FilePathUtils fileUtils;
+
+	@Override
+	public ContentFolder getContentFolder(String folder, MerchantStore store) throws Exception {
+		try {
+<span class="nc" id="L77">			List&lt;String&gt; imageNames = Optional</span>
+<span class="nc" id="L78">					.ofNullable(contentService.getContentFilesNames(store.getCode(), FileContentType.IMAGE))</span>
+<span class="nc" id="L79">					.orElseThrow(() -&gt; new ResourceNotFoundException(&quot;No Folder found for path : &quot; + folder));</span>
+
+			// images from CMS
+<span class="nc" id="L82">			List&lt;ContentImage&gt; contentImages = imageNames.stream().map(name -&gt; convertToContentImage(name, store))</span>
+<span class="nc" id="L83">					.collect(Collectors.toList());</span>
+
+<span class="nc" id="L85">			ContentFolder contentFolder = new ContentFolder();</span>
+<span class="nc bnc" id="L86" title="All 2 branches missed.">			if (!StringUtils.isBlank(folder)) {</span>
+<span class="nc" id="L87">				contentFolder.setPath(URLEncoder.encode(folder, &quot;UTF-8&quot;));</span>
+			}
+<span class="nc" id="L89">			contentFolder.getContent().addAll(contentImages);</span>
+<span class="nc" id="L90">			return contentFolder;</span>
+
+<span class="nc" id="L92">		} catch (ServiceException e) {</span>
+<span class="nc" id="L93">			throw new ServiceRuntimeException(&quot;Error while getting folder &quot; + e.getMessage(), e);</span>
+		}
+	}
+
+	private ContentImage convertToContentImage(String name, MerchantStore store) {
+<span class="nc" id="L98">		String path = absolutePath(store, null);</span>
+<span class="nc" id="L99">		ContentImage contentImage = new ContentImage();</span>
+<span class="nc" id="L100">		contentImage.setName(name);</span>
+<span class="nc" id="L101">		contentImage.setPath(path);</span>
+<span class="nc" id="L102">		return contentImage;</span>
+	}
+
+	@Override
+	public String absolutePath(MerchantStore store, String file) {
+<span class="nc" id="L107">		return new StringBuilder().append(imageUtils.getContextPath())</span>
+<span class="nc" id="L108">				.append(imageUtils.buildStaticImageUtils(store, file)).toString();</span>
+	}
+
+	@Override
+	public void delete(MerchantStore store, String fileName, String fileType) {
+<span class="nc" id="L113">		Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);</span>
+<span class="nc" id="L114">		Validate.notNull(fileName, &quot;File name cannot be null&quot;);</span>
+		try {
+<span class="nc" id="L116">			FileContentType t = FileContentType.valueOf(fileType);</span>
+<span class="nc" id="L117">			contentService.removeFile(store.getCode(), t, fileName);</span>
+<span class="nc" id="L118">		} catch (ServiceException e) {</span>
+<span class="nc" id="L119">			throw new ServiceRuntimeException(e);</span>
+<span class="nc" id="L120">		}</span>
+<span class="nc" id="L121">	}</span>
+
+	@SuppressWarnings(&quot;unchecked&quot;)
+	@Override
+	public ReadableEntityList&lt;ReadableContentPage&gt; getContentPages(MerchantStore store, Language language, int page,
+			int count) {
+<span class="nc" id="L127">		Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);</span>
+
+		@SuppressWarnings(&quot;rawtypes&quot;)
+<span class="nc" id="L130">		ReadableEntityList items = new ReadableEntityList();</span>
+		Page&lt;Content&gt; contentPages;
+		try {
+<span class="nc" id="L133">			contentPages = contentService.listByType(ContentType.PAGE, store, page, count);</span>
+
+<span class="nc" id="L135">			items.setTotalPages(contentPages.getTotalPages());</span>
+<span class="nc" id="L136">			items.setNumber(contentPages.getContent().size());</span>
+<span class="nc" id="L137">			items.setRecordsTotal(contentPages.getNumberOfElements());</span>
+
+<span class="nc" id="L139">			List&lt;ReadableContentBox&gt; boxes = contentPages.getContent().stream()</span>
+<span class="nc" id="L140">					.map(content -&gt; convertContentToReadableContentBox(store, language, content))</span>
+<span class="nc" id="L141">					.collect(Collectors.toList());</span>
+
+<span class="nc" id="L143">			items.setItems(boxes);</span>
+<span class="nc" id="L144">			return items;</span>
+
+<span class="nc" id="L146">		} catch (ServiceException e) {</span>
+<span class="nc" id="L147">			throw new ServiceRuntimeException(&quot;Exception while getting content &quot;, e);</span>
+		}
+
+	}
+
+	private ReadableContentPage contentDescriptionToReadableContent(MerchantStore store, Content content,
+			ContentDescription contentDescription) {
+
+<span class="nc" id="L155">		ReadableContentPage page = new ReadableContentPage();</span>
+
+<span class="nc" id="L157">		ContentDescription desc = new ContentDescription();</span>
+
+<span class="nc" id="L159">		desc.setName(contentDescription.getName());</span>
+<span class="nc" id="L160">		desc.setDescription(contentDescription.getDescription());</span>
+
+<span class="nc" id="L162">		page.setId(content.getId());</span>
+<span class="nc" id="L163">		desc.setSeUrl(contentDescription.getSeUrl());</span>
+<span class="nc" id="L164">		page.setLinkToMenu(content.isLinkToMenu());</span>
+<span class="nc" id="L165">		desc.setTitle(contentDescription.getTitle());</span>
+<span class="nc" id="L166">		desc.setMetatagDescription(contentDescription.getMetatagDescription());</span>
+<span class="nc" id="L167">		page.setContentType(ContentType.PAGE.name());</span>
+<span class="nc" id="L168">		page.setCode(content.getCode());</span>
+<span class="nc" id="L169">		page.setPath(fileUtils.buildStaticFilePath(store.getCode(), contentDescription.getSeUrl()));</span>
+<span class="nc" id="L170">		return page;</span>
+
+	}
+
+	@Deprecated
+	private ReadableContentFull convertContentToReadableContentFull(MerchantStore store, Language language,
+			Content content) {
+<span class="nc" id="L177">		ReadableContentFull contentFull = new ReadableContentFull();</span>
+
+		try {
+<span class="nc" id="L180">			List&lt;ContentDescriptionEntity&gt; descriptions = this.createContentDescriptionEntitys(store, content,</span>
+					language);
+
+<span class="nc" id="L183">			contentFull.setDescriptions(descriptions);</span>
+<span class="nc" id="L184">			contentFull.setId(content.getId());</span>
+<span class="nc" id="L185">			contentFull.setDisplayedInMenu(content.isLinkToMenu());</span>
+<span class="nc" id="L186">			contentFull.setContentType(content.getContentType().name());</span>
+<span class="nc" id="L187">			contentFull.setCode(content.getCode());</span>
+<span class="nc" id="L188">			contentFull.setId(content.getId());</span>
+<span class="nc" id="L189">			contentFull.setVisible(content.isVisible());</span>
+
+<span class="nc" id="L191">			return contentFull;</span>
+
+<span class="nc" id="L193">		} catch (ServiceException e) {</span>
+<span class="nc" id="L194">			throw new ServiceRuntimeException(&quot;Error while creating ReadableContentFull&quot;, e);</span>
+		}
+	}
+
+	@Deprecated
+	private ReadableContentEntity convertContentToReadableContentEntity(MerchantStore store, Language language,
+			Content content) {
+
+<span class="nc" id="L202">		ReadableContentEntity contentEntity = new ReadableContentEntity();</span>
+
+<span class="nc" id="L204">		ContentDescriptionEntity description = this.create(content.getDescription());</span>
+
+<span class="nc" id="L206">		contentEntity.setDescription(description);</span>
+<span class="nc" id="L207">		contentEntity.setId(content.getId());</span>
+<span class="nc" id="L208">		contentEntity.setDisplayedInMenu(content.isLinkToMenu());</span>
+<span class="nc" id="L209">		contentEntity.setContentType(content.getContentType().name());</span>
+<span class="nc" id="L210">		contentEntity.setCode(content.getCode());</span>
+<span class="nc" id="L211">		contentEntity.setId(content.getId());</span>
+<span class="nc" id="L212">		contentEntity.setVisible(content.isVisible());</span>
+
+<span class="nc" id="L214">		return contentEntity;</span>
+
+	}
+
+	private Content convertContentPageToContent(MerchantStore store, Content model, PersistableContentPage content) throws Exception {
+		
+		
+		
+<span class="nc" id="L222">		Content contentModel = new Content();</span>
+<span class="nc bnc" id="L223" title="All 2 branches missed.">		if(model != null) {</span>
+<span class="nc" id="L224">			contentModel = model;</span>
+		}
+
+<span class="nc" id="L227">		List&lt;ContentDescription&gt; descriptions = buildDescriptions(contentModel, content.getDescriptions());</span>
+<span class="nc" id="L228">		contentModel.setCode(content.getCode());</span>
+<span class="nc" id="L229">		contentModel.setContentType(ContentType.PAGE);</span>
+<span class="nc" id="L230">		contentModel.setMerchantStore(store);</span>
+<span class="nc" id="L231">		contentModel.setLinkToMenu(content.isLinkToMenu());</span>
+<span class="nc" id="L232">		contentModel.setVisible(content.isVisible());</span>
+<span class="nc" id="L233">		contentModel.setDescriptions(descriptions);</span>
+<span class="nc" id="L234">		contentModel.setId(content.getId());</span>
+<span class="nc" id="L235">		return contentModel;</span>
+	}
+
+	private Content convertContentBoxToContent(MerchantStore store, Content model, PersistableContentBox content) throws Exception {
+<span class="nc" id="L239">		Content contentModel = new Content();</span>
+<span class="nc bnc" id="L240" title="All 2 branches missed.">		if(model != null) {</span>
+<span class="nc" id="L241">			contentModel = model;</span>
+		}
+
+<span class="nc" id="L244">		List&lt;ContentDescription&gt; descriptions = buildDescriptions(contentModel, content.getDescriptions());</span>
+<span class="nc bnc" id="L245" title="All 2 branches missed.">		for(ContentDescription cd : descriptions) {</span>
+<span class="nc" id="L246">			cd.setContent(contentModel);</span>
+<span class="nc" id="L247">		}</span>
+
+<span class="nc" id="L249">		contentModel.setCode(content.getCode());</span>
+<span class="nc" id="L250">		contentModel.setContentType(ContentType.BOX);</span>
+<span class="nc" id="L251">		contentModel.setMerchantStore(store);</span>
+<span class="nc" id="L252">		contentModel.setVisible(content.isVisible());</span>
+<span class="nc" id="L253">		contentModel.setDescriptions(descriptions);</span>
+<span class="nc" id="L254">		contentModel.setId(content.getId());</span>
+<span class="nc" id="L255">		return contentModel;</span>
+	}
+
+	/*
+	 * private Content convertContentPageToContent(MerchantStore store, Language
+	 * language, Content content, PersistableContentEntity contentPage) throws
+	 * ServiceException {
+	 * 
+	 * ContentType contentType =
+	 * ContentType.valueOf(contentPage.getContentType()); if (contentType ==
+	 * null) { throw new
+	 * ServiceRuntimeException(&quot;Invalid specified contentType [&quot; +
+	 * contentPage.getContentType() + &quot;]&quot;); }
+	 * 
+	 * List&lt;ContentDescription&gt; descriptions = createContentDescription(store,
+	 * content, contentPage); descriptions.stream().forEach(c -&gt;
+	 * c.setContent(content));
+	 * 
+	 * content.setDescriptions(descriptions);
+	 * 
+	 * // ContentDescription contentDescription = //
+	 * createContentDescription(store, contentPage, language); //
+	 * setContentDescriptionToContentModel(content,contentDescription,language);
+	 * 
+	 * // contentDescription.setContent(content);
+	 * 
+	 * if (contentPage.getId() != null &amp;&amp; contentPage.getId().longValue() &gt; 0) {
+	 * content.setId(contentPage.getId()); }
+	 * content.setVisible(contentPage.isVisible());
+	 * content.setLinkToMenu(contentPage.isDisplayedInMenu());
+	 * content.setContentType(ContentType.valueOf(contentPage.getContentType()))
+	 * ; content.setMerchantStore(store);
+	 * 
+	 * return content; }
+	 */
+
+	@Deprecated
+	private List&lt;ContentDescriptionEntity&gt; createContentDescriptionEntitys(MerchantStore store, Content contentModel,
+			Language language) throws ServiceException {
+
+<span class="nc" id="L295">		List&lt;ContentDescriptionEntity&gt; descriptions = new ArrayList&lt;ContentDescriptionEntity&gt;();</span>
+
+<span class="nc bnc" id="L297" title="All 2 branches missed.">		if (!CollectionUtils.isEmpty(contentModel.getDescriptions())) {</span>
+<span class="nc bnc" id="L298" title="All 2 branches missed.">			for (ContentDescription description : contentModel.getDescriptions()) {</span>
+<span class="nc bnc" id="L299" title="All 4 branches missed.">				if (language != null &amp;&amp; !language.getId().equals(description.getLanguage().getId())) {</span>
+<span class="nc" id="L300">					continue;</span>
+				}
+
+<span class="nc" id="L303">				ContentDescriptionEntity contentDescription = create(description);</span>
+<span class="nc" id="L304">				descriptions.add(contentDescription);</span>
+<span class="nc" id="L305">			}</span>
+		}
+
+<span class="nc" id="L308">		return descriptions;</span>
+	}
+
+	@Deprecated
+	private ContentDescriptionEntity create(ContentDescription description) {
+
+<span class="nc" id="L314">		ContentDescriptionEntity contentDescription = new ContentDescriptionEntity();</span>
+<span class="nc" id="L315">		contentDescription.setLanguage(description.getLanguage().getCode());</span>
+<span class="nc" id="L316">		contentDescription.setTitle(description.getTitle());</span>
+<span class="nc" id="L317">		contentDescription.setName(description.getName());</span>
+<span class="nc" id="L318">		contentDescription.setFriendlyUrl(description.getSeUrl());</span>
+<span class="nc" id="L319">		contentDescription.setDescription(description.getDescription());</span>
+<span class="nc bnc" id="L320" title="All 4 branches missed.">		if (description.getId() != null &amp;&amp; description.getId().longValue() &gt; 0) {</span>
+<span class="nc" id="L321">			contentDescription.setId(description.getId());</span>
+		}
+
+<span class="nc" id="L324">		return contentDescription;</span>
+
+	}
+
+	/*
+	 * private List&lt;ContentDescription&gt; createContentDescription(
+	 * PersistableContentPage content) throws ServiceException {
+	 * Validate.notNull(contentModel, &quot;Content cannot be null&quot;);
+	 * 
+	 * List&lt;ContentDescription&gt; descriptions = new
+	 * ArrayList&lt;ContentDescription&gt;(); for (NamedEntity objectContent :
+	 * content.getDescriptions()) { Language lang =
+	 * languageService.getByCode(objectContent.getLanguage());
+	 * ContentDescription contentDescription = new ContentDescription(); if
+	 * (contentModel != null) {
+	 * setContentDescriptionToContentModel(contentModel, contentDescription,
+	 * lang); } contentDescription.setLanguage(lang);
+	 * contentDescription.setMetatagDescription(objectContent.getMetaDescription
+	 * ()); contentDescription.setTitle(objectContent.getTitle());
+	 * contentDescription.setName(objectContent.getName());
+	 * contentDescription.setSeUrl(objectContent.getFriendlyUrl());
+	 * contentDescription.setDescription(objectContent.getDescription());
+	 * contentDescription.setMetatagTitle(objectContent.getTitle());
+	 * descriptions.add(contentDescription); } return descriptions; }
+	 */
+	private List&lt;ContentDescription&gt; buildDescriptions(Content contentModel,
+			List&lt;com.salesmanager.shop.model.content.common.ContentDescription&gt; persistableDescriptions)
+			throws Exception {
+<span class="nc" id="L352">		List&lt;ContentDescription&gt; descriptions = new ArrayList&lt;ContentDescription&gt;();</span>
+<span class="nc bnc" id="L353" title="All 2 branches missed.">		for (com.salesmanager.shop.model.content.common.ContentDescription objectContent : persistableDescriptions) {</span>
+<span class="nc" id="L354">			Language lang = languageService.getByCode(objectContent.getLanguage());</span>
+<span class="nc" id="L355">			Validate.notNull(lang, &quot;language cannot be null&quot;);</span>
+<span class="nc" id="L356">			ContentDescription contentDescription = null;</span>
+<span class="nc bnc" id="L357" title="All 2 branches missed.">			if(!CollectionUtils.isEmpty(contentModel.getDescriptions())) {</span>
+<span class="nc bnc" id="L358" title="All 2 branches missed.">				for(ContentDescription descriptionModel : contentModel.getDescriptions()) {</span>
+<span class="nc bnc" id="L359" title="All 2 branches missed.">					if(descriptionModel.getLanguage().getCode().equals(lang.getCode())) {</span>
+<span class="nc" id="L360">						contentDescription = descriptionModel;</span>
+<span class="nc" id="L361">						break;</span>
+					}
+<span class="nc" id="L363">				}</span>
+			}
+			
+<span class="nc bnc" id="L366" title="All 2 branches missed.">			if(contentDescription == null) {</span>
+<span class="nc" id="L367">				contentDescription = new ContentDescription();</span>
+			}
+			
+			//if (contentModel != null) {
+			//	setContentDescriptionToContentModel(contentModel, contentDescription, lang);
+			//}
+<span class="nc" id="L373">			contentDescription.setMetatagDescription(objectContent.getMetaDescription());</span>
+<span class="nc" id="L374">			contentDescription.setTitle(objectContent.getTitle());</span>
+<span class="nc" id="L375">			contentDescription.setName(objectContent.getName());</span>
+<span class="nc" id="L376">			contentDescription.setSeUrl(objectContent.getFriendlyUrl());</span>
+<span class="nc" id="L377">			contentDescription.setDescription(objectContent.getDescription());</span>
+<span class="nc" id="L378">			contentDescription.setMetatagTitle(objectContent.getTitle());</span>
+<span class="nc" id="L379">			contentDescription.setContent(contentModel);</span>
+<span class="nc" id="L380">			contentDescription.setLanguage(lang);</span>
+<span class="nc" id="L381">			descriptions.add(contentDescription);</span>
+			//contentDescription.setId(objectContent.getId());
+			/**
+			contentDescription.setMetatagDescription(objectContent.getMetaDescription());
+			contentDescription.setTitle(objectContent.getTitle());
+			contentDescription.setName(objectContent.getName());
+			contentDescription.setSeUrl(objectContent.getFriendlyUrl());
+			contentDescription.setDescription(objectContent.getDescription());
+			contentDescription.setMetatagTitle(objectContent.getTitle());
+			descriptions.add(contentDescription);
+			**/
+<span class="nc" id="L392">		}</span>
+<span class="nc" id="L393">		return descriptions;</span>
+	}
+
+	private void setContentDescriptionToContentModel(Content content, ContentDescription contentDescription,
+			Language language) {
+
+<span class="nc" id="L399">		Optional&lt;ContentDescription&gt; contentDescriptionModel = findAppropriateContentDescription(</span>
+<span class="nc" id="L400">				content.getDescriptions(), language);</span>
+
+<span class="nc bnc" id="L402" title="All 2 branches missed.">		if (contentDescriptionModel.isPresent()) {</span>
+<span class="nc" id="L403">			contentDescription.setMetatagDescription(contentDescriptionModel.get().getMetatagDescription());</span>
+<span class="nc" id="L404">			contentDescription.setDescription(contentDescriptionModel.get().getDescription());</span>
+<span class="nc" id="L405">			contentDescription.setId(contentDescriptionModel.get().getId());</span>
+<span class="nc" id="L406">			contentDescription.setAuditSection(contentDescriptionModel.get().getAuditSection());</span>
+<span class="nc" id="L407">			contentDescription.setLanguage(contentDescriptionModel.get().getLanguage());</span>
+<span class="nc" id="L408">			contentDescription.setTitle(contentDescriptionModel.get().getTitle());</span>
+<span class="nc" id="L409">			contentDescription.setName(contentDescriptionModel.get().getName());</span>
+		} 
+
+<span class="nc" id="L412">	}</span>
+
+	@Override
+	public ReadableContentPage getContentPage(String code, MerchantStore store, Language language) {
+
+<span class="nc" id="L417">		Validate.notNull(code, &quot;Content code cannot be null&quot;);</span>
+<span class="nc" id="L418">		Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);</span>
+
+		try {
+<span class="nc" id="L421">			Content content = null;</span>
+
+<span class="nc bnc" id="L423" title="All 2 branches missed.">			if (language == null) {</span>
+<span class="nc" id="L424">				content = Optional.ofNullable(contentService.getByCode(code, store))</span>
+<span class="nc" id="L425">						.orElseThrow(() -&gt; new ResourceNotFoundException(&quot;No page found : &quot; + code));</span>
+			} else {
+<span class="nc" id="L427">				content = Optional.ofNullable(contentService.getByCode(code, store, language))</span>
+<span class="nc" id="L428">						.orElseThrow(() -&gt; new ResourceNotFoundException(&quot;No page found : &quot; + code));</span>
+			}
+
+<span class="nc" id="L431">			return convertContentToReadableContentPage(store, language, content);</span>
+
+<span class="nc" id="L433">		} catch (ServiceException e) {</span>
+<span class="nc" id="L434">			throw new ServiceRuntimeException(&quot;Error while getting page &quot; + e.getMessage(), e);</span>
+		}
+	}
+
+	@Override
+	public ReadableEntityList&lt;ReadableContentBox&gt; getContentBoxes(ContentType type, String codePrefix,
+			MerchantStore store, Language language, int page, int count) {
+
+<span class="nc" id="L442">		Validate.notNull(codePrefix, &quot;content code prefix cannot be null&quot;);</span>
+<span class="nc" id="L443">		Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);</span>
+<span class="nc" id="L444">		Validate.notNull(language, &quot;Language cannot be null&quot;);</span>
+
+		/*
+		 * return contentService.getByCodeLike(type, codePrefix, store,
+		 * language).stream() .map(content -&gt;
+		 * convertContentToReadableContentBox(store, language, content))
+		 * .collect(Collectors.toList());
+		 */
+
+<span class="nc" id="L453">		return null;</span>
+	}
+
+	@SuppressWarnings({ &quot;rawtypes&quot;, &quot;unchecked&quot; })
+	@Override
+	public ReadableEntityList&lt;ReadableContentBox&gt; getContentBoxes(ContentType type, MerchantStore store,
+			Language language, int page, int count) {
+
+<span class="nc" id="L461">		Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);</span>
+
+<span class="nc" id="L463">		ReadableEntityList items = new ReadableEntityList();</span>
+		Page&lt;Content&gt; contentBoxes;
+		try {
+<span class="nc" id="L466">			contentBoxes = contentService.listByType(type, store, page, count);</span>
+
+<span class="nc" id="L468">			items.setTotalPages(contentBoxes.getTotalPages());</span>
+<span class="nc" id="L469">			items.setNumber(contentBoxes.getContent().size());</span>
+<span class="nc" id="L470">			items.setRecordsTotal(contentBoxes.getNumberOfElements());</span>
+
+<span class="nc" id="L472">			List&lt;ReadableContentBox&gt; boxes = contentBoxes.getContent().stream()</span>
+<span class="nc" id="L473">					.map(content -&gt; convertContentToReadableContentBox(store, language, content))</span>
+<span class="nc" id="L474">					.collect(Collectors.toList());</span>
+
+<span class="nc" id="L476">			items.setItems(boxes);</span>
+
+<span class="nc" id="L478">			return items;</span>
+
+<span class="nc" id="L480">		} catch (ServiceException e) {</span>
+<span class="nc" id="L481">			throw new ServiceRuntimeException(&quot;Exception while getting content &quot;, e);</span>
+		}
+
+	}
+
+	@Override
+	public void addContentFile(ContentFile file, String merchantStoreCode) {
+		try {
+<span class="nc" id="L489">			byte[] payload = file.getFile();</span>
+<span class="nc" id="L490">			String fileName = file.getName();</span>
+
+<span class="nc" id="L492">			try (InputStream targetStream = new ByteArrayInputStream(payload)) {</span>
+
+<span class="nc" id="L494">				String type = file.getContentType().split(FILE_CONTENT_DELIMETER)[0];</span>
+<span class="nc" id="L495">				FileContentType fileType = getFileContentType(type);</span>
+
+<span class="nc" id="L497">				InputContentFile cmsContent = new InputContentFile();</span>
+<span class="nc" id="L498">				cmsContent.setFileName(fileName);</span>
+<span class="nc" id="L499">				cmsContent.setMimeType(file.getContentType());</span>
+<span class="nc" id="L500">				cmsContent.setFile(targetStream);</span>
+<span class="nc" id="L501">				cmsContent.setFileContentType(fileType);</span>
+
+<span class="nc" id="L503">				contentService.addContentFile(merchantStoreCode, cmsContent);</span>
+			}
+<span class="nc" id="L505">		} catch (ServiceException | IOException e) {</span>
+<span class="nc" id="L506">			throw new ServiceRuntimeException(e);</span>
+<span class="nc" id="L507">		}</span>
+<span class="nc" id="L508">	}</span>
+
+	private FileContentType getFileContentType(String type) {
+<span class="nc" id="L511">		FileContentType fileType = FileContentType.STATIC_FILE;</span>
+<span class="nc bnc" id="L512" title="All 2 branches missed.">		if (type.equals(&quot;image&quot;)) {// for now we consider this route from api</span>
+									// only
+<span class="nc" id="L514">			fileType = FileContentType.API_IMAGE;</span>
+		}
+<span class="nc" id="L516">		return fileType;</span>
+	}
+
+	private ReadableContentBox convertContentToReadableContentBox(MerchantStore store, Language language,
+			Content content) {
+<span class="nc bnc" id="L521" title="All 2 branches missed.">		if (language != null) {</span>
+<span class="nc" id="L522">			ReadableContentBox box = new ReadableContentBox();</span>
+<span class="nc" id="L523">			this.setDescription(content, box, language);</span>
+<span class="nc" id="L524">			box.setCode(content.getCode());</span>
+<span class="nc" id="L525">			box.setId(content.getId());</span>
+<span class="nc" id="L526">			box.setVisible(content.isVisible());</span>
+<span class="nc" id="L527">			return box;</span>
+		} else {
+<span class="nc" id="L529">			ReadableContentBoxFull box = new ReadableContentBoxFull();</span>
+<span class="nc" id="L530">			List&lt;com.salesmanager.shop.model.content.common.ContentDescription&gt; descriptions = content.getDescriptions()</span>
+<span class="nc" id="L531">					.stream().map(d -&gt; this.contentDescription(d)).collect(Collectors.toList());</span>
+<span class="nc" id="L532">			this.setDescription(content, box, store.getDefaultLanguage());</span>
+<span class="nc" id="L533">			box.setDescriptions(descriptions);</span>
+<span class="nc" id="L534">			box.setCode(content.getCode());</span>
+<span class="nc" id="L535">			box.setId(content.getId());</span>
+<span class="nc" id="L536">			box.setVisible(content.isVisible());</span>
+<span class="nc" id="L537">			return box;</span>
+		}
+		// TODO revise this
+		// String staticImageFilePath = imageUtils.buildStaticImageUtils(store,
+		// content.getCode() + &quot;.jpg&quot;);
+		// box.setImage(staticImageFilePath);
+	}
+	
+	private void setDescription(Content content, ReadableContentBox box, Language lang) {
+		
+<span class="nc" id="L547">		Optional&lt;ContentDescription&gt; contentDescription = findAppropriateContentDescription(</span>
+<span class="nc" id="L548">				content.getDescriptions(), lang);</span>
+<span class="nc bnc" id="L549" title="All 2 branches missed.">		if (contentDescription.isPresent()) {</span>
+<span class="nc" id="L550">			com.salesmanager.shop.model.content.common.ContentDescription desc = this</span>
+<span class="nc" id="L551">					.contentDescription(contentDescription.get());</span>
+<span class="nc" id="L552">			box.setDescription(desc);</span>
+		}
+		
+<span class="nc" id="L555">	}</span>
+
+	private ReadableContentPage convertContentToReadableContentPage(MerchantStore store, Language language,
+			Content content) {
+<span class="nc bnc" id="L559" title="All 2 branches missed.">		if (language != null) {</span>
+<span class="nc" id="L560">			ReadableContentPage page = new ReadableContentPage();</span>
+<span class="nc" id="L561">			Optional&lt;ContentDescription&gt; contentDescription = findAppropriateContentDescription(</span>
+<span class="nc" id="L562">					content.getDescriptions(), language);</span>
+<span class="nc bnc" id="L563" title="All 2 branches missed.">			if (contentDescription.isPresent()) {</span>
+<span class="nc" id="L564">				com.salesmanager.shop.model.content.common.ContentDescription desc = this</span>
+<span class="nc" id="L565">						.contentDescription(contentDescription.get());</span>
+<span class="nc" id="L566">				page.setDescription(desc);</span>
+			}
+<span class="nc" id="L568">			page.setCode(content.getCode());</span>
+<span class="nc" id="L569">			page.setId(content.getId());</span>
+<span class="nc" id="L570">			page.setVisible(content.isVisible());</span>
+<span class="nc" id="L571">			return page;</span>
+		} else {
+<span class="nc" id="L573">			ReadableContentPageFull page = new ReadableContentPageFull();</span>
+<span class="nc" id="L574">			List&lt;com.salesmanager.shop.model.content.common.ContentDescription&gt; descriptions = content.getDescriptions()</span>
+<span class="nc" id="L575">					.stream().map(d -&gt; this.contentDescription(d)).collect(Collectors.toList());</span>
+<span class="nc" id="L576">			page.setDescriptions(descriptions);</span>
+<span class="nc" id="L577">			page.setCode(content.getCode());</span>
+<span class="nc" id="L578">			page.setId(content.getId());</span>
+<span class="nc" id="L579">			page.setVisible(content.isVisible());</span>
+<span class="nc" id="L580">			return page;</span>
+		}
+
+	}
+
+	private com.salesmanager.shop.model.content.common.ContentDescription contentDescription(
+			ContentDescription description) {
+<span class="nc" id="L587">		Validate.notNull(description, &quot;ContentDescription cannot be null&quot;);</span>
+<span class="nc" id="L588">		com.salesmanager.shop.model.content.common.ContentDescription desc = new com.salesmanager.shop.model.content.common.ContentDescription();</span>
+<span class="nc" id="L589">		desc.setDescription(description.getDescription());//return description as is</span>
+<span class="nc" id="L590">		desc.setName(description.getName());</span>
+<span class="nc" id="L591">		desc.setTitle(description.getTitle());</span>
+<span class="nc" id="L592">		desc.setFriendlyUrl(description.getSeUrl());</span>
+<span class="nc" id="L593">		desc.setId(description.getId());</span>
+<span class="nc" id="L594">		desc.setLanguage(description.getLanguage().getCode());</span>
+<span class="nc" id="L595">		return desc;</span>
+	}
+
+	private ReadableContentBox convertContentToReadableLegacyContentBox(MerchantStore store, Language language,
+			Content content) {
+		/*
+		 * ReadableContentBox box = new ReadableContentBox();
+		 * Optional&lt;ContentDescription&gt; contentDescription =
+		 * findAppropriateContentDescription(content.getDescriptions(),
+		 * language); if (contentDescription.isPresent()) {
+		 * box.setName(contentDescription.get().getName());
+		 * box.setBoxContent(contentDescription.get().getDescription()); }
+		 * String staticImageFilePath = imageUtils.buildStaticImageUtils(store,
+		 * content.getCode() + &quot;.jpg&quot;); box.setImage(staticImageFilePath);
+		 * return box;
+		 */
+
+<span class="nc" id="L612">		return null;</span>
+	}
+
+	private Optional&lt;ContentDescription&gt; findAppropriateContentDescription(List&lt;ContentDescription&gt; contentDescriptions,
+			Language language) {
+<span class="nc" id="L617">		return contentDescriptions.stream()</span>
+<span class="nc" id="L618">				.filter(description -&gt; description.getLanguage().getCode().equals(language.getCode())).findFirst();</span>
+	}
+
+	@Override
+	public ReadableContentBox getContentBox(String code, MerchantStore store, Language language) {
+<span class="nc" id="L623">		Validate.notNull(code, &quot;Content code cannot be null&quot;);</span>
+<span class="nc" id="L624">		Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);</span>
+
+		try {
+<span class="nc" id="L627">			Content content = null;</span>
+<span class="nc" id="L628">			ReadableContentBox box = new ReadableContentBox();</span>
+			
+<span class="nc bnc" id="L630" title="All 2 branches missed.">			if(language != null) {</span>
+				
+<span class="nc" id="L632">				content = 	Optional.ofNullable(contentService.getByCode(code, store, language))</span>
+<span class="nc" id="L633">						.orElseThrow(() -&gt; new ResourceNotFoundException(</span>
+<span class="nc" id="L634">								&quot;Resource not found [&quot; + code + &quot;] for store [&quot; + store.getCode() + &quot;]&quot;));</span>
+				
+<span class="nc" id="L636">				Optional&lt;ContentDescription&gt; contentDescription = findAppropriateContentDescription(</span>
+<span class="nc" id="L637">						content.getDescriptions(), language);</span>
+
+<span class="nc bnc" id="L639" title="All 2 branches missed.">				if (contentDescription.isPresent()) {</span>
+<span class="nc" id="L640">					com.salesmanager.shop.model.content.common.ContentDescription desc = this</span>
+<span class="nc" id="L641">							.contentDescription(contentDescription.get());//return cdata description</span>
+<span class="nc" id="L642">					desc.setDescription(this.fixContentDescription(desc.getDescription()));</span>
+<span class="nc" id="L643">					box.setDescription(desc);</span>
+				}
+				
+<span class="nc" id="L646">				return box;</span>
+				
+			} else {
+
+<span class="nc" id="L650">				content = 	Optional.ofNullable(contentService.getByCode(code, store))</span>
+<span class="nc" id="L651">						.orElseThrow(() -&gt; new ResourceNotFoundException(</span>
+<span class="nc" id="L652">								&quot;Resource not found [&quot; + code + &quot;] for store [&quot; + store.getCode() + &quot;]&quot;));</span>
+				
+<span class="nc" id="L654">				ReadableContentBoxFull full = new ReadableContentBoxFull(); //all languages</span>
+				
+<span class="nc" id="L656">				List&lt;com.salesmanager.shop.model.content.common.ContentDescription&gt; descriptions = content.getDescriptions()</span>
+<span class="nc" id="L657">						.stream().map(d -&gt; this.contentDescription(d)).collect(Collectors.toList());</span>
+				
+				/**
+				Optional&lt;ContentDescription&gt; contentDescription = findAppropriateContentDescription(
+						content.getDescriptions(), store.getDefaultLanguage());
+				
+				if(contentDescription.isPresent()) {
+					com.salesmanager.shop.model.content.common.ContentDescription desc = this
+							.contentDescription(contentDescription.get());
+					full.setDescription(desc);
+				}
+				**/
+				
+				
+<span class="nc" id="L671">				full.setDescriptions(descriptions);</span>
+<span class="nc" id="L672">				full.setCode(content.getCode());</span>
+<span class="nc" id="L673">				full.setId(content.getId());</span>
+<span class="nc" id="L674">				full.setVisible(content.isVisible());</span>
+				
+<span class="nc" id="L676">				return full;</span>
+				
+			}
+					
+
+<span class="nc" id="L681">		} catch (ServiceException e) {</span>
+<span class="nc" id="L682">			throw new ServiceRuntimeException(e);</span>
+		}
+	}
+	
+	private String fixContentDescription(String description) {
+<span class="nc" id="L687">		Validate.notNull(description, &quot;description cannot be empty&quot;);</span>
+<span class="nc" id="L688">		return &quot;&lt;![CDATA[&quot; + description.replaceAll(&quot;\r\n&quot;, &quot;&quot;).replaceAll(&quot;\t&quot;, &quot;&quot;) + &quot;]]&gt;&quot;;</span>
+		
+		
+	}
+
+	@Override
+	public Long saveContentPage(PersistableContentPage page, MerchantStore merchantStore, Language language) {
+<span class="nc" id="L695">		Validate.notNull(page);</span>
+<span class="nc" id="L696">		Validate.notNull(page.getCode(), &quot;Content code must not be null&quot;);</span>
+<span class="nc" id="L697">		Validate.notNull(merchantStore);</span>
+
+		try {
+<span class="nc" id="L700">			Content content = null;</span>
+
+<span class="nc" id="L702">			content = contentService.getByCode(page.getCode(), merchantStore);</span>
+<span class="nc bnc" id="L703" title="All 2 branches missed.">			if (content != null) {</span>
+<span class="nc" id="L704">				throw new ConstraintException(&quot;Page with code [&quot; + page.getCode() + &quot;] already exist for store [&quot;</span>
+<span class="nc" id="L705">						+ merchantStore.getCode() + &quot;]&quot;);</span>
+			}
+
+<span class="nc" id="L708">			content = convertContentPageToContent(merchantStore, content, page);</span>
+<span class="nc" id="L709">			contentService.saveOrUpdate(content);</span>
+<span class="nc" id="L710">			return content.getId();</span>
+<span class="nc" id="L711">		} catch (Exception e) {</span>
+<span class="nc" id="L712">			throw new ServiceRuntimeException(e);</span>
+		}
+	}
+
+	@Override
+	public Long saveContentBox(PersistableContentBox box, MerchantStore merchantStore, Language language) {
+<span class="nc" id="L718">		Validate.notNull(box);</span>
+<span class="nc" id="L719">		Validate.notNull(box.getCode(), &quot;Content box must not be null&quot;);</span>
+<span class="nc" id="L720">		Validate.notNull(merchantStore);</span>
+
+		try {
+<span class="nc" id="L723">			Content content = null;</span>
+
+<span class="nc" id="L725">			content = contentService.getByCode(box.getCode(), merchantStore);</span>
+<span class="nc bnc" id="L726" title="All 2 branches missed.">			if (content != null) {</span>
+<span class="nc" id="L727">				throw new ConstraintException(&quot;Content box with code [&quot; + box.getCode() + &quot;] already exist for store [&quot;</span>
+<span class="nc" id="L728">						+ merchantStore.getCode() + &quot;]&quot;);</span>
+			}
+
+<span class="nc" id="L731">			content = convertContentBoxToContent(merchantStore, content, box);</span>
+<span class="nc" id="L732">			contentService.saveOrUpdate(content);</span>
+<span class="nc" id="L733">			return content.getId();</span>
+<span class="nc" id="L734">		} catch (Exception e) {</span>
+<span class="nc" id="L735">			throw new ServiceRuntimeException(e);</span>
+		}
+
+	}
+
+	@Override
+	public void addContentFiles(List&lt;ContentFile&gt; files, String merchantStoreCode) {
+<span class="nc bnc" id="L742" title="All 2 branches missed.">		for (ContentFile file : files) {</span>
+<span class="nc" id="L743">			addContentFile(file, merchantStoreCode);</span>
+<span class="nc" id="L744">		}</span>
+
+<span class="nc" id="L746">	}</span>
+
+	@Override
+	public void delete(MerchantStore store, Long id) {
+<span class="nc" id="L750">		Validate.notNull(store, &quot;MerchantStore not null&quot;);</span>
+<span class="nc" id="L751">		Validate.notNull(id, &quot;Content id must not be null&quot;);</span>
+		// select content first
+<span class="nc" id="L753">		Content content = contentService.getById(id);</span>
+<span class="nc bnc" id="L754" title="All 2 branches missed.">		if (content != null) {</span>
+<span class="nc bnc" id="L755" title="All 2 branches missed.">			if (content.getMerchantStore().getId().intValue() != store.getId().intValue()) {</span>
+<span class="nc" id="L756">				throw new ResourceNotFoundException(</span>
+<span class="nc" id="L757">						&quot;No content found with id [&quot; + id + &quot;] for store [&quot; + store.getCode() + &quot;]&quot;);</span>
+			}
+		}
+
+		try {
+<span class="nc" id="L762">			contentService.delete(content);</span>
+<span class="nc" id="L763">		} catch (ServiceException e) {</span>
+<span class="nc" id="L764">			throw new ServiceRuntimeException(&quot;Exception while deleting content &quot; + e.getMessage(), e);</span>
+<span class="nc" id="L765">		}</span>
+
+<span class="nc" id="L767">	}</span>
+
+	@Override
+	public ReadableContentFull getContent(String code, MerchantStore store, Language language) {
+<span class="nc" id="L771">		Validate.notNull(store, &quot;MerchantStore not null&quot;);</span>
+<span class="nc" id="L772">		Validate.notNull(code, &quot;Content code must not be null&quot;);</span>
+
+		try {
+<span class="nc" id="L775">			Content content = contentService.getByCode(code, store);</span>
+<span class="nc bnc" id="L776" title="All 2 branches missed.">			if (content == null) {</span>
+<span class="nc" id="L777">				throw new ResourceNotFoundException(</span>
+<span class="nc" id="L778">						&quot;No content found with code [&quot; + code + &quot;] for store [&quot; + store.getCode() + &quot;]&quot;);</span>
+			}
+
+<span class="nc" id="L781">			return this.convertContentToReadableContentFull(store, language, content);</span>
+<span class="nc" id="L782">		} catch (ServiceException e) {</span>
+<span class="nc" id="L783">			throw new ServiceRuntimeException(&quot;Error while getting content [&quot; + code + &quot;]&quot;, e);</span>
+		}
+
+	}
+
+	@Override
+	public List&lt;ReadableContentEntity&gt; getContents(Optional&lt;String&gt; type, MerchantStore store, Language language) {
+
+		/**
+		 * get all types
+		 */
+<span class="nc" id="L794">		List&lt;ContentType&gt; types = new ArrayList&lt;ContentType&gt;();</span>
+<span class="nc" id="L795">		types.add(ContentType.BOX);</span>
+<span class="nc" id="L796">		types.add(ContentType.PAGE);</span>
+<span class="nc" id="L797">		types.add(ContentType.SECTION);</span>
+
+		try {
+<span class="nc" id="L800">			return contentService.listByType(types, store, language).stream()</span>
+<span class="nc" id="L801">					.map(content -&gt; convertContentToReadableContentEntity(store, language, content))</span>
+<span class="nc" id="L802">					.collect(Collectors.toList());</span>
+
+<span class="nc" id="L804">		} catch (ServiceException e) {</span>
+<span class="nc" id="L805">			throw new ServiceRuntimeException(&quot;Exception while getting contents&quot;, e);</span>
+		}
+
+	}
+
+	@Override
+	public ReadableContentPage getContentPageByName(String name, MerchantStore store, Language language) {
+<span class="nc" id="L812">		Validate.notNull(name, &quot;Content name cannot be null&quot;);</span>
+<span class="nc" id="L813">		Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);</span>
+<span class="nc" id="L814">		Validate.notNull(language, &quot;Language cannot be null&quot;);</span>
+
+		try {
+
+<span class="nc" id="L818">			ContentDescription contentDescription = Optional.ofNullable(contentService.getBySeUrl(store, name))</span>
+<span class="nc" id="L819">					.orElseThrow(() -&gt; new ResourceNotFoundException(&quot;No page found : &quot; + name));</span>
+
+<span class="nc" id="L821">			return this.contentDescriptionToReadableContent(store, contentDescription.getContent(), contentDescription);</span>
+
+<span class="nc" id="L823">		} catch (Exception e) {</span>
+<span class="nc" id="L824">			throw new ServiceRuntimeException(&quot;Error while getting page &quot; + e.getMessage(), e);</span>
+		}
+	}
+
+	@Override
+	public void renameFile(MerchantStore store, FileContentType fileType, String originalName, String newName) {
+<span class="nc" id="L830">		Optional&lt;String&gt; path = Optional.ofNullable(null);</span>
+		try {
+<span class="nc" id="L832">			contentService.renameFile(store.getCode(), fileType, path, originalName, newName);</span>
+<span class="nc" id="L833">		} catch (ServiceException e) {</span>
+<span class="nc" id="L834">			throw new ServiceRuntimeException(&quot;Error while renaming file &quot; + e.getMessage(), e);</span>
+<span class="nc" id="L835">		}</span>
+
+<span class="nc" id="L837">	}</span>
+
+	@Override
+	public OutputContentFile download(MerchantStore store, FileContentType fileType, String fileName) {
+
+		try {
+<span class="nc" id="L843">			return contentService.getContentFile(store.getCode(), fileType, fileName);</span>
+<span class="nc" id="L844">		} catch (ServiceException e) {</span>
+<span class="nc" id="L845">			throw new ServiceRuntimeException(&quot;Error while downloading file &quot; + e.getMessage(), e);</span>
+		}
+
+	}
+
+
+
+	@Override
+	public void updateContentPage(Long id, PersistableContentPage page, MerchantStore merchantStore,
+			Language language) {
+<span class="nc" id="L855">		Validate.notNull(page);</span>
+<span class="nc" id="L856">		Validate.notNull(id, &quot;Content id must not be null&quot;);</span>
+<span class="nc" id="L857">		Validate.notNull(merchantStore);</span>
+
+		try {
+<span class="nc" id="L860">			Content content = null;</span>
+
+<span class="nc" id="L862">			content = contentService.getById(id, merchantStore);</span>
+<span class="nc bnc" id="L863" title="All 2 branches missed.">			if (content == null) {</span>
+<span class="nc" id="L864">				throw new ConstraintException(&quot;Page with id [&quot; + id + &quot;] does not exist for store [&quot;</span>
+<span class="nc" id="L865">						+ merchantStore.getCode() + &quot;]&quot;);</span>
+			}
+
+<span class="nc" id="L868">			page.setId(id);</span>
+<span class="nc" id="L869">			content = convertContentPageToContent(merchantStore, content, page);</span>
+<span class="nc" id="L870">			contentService.saveOrUpdate(content);</span>
+
+<span class="nc" id="L872">		} catch (Exception e) {</span>
+<span class="nc" id="L873">			throw new ServiceRuntimeException(e);</span>
+<span class="nc" id="L874">		}</span>
+
+<span class="nc" id="L876">	}</span>
+
+	@Override
+	public void deleteContent(Long id, MerchantStore merchantStore) {
+<span class="nc" id="L880">		Validate.notNull(id, &quot;Content id must not be null&quot;);</span>
+<span class="nc" id="L881">		Validate.notNull(merchantStore);</span>
+		
+		try {
+<span class="nc" id="L884">			Content content = null;</span>
+
+<span class="nc" id="L886">			content = contentService.getById(id, merchantStore);</span>
+<span class="nc bnc" id="L887" title="All 2 branches missed.">			if (content == null) {</span>
+<span class="nc" id="L888">				throw new ConstraintException(&quot;Content with id [&quot; + id + &quot;] does not exist for store [&quot;</span>
+<span class="nc" id="L889">						+ merchantStore.getCode() + &quot;]&quot;);</span>
+			}
+
+<span class="nc" id="L892">			contentService.delete(content);</span>
+
+<span class="nc" id="L894">		} catch (Exception e) {</span>
+<span class="nc" id="L895">			throw new ServiceRuntimeException(e);</span>
+<span class="nc" id="L896">		}</span>
+
+<span class="nc" id="L898">	}</span>
+
+	@Override
+	public void updateContentBox(Long id, PersistableContentBox box, MerchantStore merchantStore, Language language) {
+<span class="nc" id="L902">		Validate.notNull(box);</span>
+<span class="nc" id="L903">		Validate.notNull(id, &quot;Content id must not be null&quot;);</span>
+<span class="nc" id="L904">		Validate.notNull(merchantStore);</span>
+
+		try {
+<span class="nc" id="L907">			Content content = null;</span>
+
+<span class="nc" id="L909">			content = contentService.getById(id, merchantStore);</span>
+<span class="nc bnc" id="L910" title="All 2 branches missed.">			if (content == null) {</span>
+<span class="nc" id="L911">				throw new ConstraintException(&quot;Page with id [&quot; + id + &quot;] does not exist for store [&quot;</span>
+<span class="nc" id="L912">						+ merchantStore.getCode() + &quot;]&quot;);</span>
+			}
+
+<span class="nc" id="L915">			box.setId(id);</span>
+<span class="nc" id="L916">			content = convertContentBoxToContent(merchantStore, content, box);</span>
+<span class="nc" id="L917">			contentService.saveOrUpdate(content);</span>
+
+<span class="nc" id="L919">		} catch (Exception e) {</span>
+<span class="nc" id="L920">			throw new ServiceRuntimeException(e);</span>
+<span class="nc" id="L921">		}</span>
+
+<span class="nc" id="L923">	}</span>
+
+	@Override
+	public boolean codeExist(String code, String type, MerchantStore store) {
+<span class="nc" id="L927">		return contentService.exists(code, ContentType.valueOf(type), store);</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

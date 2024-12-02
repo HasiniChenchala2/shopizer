@@ -1,0 +1,283 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ShoppingCartModelPopulator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.populator.shoppingCart</a> &gt; <span class="el_source">ShoppingCartModelPopulator.java</span></div><h1>ShoppingCartModelPopulator.java</h1><pre class="source lang-java linenums">/**
+ * 
+ */
+package com.salesmanager.shop.populator.shoppingCart;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import org.apache.commons.beanutils.ConversionException;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.catalog.product.ProductService;
+import com.salesmanager.core.business.services.catalog.product.attribute.ProductAttributeService;
+import com.salesmanager.core.business.services.shoppingcart.ShoppingCartService;
+import com.salesmanager.core.business.utils.AbstractDataPopulator;
+import com.salesmanager.core.model.catalog.product.Product;
+import com.salesmanager.core.model.catalog.product.attribute.ProductAttribute;
+import com.salesmanager.core.model.customer.Customer;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.core.model.shoppingcart.ShoppingCart;
+import com.salesmanager.shop.model.shoppingcart.ShoppingCartAttribute;
+import com.salesmanager.shop.model.shoppingcart.ShoppingCartData;
+import com.salesmanager.shop.model.shoppingcart.ShoppingCartItem;
+
+/**
+ * @author Umesh A
+ */
+
+@Service(value=&quot;shoppingCartModelPopulator&quot;)
+<span class="fc" id="L37">public class ShoppingCartModelPopulator</span>
+    extends AbstractDataPopulator&lt;ShoppingCartData,ShoppingCart&gt;
+{
+
+<span class="fc" id="L41">	private static final Logger LOG = LoggerFactory.getLogger(ShoppingCartModelPopulator.class);</span>
+
+    private ShoppingCartService shoppingCartService;
+    
+    private Customer customer;
+
+    public ShoppingCartService getShoppingCartService() {
+<span class="nc" id="L48">		return shoppingCartService;</span>
+	}
+
+
+	public void setShoppingCartService(ShoppingCartService shoppingCartService) {
+<span class="nc" id="L53">		this.shoppingCartService = shoppingCartService;</span>
+<span class="nc" id="L54">	}</span>
+
+
+	private ProductService productService;
+
+
+    public ProductService getProductService() {
+<span class="nc" id="L61">		return productService;</span>
+	}
+
+
+	public void setProductService(ProductService productService) {
+<span class="nc" id="L66">		this.productService = productService;</span>
+<span class="nc" id="L67">	}</span>
+
+
+	private ProductAttributeService productAttributeService;
+    
+   
+    public ProductAttributeService getProductAttributeService() {
+<span class="nc" id="L74">		return productAttributeService;</span>
+	}
+
+
+	public void setProductAttributeService(
+			ProductAttributeService productAttributeService) {
+<span class="nc" id="L80">		this.productAttributeService = productAttributeService;</span>
+<span class="nc" id="L81">	}</span>
+
+
+	@Override
+    public ShoppingCart populate(ShoppingCartData shoppingCart,ShoppingCart cartMdel,final MerchantStore store, Language language)
+    {
+
+
+        // if id &gt;0 get the original from the database, override products
+       try{
+<span class="nc bnc" id="L91" title="All 4 branches missed.">        if ( shoppingCart.getId() &gt; 0  &amp;&amp; StringUtils.isNotBlank( shoppingCart.getCode()))</span>
+        {
+<span class="nc" id="L93">            cartMdel = shoppingCartService.getByCode( shoppingCart.getCode(), store );</span>
+<span class="nc bnc" id="L94" title="All 2 branches missed.">            if(cartMdel==null){</span>
+<span class="nc" id="L95">                cartMdel=new ShoppingCart();</span>
+<span class="nc" id="L96">                cartMdel.setShoppingCartCode( shoppingCart.getCode() );</span>
+<span class="nc" id="L97">                cartMdel.setMerchantStore( store );</span>
+<span class="nc bnc" id="L98" title="All 2 branches missed.">                if ( customer != null )</span>
+                {
+<span class="nc" id="L100">                    cartMdel.setCustomerId( customer.getId() );</span>
+                }
+<span class="nc" id="L102">                shoppingCartService.create( cartMdel );</span>
+            }
+        }
+        else
+        {
+<span class="nc" id="L107">            cartMdel.setShoppingCartCode( shoppingCart.getCode() );</span>
+<span class="nc" id="L108">            cartMdel.setMerchantStore( store );</span>
+<span class="nc bnc" id="L109" title="All 2 branches missed.">            if ( customer != null )</span>
+            {
+<span class="nc" id="L111">                cartMdel.setCustomerId( customer.getId() );</span>
+            }
+<span class="nc" id="L113">            shoppingCartService.create( cartMdel );</span>
+        }
+
+<span class="nc" id="L116">        List&lt;ShoppingCartItem&gt; items = shoppingCart.getShoppingCartItems();</span>
+<span class="nc" id="L117">        Set&lt;com.salesmanager.core.model.shoppingcart.ShoppingCartItem&gt; newItems =</span>
+            new HashSet&lt;com.salesmanager.core.model.shoppingcart.ShoppingCartItem&gt;();
+<span class="nc bnc" id="L119" title="All 4 branches missed.">        if ( items != null &amp;&amp; items.size() &gt; 0 )</span>
+        {
+<span class="nc bnc" id="L121" title="All 2 branches missed.">            for ( ShoppingCartItem item : items )</span>
+            {
+
+<span class="nc" id="L124">                Set&lt;com.salesmanager.core.model.shoppingcart.ShoppingCartItem&gt; cartItems = cartMdel.getLineItems();</span>
+<span class="nc bnc" id="L125" title="All 4 branches missed.">                if ( cartItems != null &amp;&amp; cartItems.size() &gt; 0 )</span>
+                {
+
+<span class="nc bnc" id="L128" title="All 2 branches missed.">                    for ( com.salesmanager.core.model.shoppingcart.ShoppingCartItem dbItem : cartItems )</span>
+                    {
+<span class="nc bnc" id="L130" title="All 2 branches missed.">                        if ( dbItem.getId().longValue() == item.getId() )</span>
+                        {
+<span class="nc" id="L132">                            dbItem.setQuantity( item.getQuantity() );</span>
+                            // compare attributes
+<span class="nc" id="L134">                            Set&lt;com.salesmanager.core.model.shoppingcart.ShoppingCartAttributeItem&gt; attributes =</span>
+<span class="nc" id="L135">                                dbItem.getAttributes();</span>
+<span class="nc" id="L136">                            Set&lt;com.salesmanager.core.model.shoppingcart.ShoppingCartAttributeItem&gt; newAttributes =</span>
+                                new HashSet&lt;com.salesmanager.core.model.shoppingcart.ShoppingCartAttributeItem&gt;();
+<span class="nc" id="L138">                            List&lt;ShoppingCartAttribute&gt; cartAttributes = item.getShoppingCartAttributes();</span>
+<span class="nc bnc" id="L139" title="All 2 branches missed.">                            if ( !CollectionUtils.isEmpty( cartAttributes ) )</span>
+                            {
+<span class="nc bnc" id="L141" title="All 2 branches missed.">                                for ( ShoppingCartAttribute attribute : cartAttributes )</span>
+                                {
+<span class="nc bnc" id="L143" title="All 2 branches missed.">                                    for ( com.salesmanager.core.model.shoppingcart.ShoppingCartAttributeItem dbAttribute : attributes )</span>
+                                    {
+<span class="nc bnc" id="L145" title="All 2 branches missed.">                                        if ( dbAttribute.getId().longValue() == attribute.getId() )</span>
+                                        {
+<span class="nc" id="L147">                                            newAttributes.add( dbAttribute );</span>
+                                        }
+<span class="nc" id="L149">                                    }</span>
+<span class="nc" id="L150">                                }</span>
+                                
+<span class="nc" id="L152">                                dbItem.setAttributes( newAttributes );</span>
+                            }
+                            else
+                            {
+<span class="nc" id="L156">                                dbItem.removeAllAttributes();</span>
+                            }
+<span class="nc" id="L158">                            newItems.add( dbItem );</span>
+                        }
+<span class="nc" id="L160">                    }</span>
+                }
+                else
+                {// create new item
+<span class="nc" id="L164">                    com.salesmanager.core.model.shoppingcart.ShoppingCartItem cartItem =</span>
+<span class="nc" id="L165">                        createCartItem( cartMdel, item, store );</span>
+<span class="nc" id="L166">                    Set&lt;com.salesmanager.core.model.shoppingcart.ShoppingCartItem&gt; lineItems =</span>
+<span class="nc" id="L167">                        cartMdel.getLineItems();</span>
+<span class="nc bnc" id="L168" title="All 2 branches missed.">                    if ( lineItems == null )</span>
+                    {
+<span class="nc" id="L170">                        lineItems = new HashSet&lt;com.salesmanager.core.model.shoppingcart.ShoppingCartItem&gt;();</span>
+<span class="nc" id="L171">                        cartMdel.setLineItems( lineItems );</span>
+                    }
+<span class="nc" id="L173">                    lineItems.add( cartItem );</span>
+<span class="nc" id="L174">                    shoppingCartService.update( cartMdel );</span>
+                }
+<span class="nc" id="L176">            }// end for</span>
+        }// end if
+<span class="nc" id="L178">       }catch(ServiceException se){</span>
+<span class="nc" id="L179">           LOG.error( &quot;Error while converting cart data to cart model..&quot;+se );</span>
+<span class="nc" id="L180">           throw new ConversionException( &quot;Unable to create cart model&quot;, se ); </span>
+       }
+<span class="nc" id="L182">       catch (Exception ex){</span>
+<span class="nc" id="L183">           LOG.error( &quot;Error while converting cart data to cart model..&quot;+ex );</span>
+<span class="nc" id="L184">           throw new ConversionException( &quot;Unable to create cart model&quot;, ex );  </span>
+<span class="nc" id="L185">       }</span>
+
+<span class="nc" id="L187">        return cartMdel;</span>
+    }
+
+   
+    private com.salesmanager.core.model.shoppingcart.ShoppingCartItem createCartItem( 
+    		com.salesmanager.core.model.shoppingcart.ShoppingCart cart,                                                                                            
+    		ShoppingCartItem shoppingCartItem,                                                                                  
+    		MerchantStore store ) throws Exception
+    {
+
+
+
+<span class="nc" id="L199">        Product product = productService.getBySku(shoppingCartItem.getSku(), store, store.getDefaultLanguage());</span>
+<span class="nc bnc" id="L200" title="All 2 branches missed.">            if ( product == null )</span>
+            {
+<span class="nc" id="L202">                throw new Exception( &quot;Item with sku &quot; + shoppingCartItem.getSku() + &quot; does not exist&quot; );</span>
+            }
+
+<span class="nc bnc" id="L205" title="All 2 branches missed.">            if ( product.getMerchantStore().getId().intValue() != store.getId().intValue() )</span>
+            {
+<span class="nc" id="L207">                throw new Exception( &quot;Item with sku &quot; + shoppingCartItem.getSku() + &quot; does not belong to merchant &quot;</span>
+<span class="nc" id="L208">                    + store.getId() );</span>
+            }
+
+
+
+
+
+<span class="nc" id="L215">        com.salesmanager.core.model.shoppingcart.ShoppingCartItem item =</span>
+            new com.salesmanager.core.model.shoppingcart.ShoppingCartItem( cart, product );
+<span class="nc" id="L217">        item.setQuantity( shoppingCartItem.getQuantity() );</span>
+<span class="nc" id="L218">        item.setItemPrice( shoppingCartItem.getProductPrice() );</span>
+<span class="nc" id="L219">        item.setShoppingCart( cart );</span>
+<span class="nc" id="L220">        item.setSku(shoppingCartItem.getSku());</span>
+
+        // attributes
+<span class="nc" id="L223">        List&lt;ShoppingCartAttribute&gt; cartAttributes = shoppingCartItem.getShoppingCartAttributes();</span>
+<span class="nc bnc" id="L224" title="All 2 branches missed.">        if ( !CollectionUtils.isEmpty( cartAttributes ) )</span>
+        {
+<span class="nc" id="L226">            Set&lt;com.salesmanager.core.model.shoppingcart.ShoppingCartAttributeItem&gt; newAttributes =</span>
+                new HashSet&lt;com.salesmanager.core.model.shoppingcart.ShoppingCartAttributeItem&gt;();
+<span class="nc bnc" id="L228" title="All 2 branches missed.">            for ( ShoppingCartAttribute attribute : cartAttributes )</span>
+            {
+<span class="nc" id="L230">                ProductAttribute productAttribute = productAttributeService.getById( attribute.getAttributeId() );</span>
+<span class="nc bnc" id="L231" title="All 2 branches missed.">                if ( productAttribute != null</span>
+<span class="nc bnc" id="L232" title="All 2 branches missed.">                    &amp;&amp; productAttribute.getProduct().getId().longValue() == product.getId().longValue() )</span>
+                {
+<span class="nc" id="L234">                    com.salesmanager.core.model.shoppingcart.ShoppingCartAttributeItem attributeItem =</span>
+                        new com.salesmanager.core.model.shoppingcart.ShoppingCartAttributeItem( item,
+                                                                                                         productAttribute );
+<span class="nc bnc" id="L237" title="All 2 branches missed.">                    if ( attribute.getAttributeId() &gt; 0 )</span>
+                    {
+<span class="nc" id="L239">                        attributeItem.setId( attribute.getId() );</span>
+                    }
+<span class="nc" id="L241">                    item.addAttributes( attributeItem );</span>
+                    //newAttributes.add( attributeItem );
+                }
+
+<span class="nc" id="L245">            }</span>
+            
+            //item.setAttributes( newAttributes );
+        }
+
+<span class="nc" id="L250">        return item;</span>
+
+    }
+
+
+
+
+    @Override
+    protected ShoppingCart createTarget()
+    {
+      
+<span class="nc" id="L261">        return new ShoppingCart();</span>
+    }
+
+
+	public Customer getCustomer() {
+<span class="nc" id="L266">		return customer;</span>
+	}
+
+
+	public void setCustomer(Customer customer) {
+<span class="nc" id="L271">		this.customer = customer;</span>
+<span class="nc" id="L272">	}</span>
+
+
+   
+
+
+   
+
+   
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

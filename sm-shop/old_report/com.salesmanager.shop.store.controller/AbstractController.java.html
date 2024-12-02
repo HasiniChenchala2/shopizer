@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AbstractController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.controller</a> &gt; <span class="el_source">AbstractController.java</span></div><h1>AbstractController.java</h1><pre class="source lang-java linenums">/**
+ *
+ */
+package com.salesmanager.shop.store.controller;
+
+import javax.servlet.http.HttpServletRequest;
+
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.constants.Constants;
+import com.salesmanager.shop.store.model.paging.PaginationData;
+
+/**
+ * @author Umesh A
+ *
+ */
+<span class="fc" id="L16">public abstract class AbstractController {</span>
+
+
+    /**
+     * Method which will help to retrieving values from Session
+     * based on the key being passed to the method.
+     * @param key
+     * @return value stored in session corresponding to the key
+     */
+    @SuppressWarnings( &quot;unchecked&quot; )
+    protected &lt;T&gt; T getSessionAttribute(final String key, HttpServletRequest request) {
+<span class="nc" id="L27">	          return (T) com.salesmanager.shop.utils.SessionUtil.getSessionAttribute(key, request);</span>
+
+	}
+    
+    protected void setSessionAttribute(final String key, final Object value, HttpServletRequest request) {
+<span class="nc" id="L32">    	com.salesmanager.shop.utils.SessionUtil.setSessionAttribute(key, value, request);</span>
+<span class="nc" id="L33">	}</span>
+    
+    
+    protected void removeAttribute(final String key, HttpServletRequest request) {
+<span class="nc" id="L37">    	com.salesmanager.shop.utils.SessionUtil.removeSessionAttribute(key, request);</span>
+<span class="nc" id="L38">	}</span>
+    
+    protected Language getLanguage(HttpServletRequest request) {
+<span class="nc" id="L41">    	return (Language)request.getAttribute(Constants.LANGUAGE);</span>
+    }
+
+    protected PaginationData createPaginaionData( final int pageNumber, final int pageSize )
+    {
+<span class="nc" id="L46">        final PaginationData paginaionData = new PaginationData(pageSize,pageNumber);</span>
+       
+<span class="nc" id="L48">        return paginaionData;</span>
+    }
+    
+    protected PaginationData calculatePaginaionData( final PaginationData paginationData, final int pageSize, final int resultCount){
+        
+<span class="nc" id="L53">    	int currentPage = paginationData.getCurrentPage();</span>
+
+
+<span class="nc" id="L56">    	int count = Math.min((currentPage * pageSize), resultCount);  </span>
+<span class="nc" id="L57">    	paginationData.setCountByPage(count);</span>
+
+<span class="nc" id="L59">    	paginationData.setTotalCount( resultCount );</span>
+<span class="nc" id="L60">        return paginationData;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

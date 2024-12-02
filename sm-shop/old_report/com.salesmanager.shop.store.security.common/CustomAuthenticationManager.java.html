@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CustomAuthenticationManager.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.security.common</a> &gt; <span class="el_source">CustomAuthenticationManager.java</span></div><h1>CustomAuthenticationManager.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.security.common;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
+
+/**
+ * Abstract authentication manager to be used by various internal Authentication manager
+ * invoked from a SecurityFilter placed in the security filter chain of given http configuration.
+ * @author c.samson
+ *
+ */
+<span class="fc" id="L19">public abstract class CustomAuthenticationManager {</span>
+	
+<span class="fc" id="L21">	protected final Log logger = LogFactory.getLog(getClass());</span>
+	
+    @Value(&quot;${authToken.header}&quot;)
+    private String tokenHeader;
+
+	
+	public String getTokenHeader() {
+<span class="fc" id="L28">		return tokenHeader;</span>
+	}
+
+	public void setTokenHeader(String tokenHeader) {
+<span class="nc" id="L32">		this.tokenHeader = tokenHeader;</span>
+<span class="nc" id="L33">	}</span>
+
+	public void authenticateRequest(HttpServletRequest request, HttpServletResponse response) throws Exception {
+		
+		
+<span class="pc bpc" id="L38" title="1 of 2 branches missed.">		if (logger.isDebugEnabled()) {</span>
+<span class="nc" id="L39">			logger.debug(&quot;Processing authentication&quot;);</span>
+		}
+		
+<span class="fc" id="L42">		Authentication authResult = null;</span>
+
+		try {
+<span class="fc" id="L45">			authResult = this.attemptAuthentication(request, response);</span>
+<span class="pc bpc" id="L46" title="1 of 2 branches missed.">			if (authResult == null) {</span>
+				// return immediately as subclass has indicated that it hasn't completed
+				// authentication
+<span class="nc" id="L49">				return;</span>
+			}
+<span class="nc" id="L51">		} catch (AuthenticationException failed) {</span>
+			// Authentication failed
+<span class="nc" id="L53">			unsuccess(request, response);</span>
+<span class="nc" id="L54">			return;</span>
+<span class="fc" id="L55">		}</span>
+
+<span class="fc" id="L57">		this.success(request, response, authResult);</span>
+
+		
+<span class="fc" id="L60">	}</span>
+	
+	private void success(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws AuthenticationException {
+
+<span class="fc" id="L64">		SecurityContextHolder.getContext().setAuthentication(authentication);</span>
+		
+<span class="pc bpc" id="L66" title="1 of 2 branches missed.">		if (logger.isDebugEnabled()) {</span>
+<span class="nc" id="L67">			logger.debug(&quot;Authentication success&quot;);</span>
+<span class="nc" id="L68">			logger.debug(&quot;Updated SecurityContextHolder to containAuthentication&quot;);</span>
+		}
+		
+<span class="fc" id="L71">		successfullAuthentication(request, response, authentication);</span>
+<span class="fc" id="L72">	}</span>
+	
+	private void unsuccess(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
+
+<span class="nc" id="L76">		SecurityContextHolder.clearContext();</span>
+		
+<span class="nc bnc" id="L78" title="All 2 branches missed.">		if (logger.isDebugEnabled()) {</span>
+<span class="nc" id="L79">			logger.debug(&quot;Authentication request failed&quot;);</span>
+<span class="nc" id="L80">			logger.debug(&quot;Updated SecurityContextHolder to contain null Authentication&quot;);</span>
+		}
+		
+<span class="nc" id="L83">		unSuccessfullAuthentication(request, response);</span>
+<span class="nc" id="L84">	}</span>
+
+	
+	public abstract Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException, Exception;
+	
+	public abstract void successfullAuthentication(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws AuthenticationException;
+
+	public abstract void unSuccessfullAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException;
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

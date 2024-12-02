@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PersistableOrderApiPopulator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.populator.order</a> &gt; <span class="el_source">PersistableOrderApiPopulator.java</span></div><h1>PersistableOrderApiPopulator.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.populator.order;
+
+import java.math.BigDecimal;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Validate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.services.customer.CustomerService;
+import com.salesmanager.core.business.services.reference.currency.CurrencyService;
+import com.salesmanager.core.business.utils.AbstractDataPopulator;
+import com.salesmanager.core.model.common.Billing;
+import com.salesmanager.core.model.common.Delivery;
+import com.salesmanager.core.model.customer.Customer;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.order.Order;
+import com.salesmanager.core.model.order.OrderChannel;
+import com.salesmanager.core.model.order.attributes.OrderAttribute;
+import com.salesmanager.core.model.order.orderstatus.OrderStatus;
+import com.salesmanager.core.model.order.orderstatus.OrderStatusHistory;
+import com.salesmanager.core.model.payments.PaymentType;
+import com.salesmanager.core.model.reference.currency.Currency;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.model.customer.PersistableCustomer;
+import com.salesmanager.shop.model.order.v1.PersistableAnonymousOrder;
+import com.salesmanager.shop.model.order.v1.PersistableOrder;
+import com.salesmanager.shop.populator.customer.CustomerPopulator;
+import com.salesmanager.shop.utils.LocaleUtils;
+
+@Component
+<span class="fc" id="L36">public class PersistableOrderApiPopulator extends AbstractDataPopulator&lt;PersistableOrder, Order&gt; {</span>
+
+	@Autowired
+	private CurrencyService currencyService;
+	@Autowired
+	private CustomerService customerService;
+/*	@Autowired
+	private ShoppingCartService shoppingCartService;
+	@Autowired
+	private ProductService productService;
+	@Autowired
+	private ProductAttributeService productAttributeService;
+	@Autowired
+	private DigitalProductService digitalProductService;*/
+	@Autowired
+	private CustomerPopulator customerPopulator;
+	
+	
+
+	
+
+
+	@Override
+	public Order populate(PersistableOrder source, Order target, MerchantStore store, Language language)
+			throws ConversionException {
+		
+
+/*		Validate.notNull(currencyService,&quot;currencyService must be set&quot;);
+		Validate.notNull(customerService,&quot;customerService must be set&quot;);
+		Validate.notNull(shoppingCartService,&quot;shoppingCartService must be set&quot;);
+		Validate.notNull(productService,&quot;productService must be set&quot;);
+		Validate.notNull(productAttributeService,&quot;productAttributeService must be set&quot;);
+		Validate.notNull(digitalProductService,&quot;digitalProductService must be set&quot;);*/
+<span class="nc" id="L69">		Validate.notNull(source.getPayment(),&quot;Payment cannot be null&quot;);</span>
+		
+		try {
+			
+<span class="nc bnc" id="L73" title="All 2 branches missed.">			if(target == null) {</span>
+<span class="nc" id="L74">				target = new Order();</span>
+			}
+		
+			//target.setLocale(LocaleUtils.getLocale(store));
+
+<span class="nc" id="L79">			target.setLocale(LocaleUtils.getLocale(store));</span>
+			
+			
+<span class="nc" id="L82">			Currency currency = null;</span>
+			try {
+<span class="nc" id="L84">				currency = currencyService.getByCode(source.getCurrency());</span>
+<span class="nc" id="L85">			} catch(Exception e) {</span>
+<span class="nc" id="L86">				throw new ConversionException(&quot;Currency not found for code &quot; + source.getCurrency());</span>
+<span class="nc" id="L87">			}</span>
+			
+<span class="nc bnc" id="L89" title="All 2 branches missed.">			if(currency==null) {</span>
+<span class="nc" id="L90">				throw new ConversionException(&quot;Currency not found for code &quot; + source.getCurrency());</span>
+			}
+			
+			//Customer
+<span class="nc" id="L94">			Customer customer = null;</span>
+<span class="nc bnc" id="L95" title="All 4 branches missed.">			if(source.getCustomerId() != null &amp;&amp; source.getCustomerId().longValue() &gt;0) {</span>
+<span class="nc" id="L96">			  Long customerId = source.getCustomerId();</span>
+<span class="nc" id="L97">			  customer = customerService.getById(customerId);</span>
+
+<span class="nc bnc" id="L99" title="All 2 branches missed.">			  if(customer == null) {</span>
+<span class="nc" id="L100">				throw new ConversionException(&quot;Curstomer with id &quot; + source.getCustomerId() + &quot; does not exist&quot;);</span>
+			  }
+<span class="nc" id="L102">			  target.setCustomerId(customerId);</span>
+			
+<span class="nc" id="L104">			} else {</span>
+<span class="nc bnc" id="L105" title="All 2 branches missed.">			  if(source instanceof PersistableAnonymousOrder) {</span>
+<span class="nc" id="L106">			    PersistableCustomer persistableCustomer = ((PersistableAnonymousOrder)source).getCustomer();</span>
+<span class="nc" id="L107">			    customer = new Customer();</span>
+<span class="nc" id="L108">			    customer = customerPopulator.populate(persistableCustomer, customer, store, language);</span>
+<span class="nc" id="L109">			  } else {</span>
+<span class="nc" id="L110">			    throw new ConversionException(&quot;Curstomer details or id not set in request&quot;);</span>
+			  } 
+			}
+			
+			
+<span class="nc" id="L115">			target.setCustomerEmailAddress(customer.getEmailAddress());</span>
+			
+<span class="nc" id="L117">			Delivery delivery = customer.getDelivery();</span>
+<span class="nc" id="L118">			target.setDelivery(delivery);</span>
+			
+<span class="nc" id="L120">			Billing billing = customer.getBilling();</span>
+<span class="nc" id="L121">			target.setBilling(billing);</span>
+			
+<span class="nc bnc" id="L123" title="All 4 branches missed.">			if(source.getAttributes() != null &amp;&amp; source.getAttributes().size() &gt; 0) {</span>
+<span class="nc" id="L124">				Set&lt;OrderAttribute&gt; attrs = new HashSet&lt;OrderAttribute&gt;();</span>
+<span class="nc bnc" id="L125" title="All 2 branches missed.">				for(com.salesmanager.shop.model.order.OrderAttribute attribute : source.getAttributes()) {</span>
+<span class="nc" id="L126">					OrderAttribute attr = new OrderAttribute();</span>
+<span class="nc" id="L127">					attr.setKey(attribute.getKey());</span>
+<span class="nc" id="L128">					attr.setValue(attribute.getValue());</span>
+<span class="nc" id="L129">					attr.setOrder(target);</span>
+<span class="nc" id="L130">					attrs.add(attr);</span>
+<span class="nc" id="L131">				}</span>
+<span class="nc" id="L132">				target.setOrderAttributes(attrs);</span>
+			}
+
+<span class="nc" id="L135">			target.setDatePurchased(new Date());</span>
+<span class="nc" id="L136">			target.setCurrency(currency);</span>
+<span class="nc" id="L137">			target.setCurrencyValue(new BigDecimal(0));</span>
+<span class="nc" id="L138">			target.setMerchant(store);</span>
+<span class="nc" id="L139">			target.setChannel(OrderChannel.API);</span>
+			//need this
+<span class="nc" id="L141">			target.setStatus(OrderStatus.ORDERED);</span>
+<span class="nc" id="L142">			target.setPaymentModuleCode(source.getPayment().getPaymentModule());</span>
+<span class="nc" id="L143">			target.setPaymentType(PaymentType.valueOf(source.getPayment().getPaymentType()));</span>
+			
+<span class="nc" id="L145">			target.setCustomerAgreement(source.isCustomerAgreement());</span>
+<span class="nc" id="L146">			target.setConfirmedAddress(true);//force this to true, cannot perform this activity from the API</span>
+
+			
+<span class="nc bnc" id="L149" title="All 2 branches missed.">			if(!StringUtils.isBlank(source.getComments())) {</span>
+<span class="nc" id="L150">				OrderStatusHistory statusHistory = new OrderStatusHistory();</span>
+<span class="nc" id="L151">				statusHistory.setStatus(null);</span>
+<span class="nc" id="L152">				statusHistory.setOrder(target);</span>
+<span class="nc" id="L153">				statusHistory.setComments(source.getComments());</span>
+<span class="nc" id="L154">				target.getOrderHistory().add(statusHistory);</span>
+			}
+			
+<span class="nc" id="L157">			return target;</span>
+		
+<span class="nc" id="L159">		} catch(Exception e) {</span>
+<span class="nc" id="L160">			throw new ConversionException(e);</span>
+		}
+	}
+
+	@Override
+	protected Order createTarget() {
+		// TODO Auto-generated method stub
+<span class="nc" id="L167">		return null;</span>
+	}
+
+
+/*	public CurrencyService getCurrencyService() {
+		return currencyService;
+	}
+
+	public void setCurrencyService(CurrencyService currencyService) {
+		this.currencyService = currencyService;
+	}
+
+	public CustomerService getCustomerService() {
+		return customerService;
+	}
+
+	public void setCustomerService(CustomerService customerService) {
+		this.customerService = customerService;
+	}
+
+	public ShoppingCartService getShoppingCartService() {
+		return shoppingCartService;
+	}
+
+	public void setShoppingCartService(ShoppingCartService shoppingCartService) {
+		this.shoppingCartService = shoppingCartService;
+	}
+
+	public ProductService getProductService() {
+		return productService;
+	}
+
+	public void setProductService(ProductService productService) {
+		this.productService = productService;
+	}
+
+	public ProductAttributeService getProductAttributeService() {
+		return productAttributeService;
+	}
+
+	public void setProductAttributeService(ProductAttributeService productAttributeService) {
+		this.productAttributeService = productAttributeService;
+	}
+
+	public DigitalProductService getDigitalProductService() {
+		return digitalProductService;
+	}
+
+	public void setDigitalProductService(DigitalProductService digitalProductService) {
+		this.digitalProductService = digitalProductService;
+	}*/
+
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ProductFacadeImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.facade.product</a> &gt; <span class="el_source">ProductFacadeImpl.java</span></div><h1>ProductFacadeImpl.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.facade.product;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import javax.inject.Inject;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.Validate;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Profile;
+import org.springframework.data.domain.Page;
+import org.springframework.stereotype.Service;
+
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.catalog.category.CategoryService;
+import com.salesmanager.core.business.services.catalog.pricing.PricingService;
+import com.salesmanager.core.business.services.catalog.product.ProductService;
+import com.salesmanager.core.business.services.catalog.product.attribute.ProductAttributeService;
+import com.salesmanager.core.business.services.catalog.product.relationship.ProductRelationshipService;
+import com.salesmanager.core.model.catalog.product.Product;
+import com.salesmanager.core.model.catalog.product.ProductCriteria;
+import com.salesmanager.core.model.catalog.product.relationship.ProductRelationship;
+import com.salesmanager.core.model.catalog.product.relationship.ProductRelationshipType;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.model.catalog.product.ReadableProduct;
+import com.salesmanager.shop.model.catalog.product.ReadableProductList;
+import com.salesmanager.shop.model.catalog.product.product.PersistableProduct;
+import com.salesmanager.shop.populator.catalog.ReadableProductPopulator;
+import com.salesmanager.shop.store.api.exception.ConversionRuntimeException;
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+import com.salesmanager.shop.store.controller.product.facade.ProductFacade;
+import com.salesmanager.shop.utils.ImageFilePath;
+import com.salesmanager.shop.utils.LocaleUtils;
+
+@Service(&quot;productFacade&quot;)
+@Profile({ &quot;default&quot;, &quot;cloud&quot;, &quot;gcp&quot;, &quot;aws&quot;, &quot;mysql&quot; , &quot;local&quot; })
+<span class="fc" id="L42">public class ProductFacadeImpl implements ProductFacade {</span>
+
+	@Inject
+	private CategoryService categoryService;
+	
+	@Inject
+	private ProductAttributeService productAttributeService;
+
+	@Inject
+	private ProductService productService;
+
+	@Inject
+	private PricingService pricingService;
+
+	@Inject
+	private ProductRelationshipService productRelationshipService;
+
+
+	@Inject
+	@Qualifier(&quot;img&quot;)
+	private ImageFilePath imageUtils;
+
+	public void updateProduct(MerchantStore store, PersistableProduct product, Language language) {
+
+<span class="nc" id="L66">		Validate.notNull(product, &quot;Product must not be null&quot;);</span>
+<span class="nc" id="L67">		Validate.notNull(product.getId(), &quot;Product id must not be null&quot;);</span>
+
+		// get original product
+<span class="nc" id="L70">		productService.getById(product.getId());</span>
+
+<span class="nc" id="L72">	}</span>
+
+	@Override
+	public ReadableProduct getProduct(MerchantStore store, String sku, Language language) throws Exception {
+
+<span class="nc" id="L77">		Product product = productService.getBySku(sku, store, language);</span>
+
+<span class="nc bnc" id="L79" title="All 2 branches missed.">		if (product == null) {</span>
+<span class="nc" id="L80">			return null;</span>
+		}
+
+<span class="nc" id="L83">		ReadableProduct readableProduct = new ReadableProduct();</span>
+
+<span class="nc" id="L85">		ReadableProductPopulator populator = new ReadableProductPopulator();</span>
+
+<span class="nc" id="L87">		populator.setPricingService(pricingService);</span>
+<span class="nc" id="L88">		populator.setimageUtils(imageUtils);</span>
+<span class="nc" id="L89">		populator.populate(product, readableProduct, store, language);</span>
+
+<span class="nc" id="L91">		return readableProduct;</span>
+	}
+
+	@Override
+	public ReadableProductList getProductListsByCriterias(MerchantStore store, Language language,
+			ProductCriteria criterias) throws Exception {
+
+<span class="nc" id="L98">		Validate.notNull(criterias, &quot;ProductCriteria must be set for this product&quot;);</span>
+
+		/** This is for category **/
+<span class="nc bnc" id="L101" title="All 2 branches missed.">		if (CollectionUtils.isNotEmpty(criterias.getCategoryIds())) {</span>
+
+<span class="nc bnc" id="L103" title="All 2 branches missed.">			if (criterias.getCategoryIds().size() == 1) {</span>
+
+<span class="nc" id="L105">				com.salesmanager.core.model.catalog.category.Category category = categoryService</span>
+<span class="nc" id="L106">						.getById(criterias.getCategoryIds().get(0));</span>
+
+<span class="nc bnc" id="L108" title="All 2 branches missed.">				if (category != null) {</span>
+<span class="nc" id="L109">					String lineage = new StringBuilder().append(category.getLineage())</span>
+<span class="nc" id="L110">							.toString();</span>
+
+<span class="nc" id="L112">					List&lt;com.salesmanager.core.model.catalog.category.Category&gt; categories = categoryService</span>
+<span class="nc" id="L113">							.getListByLineage(store, lineage);</span>
+
+<span class="nc" id="L115">					List&lt;Long&gt; ids = new ArrayList&lt;Long&gt;();</span>
+<span class="nc bnc" id="L116" title="All 4 branches missed.">					if (categories != null &amp;&amp; categories.size() &gt; 0) {</span>
+<span class="nc bnc" id="L117" title="All 2 branches missed.">						for (com.salesmanager.core.model.catalog.category.Category c : categories) {</span>
+<span class="nc" id="L118">							ids.add(c.getId());</span>
+<span class="nc" id="L119">						}</span>
+					}
+<span class="nc" id="L121">					ids.add(category.getId());</span>
+<span class="nc" id="L122">					criterias.setCategoryIds(ids);</span>
+				}
+			}
+		}
+
+		
+<span class="nc" id="L128">		Page&lt;Product&gt; modelProductList = productService.listByStore(store, language, criterias, criterias.getStartPage(), criterias.getMaxCount());</span>
+		
+<span class="nc" id="L130">		List&lt;Product&gt; products = modelProductList.getContent();</span>
+		
+<span class="nc" id="L132">		List&lt;Product&gt; prds = products.stream().sorted(Comparator.comparing(Product::getSortOrder)).collect(Collectors.toList());</span>
+<span class="nc" id="L133">		products = prds;</span>
+		
+<span class="nc" id="L135">		ReadableProductPopulator populator = new ReadableProductPopulator();</span>
+<span class="nc" id="L136">		populator.setPricingService(pricingService);</span>
+<span class="nc" id="L137">		populator.setimageUtils(imageUtils);</span>
+
+<span class="nc" id="L139">		ReadableProductList productList = new ReadableProductList();</span>
+<span class="nc bnc" id="L140" title="All 2 branches missed.">		for (Product product : products) {</span>
+
+			// create new proxy product
+<span class="nc" id="L143">			ReadableProduct readProduct = populator.populate(product, new ReadableProduct(), store, language);</span>
+<span class="nc" id="L144">			productList.getProducts().add(readProduct);</span>
+
+<span class="nc" id="L146">		}</span>
+
+		// productList.setTotalPages(products.getTotalCount());
+<span class="nc" id="L149">		productList.setRecordsTotal(modelProductList.getTotalElements());</span>
+<span class="nc" id="L150">		productList.setNumber(productList.getProducts().size());</span>
+
+<span class="nc" id="L152">		productList.setTotalPages(modelProductList.getTotalPages());</span>
+
+<span class="nc" id="L154">		return productList;</span>
+	}
+	
+	@Override
+	public ReadableProduct getProductByCode(MerchantStore store, String uniqueCode, Language language) {
+
+<span class="nc" id="L160">		Product product = null;</span>
+		try {
+<span class="nc" id="L162">			product = productService.getBySku(uniqueCode, store, language);</span>
+<span class="nc" id="L163">		} catch (ServiceException e) {</span>
+<span class="nc" id="L164">			throw new ServiceRuntimeException(e);</span>
+<span class="nc" id="L165">		}</span>
+
+<span class="nc" id="L167">		ReadableProduct readableProduct = new ReadableProduct();</span>
+
+<span class="nc" id="L169">		ReadableProductPopulator populator = new ReadableProductPopulator();</span>
+
+<span class="nc" id="L171">		populator.setPricingService(pricingService);</span>
+<span class="nc" id="L172">		populator.setimageUtils(imageUtils);</span>
+		try {
+<span class="nc" id="L174">			populator.populate(product, readableProduct, product.getMerchantStore(), language);</span>
+<span class="nc" id="L175">		} catch (ConversionException e) {</span>
+<span class="nc" id="L176">			throw new ConversionRuntimeException(&quot;Product with code [&quot; + uniqueCode + &quot;] cannot be converted&quot;, e);</span>
+<span class="nc" id="L177">		}</span>
+
+<span class="nc" id="L179">		return readableProduct;</span>
+	}
+
+	@Override
+	public List&lt;ReadableProduct&gt; relatedItems(MerchantStore store, Product product, Language language)
+			throws Exception {
+<span class="nc" id="L185">		ReadableProductPopulator populator = new ReadableProductPopulator();</span>
+<span class="nc" id="L186">		populator.setPricingService(pricingService);</span>
+<span class="nc" id="L187">		populator.setimageUtils(imageUtils);</span>
+
+<span class="nc" id="L189">		List&lt;ProductRelationship&gt; relatedItems = productRelationshipService.getByType(store, product,</span>
+				ProductRelationshipType.RELATED_ITEM);
+<span class="nc bnc" id="L191" title="All 4 branches missed.">		if (relatedItems != null &amp;&amp; relatedItems.size() &gt; 0) {</span>
+<span class="nc" id="L192">			List&lt;ReadableProduct&gt; items = new ArrayList&lt;ReadableProduct&gt;();</span>
+<span class="nc bnc" id="L193" title="All 2 branches missed.">			for (ProductRelationship relationship : relatedItems) {</span>
+<span class="nc" id="L194">				Product relatedProduct = relationship.getRelatedProduct();</span>
+<span class="nc" id="L195">				ReadableProduct proxyProduct = populator.populate(relatedProduct, new ReadableProduct(), store,</span>
+						language);
+<span class="nc" id="L197">				items.add(proxyProduct);</span>
+<span class="nc" id="L198">			}</span>
+<span class="nc" id="L199">			return items;</span>
+		}
+<span class="nc" id="L201">		return null;</span>
+	}
+
+
+
+	@Override
+	public ReadableProduct getProductBySeUrl(MerchantStore store, String friendlyUrl, Language language) throws Exception {
+
+<span class="nc" id="L209">		Product product = productService.getBySeUrl(store, friendlyUrl, LocaleUtils.getLocale(language));</span>
+
+<span class="nc bnc" id="L211" title="All 2 branches missed.">		if (product == null) {</span>
+<span class="nc" id="L212">			return null;</span>
+		}
+
+<span class="nc" id="L215">		ReadableProduct readableProduct = new ReadableProduct();</span>
+
+<span class="nc" id="L217">		ReadableProductPopulator populator = new ReadableProductPopulator();</span>
+
+<span class="nc" id="L219">		populator.setPricingService(pricingService);</span>
+<span class="nc" id="L220">		populator.setimageUtils(imageUtils);</span>
+<span class="nc" id="L221">		populator.populate(product, readableProduct, store, language);</span>
+
+<span class="nc" id="L223">		return readableProduct;</span>
+	}
+
+	/**
+	@Override
+	public ReadableProductPrice getProductPrice(Long id, ProductPriceRequest priceRequest, MerchantStore store, Language language) {
+		Validate.notNull(id, &quot;Product id cannot be null&quot;);
+		Validate.notNull(priceRequest, &quot;Product price request cannot be null&quot;);
+		Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);
+		Validate.notNull(language, &quot;Language cannot be null&quot;);
+		
+		try {
+			Product model = productService.findOne(id, store);
+			
+			//TODO check if null
+			List&lt;Long&gt; attrinutesIds = priceRequest.getOptions().stream().map(p -&gt; p.getId()).collect(Collectors.toList());
+			
+			List&lt;ProductAttribute&gt; attributes = productAttributeService.getByAttributeIds(store, model, attrinutesIds);      
+			
+			for(ProductAttribute attribute : attributes) {
+				if(attribute.getProduct().getId().longValue()!= id.longValue()) {
+					//throw unauthorized
+					throw new OperationNotAllowedException(&quot;Attribute with id [&quot; + attribute.getId() + &quot;] is not attached to product id [&quot; + id + &quot;]&quot;);
+				}
+			}
+			
+			FinalPrice price;
+		
+			price = pricingService.calculateProductPrice(model, attributes);
+	    	ReadableProductPrice readablePrice = new ReadableProductPrice();
+	    	ReadableFinalPricePopulator populator = new ReadableFinalPricePopulator();
+	    	populator.setPricingService(pricingService);
+	    	
+	    	
+	    	return populator.populate(price, readablePrice, store, language);
+    	
+		} catch (Exception e) {
+			throw new ServiceRuntimeException(&quot;An error occured while getting product price&quot;,e);
+		}
+
+	}
+	**/
+
+	@Override
+	public Product getProduct(Long id, MerchantStore store) {
+<span class="nc" id="L268">		return productService.findOne(id, store);</span>
+	}
+
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

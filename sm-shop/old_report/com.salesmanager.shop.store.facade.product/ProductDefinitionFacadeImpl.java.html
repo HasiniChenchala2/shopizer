@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ProductDefinitionFacadeImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.facade.product</a> &gt; <span class="el_source">ProductDefinitionFacadeImpl.java</span></div><h1>ProductDefinitionFacadeImpl.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.facade.product;
+
+import java.util.Optional;
+
+import javax.inject.Inject;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Service;
+
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.catalog.product.ProductService;
+import com.salesmanager.core.model.catalog.product.Product;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.mapper.catalog.product.PersistableProductDefinitionMapper;
+import com.salesmanager.shop.mapper.catalog.product.ReadableProductDefinitionMapper;
+import com.salesmanager.shop.model.catalog.product.product.definition.PersistableProductDefinition;
+import com.salesmanager.shop.model.catalog.product.product.definition.ReadableProductDefinition;
+import com.salesmanager.shop.store.api.exception.ResourceNotFoundException;
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+import com.salesmanager.shop.store.controller.product.facade.ProductDefinitionFacade;
+import com.salesmanager.shop.store.controller.product.facade.ProductVariantFacade;
+import com.salesmanager.shop.utils.ImageFilePath;
+
+@Service(&quot;productDefinitionFacade&quot;)
+@Profile({ &quot;default&quot;, &quot;cloud&quot;, &quot;gcp&quot;, &quot;aws&quot;, &quot;mysql&quot;, &quot;local&quot; })
+<span class="fc" id="L29">public class ProductDefinitionFacadeImpl implements ProductDefinitionFacade {</span>
+	
+
+
+	@Inject
+	private ProductService productService;
+
+
+	@Autowired
+	private PersistableProductDefinitionMapper persistableProductDefinitionMapper;
+	
+	@Autowired
+	private ReadableProductDefinitionMapper readableProductDefinitionMapper;
+	
+	@Autowired
+	private ProductVariantFacade productVariantFacade;
+
+	@Inject
+	@Qualifier(&quot;img&quot;)
+	private ImageFilePath imageUtils;
+
+	@Override
+	public Long saveProductDefinition(MerchantStore store, PersistableProductDefinition product, Language language) {
+		
+
+<span class="fc" id="L54">		Product target = null;</span>
+<span class="pc bpc" id="L55" title="3 of 4 branches missed.">		if (product.getId() != null &amp;&amp; product.getId().longValue() &gt; 0) {</span>
+<span class="nc" id="L56">			Optional&lt;Product&gt; p = productService.retrieveById(product.getId(), store);</span>
+<span class="nc bnc" id="L57" title="All 2 branches missed.">			if(p.isEmpty()) {</span>
+<span class="nc" id="L58">				throw new ResourceNotFoundException(&quot;Product with id [&quot; + product.getId() + &quot;] not found for store [&quot; + store.getCode() + &quot;]&quot;);</span>
+			}
+<span class="nc" id="L60">			target = p.get();</span>
+<span class="nc" id="L61">		} else {</span>
+<span class="fc" id="L62">			target = new Product();</span>
+		}
+
+		try {
+<span class="fc" id="L66">			target = persistableProductDefinitionMapper.merge(product, target, store, language);</span>
+				
+<span class="fc" id="L68">			productService.saveProduct(target);</span>
+<span class="fc" id="L69">			product.setId(target.getId());</span>
+
+
+<span class="fc" id="L72">			return target.getId();</span>
+<span class="nc" id="L73">		} catch (Exception e) {</span>
+<span class="nc" id="L74">			throw new ServiceRuntimeException(e);</span>
+		}
+		
+	}
+
+	@Override
+	public void update(Long id, PersistableProductDefinition product, MerchantStore merchant,
+			Language language) {
+<span class="nc" id="L82">		product.setId(id);</span>
+<span class="nc" id="L83">		this.saveProductDefinition(merchant, product, language);</span>
+<span class="nc" id="L84">	}</span>
+
+	@Override
+	public ReadableProductDefinition getProduct(MerchantStore store, Long id, Language language) {
+<span class="nc" id="L88">		Product product = productService.findOne(id, store);</span>
+<span class="nc" id="L89">		return readableProductDefinitionMapper.convert(product, store, language);</span>
+	}
+
+	@Override
+	public ReadableProductDefinition getProductBySku(MerchantStore store, String uniqueCode, Language language) {
+		
+<span class="nc" id="L95">		Product product = null;</span>
+		try {
+<span class="nc" id="L97">			product = productService.getBySku(uniqueCode, store, language);</span>
+<span class="nc" id="L98">		} catch (ServiceException e) {</span>
+<span class="nc" id="L99">			throw new ServiceRuntimeException(e);</span>
+<span class="nc" id="L100">		}</span>
+<span class="nc" id="L101">		return readableProductDefinitionMapper.convert(product, store, language);</span>
+
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

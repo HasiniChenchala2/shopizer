@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SearchApi.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.api.v1.search</a> &gt; <span class="el_source">SearchApi.java</span></div><h1>SearchApi.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.api.v1.search;
+
+import java.util.List;
+
+import javax.inject.Inject;
+
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.model.catalog.SearchProductRequest;
+import com.salesmanager.shop.model.entity.ValueList;
+import com.salesmanager.shop.store.controller.search.facade.SearchFacade;
+
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiImplicitParams;
+import io.swagger.annotations.SwaggerDefinition;
+import io.swagger.annotations.Tag;
+import modules.commons.search.request.SearchItem;
+import springfox.documentation.annotations.ApiIgnore;
+
+/**
+ * Api for searching shopizer catalog based on search term when filtering products based on product
+ * attribute is required, see /api/v1/product
+ *
+ * @author c.samson
+ */
+@RestController
+@RequestMapping(&quot;/api/v1&quot;)
+@Api(tags = {&quot;Search products and search word/sentence completion functionality (Search Api)&quot;})
+@SwaggerDefinition(tags = {
+    @Tag(name = &quot;Search products resource&quot;, description = &quot;Search products and search term completion functionality&quot;)
+})
+<span class="fc" id="L39">public class SearchApi {</span>
+
+  @Inject private SearchFacade searchFacade;
+
+
+  /**
+   * Search products from underlying elastic search
+   */
+  @PostMapping(&quot;/search&quot;)
+  @ApiImplicitParams({
+    @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+    @ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;)
+  })
+  
+  //TODO use total, count and page
+  public @ResponseBody List&lt;SearchItem&gt; search(
+      @RequestBody SearchProductRequest searchRequest,
+      @ApiIgnore MerchantStore merchantStore,
+      @ApiIgnore Language language) {
+
+<span class="nc" id="L59">    return searchFacade.search(merchantStore, language, searchRequest);</span>
+  }
+
+  @PostMapping(&quot;/search/autocomplete&quot;)
+  @ApiImplicitParams({
+    @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+    @ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;)
+  })
+  public @ResponseBody ValueList autocomplete(
+      @RequestBody SearchProductRequest searchRequest,
+      @ApiIgnore MerchantStore merchantStore,
+      @ApiIgnore Language language) {
+<span class="nc" id="L71">    return searchFacade.autocompleteRequest(searchRequest.getQuery(), merchantStore, language);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

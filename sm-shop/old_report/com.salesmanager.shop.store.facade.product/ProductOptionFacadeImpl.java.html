@@ -1,0 +1,514 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ProductOptionFacadeImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.facade.product</a> &gt; <span class="el_source">ProductOptionFacadeImpl.java</span></div><h1>ProductOptionFacadeImpl.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.facade.product;
+
+import java.io.InputStream;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.apache.commons.lang3.NotImplementedException;
+import org.jsoup.helper.Validate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.catalog.product.ProductService;
+import com.salesmanager.core.business.services.catalog.product.attribute.ProductAttributeService;
+import com.salesmanager.core.business.services.catalog.product.attribute.ProductOptionService;
+import com.salesmanager.core.business.services.catalog.product.attribute.ProductOptionValueService;
+import com.salesmanager.core.business.services.content.ContentService;
+import com.salesmanager.core.model.catalog.product.Product;
+import com.salesmanager.core.model.catalog.product.attribute.ProductAttribute;
+import com.salesmanager.core.model.catalog.product.attribute.ProductOption;
+import com.salesmanager.core.model.catalog.product.attribute.ProductOptionValue;
+import com.salesmanager.core.model.content.FileContentType;
+import com.salesmanager.core.model.content.InputContentFile;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.mapper.catalog.PersistableProductAttributeMapper;
+import com.salesmanager.shop.mapper.catalog.PersistableProductOptionMapper;
+import com.salesmanager.shop.mapper.catalog.PersistableProductOptionValueMapper;
+import com.salesmanager.shop.mapper.catalog.ReadableProductAttributeMapper;
+import com.salesmanager.shop.mapper.catalog.ReadableProductOptionMapper;
+import com.salesmanager.shop.mapper.catalog.ReadableProductOptionValueMapper;
+import com.salesmanager.shop.model.catalog.product.attribute.PersistableProductAttribute;
+import com.salesmanager.shop.model.catalog.product.attribute.PersistableProductOptionValue;
+import com.salesmanager.shop.model.catalog.product.attribute.api.PersistableProductOptionEntity;
+import com.salesmanager.shop.model.catalog.product.attribute.api.ReadableProductAttributeEntity;
+import com.salesmanager.shop.model.catalog.product.attribute.api.ReadableProductAttributeList;
+import com.salesmanager.shop.model.catalog.product.attribute.api.ReadableProductOptionEntity;
+import com.salesmanager.shop.model.catalog.product.attribute.api.ReadableProductOptionList;
+import com.salesmanager.shop.model.catalog.product.attribute.api.ReadableProductOptionValue;
+import com.salesmanager.shop.model.catalog.product.attribute.api.ReadableProductOptionValueList;
+import com.salesmanager.shop.model.entity.CodeEntity;
+import com.salesmanager.shop.store.api.exception.ResourceNotFoundException;
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+import com.salesmanager.shop.store.controller.product.facade.ProductOptionFacade;
+
+@Service
+<span class="fc" id="L49">public class ProductOptionFacadeImpl implements ProductOptionFacade {</span>
+
+	@Autowired
+	private ProductOptionService productOptionService;
+
+	@Autowired
+	private ProductOptionValueService productOptionValueService;
+
+	@Autowired
+	private ReadableProductOptionMapper readableMapper;
+
+	@Autowired
+	private PersistableProductOptionMapper persistableeMapper;
+
+	@Autowired
+	private PersistableProductOptionValueMapper persistableOptionValueMapper;
+
+	@Autowired
+	private ReadableProductOptionValueMapper readableOptionValueMapper;
+
+	@Autowired
+	private ContentService contentService;
+
+	@Autowired
+	private ProductAttributeService productAttributeService;
+
+	@Autowired
+	private PersistableProductAttributeMapper persistableProductAttributeMapper;
+
+	@Autowired
+	private ReadableProductAttributeMapper readableProductAttributeMapper;
+
+	@Autowired
+	private ProductService productService;
+
+	@Override
+	public ReadableProductOptionEntity saveOption(PersistableProductOptionEntity option, MerchantStore store,
+			Language language) {
+<span class="fc" id="L87">		Validate.notNull(option, &quot;ProductOption cannot be null&quot;);</span>
+<span class="fc" id="L88">		Validate.notNull(store, &quot;MerchantStore cannot be null&quot;);</span>
+
+<span class="fc" id="L90">		ProductOption optionModel = new ProductOption();</span>
+<span class="pc bpc" id="L91" title="2 of 4 branches missed.">		if (option.getId() != null &amp;&amp; option.getId().longValue() &gt; 0) {</span>
+<span class="nc" id="L92">			optionModel = productOptionService.getById(store, option.getId());</span>
+<span class="nc bnc" id="L93" title="All 2 branches missed.">			if (optionModel == null) {</span>
+<span class="nc" id="L94">				throw new ResourceNotFoundException(</span>
+<span class="nc" id="L95">						&quot;ProductOption not found for if [&quot; + option.getId() + &quot;] and store [&quot; + store.getCode() + &quot;]&quot;);</span>
+			}
+		}
+
+<span class="fc" id="L99">		optionModel = persistableeMapper.merge(option, optionModel, store, language);</span>
+		try {
+<span class="fc" id="L101">			productOptionService.saveOrUpdate(optionModel);</span>
+<span class="nc" id="L102">		} catch (ServiceException e) {</span>
+<span class="nc" id="L103">			throw new ServiceRuntimeException(&quot;An exception occured while saving ProductOption&quot;, e);</span>
+<span class="fc" id="L104">		}</span>
+
+<span class="fc" id="L106">		optionModel = productOptionService.getById(store, optionModel.getId());</span>
+<span class="fc" id="L107">		ReadableProductOptionEntity readable = readableMapper.convert(optionModel, store, language);</span>
+<span class="fc" id="L108">		return readable;</span>
+
+	}
+
+	@Override
+	public void deleteOption(Long optionId, MerchantStore store) {
+<span class="nc" id="L114">		ProductOption optionModel = productOptionService.getById(store, optionId);</span>
+<span class="nc bnc" id="L115" title="All 2 branches missed.">		if (optionModel == null) {</span>
+<span class="nc" id="L116">			throw new ResourceNotFoundException(</span>
+<span class="nc" id="L117">					&quot;ProductOption not found for [&quot; + optionId + &quot;] and store [&quot; + store.getCode() + &quot;]&quot;);</span>
+		}
+		try {
+<span class="nc" id="L120">			productOptionService.delete(optionModel);</span>
+<span class="nc" id="L121">		} catch (ServiceException e) {</span>
+<span class="nc" id="L122">			throw new ServiceRuntimeException(&quot;An exception occured while deleting ProductOption [&quot; + optionId + &quot;]&quot;,</span>
+					e);
+<span class="nc" id="L124">		}</span>
+<span class="nc" id="L125">	}</span>
+
+	@Override
+	public void deleteOptionValue(Long optionValueId, MerchantStore store) {
+<span class="nc" id="L129">		ProductOptionValue optionModel = productOptionValueService.getById(store, optionValueId);</span>
+<span class="nc bnc" id="L130" title="All 2 branches missed.">		if (optionModel == null) {</span>
+<span class="nc" id="L131">			throw new ResourceNotFoundException(</span>
+<span class="nc" id="L132">					&quot;ProductOptionValue not found for  [&quot; + optionValueId + &quot;] and store [&quot; + store.getCode() + &quot;]&quot;);</span>
+		}
+		try {
+<span class="nc" id="L135">			productOptionValueService.delete(optionModel);</span>
+<span class="nc" id="L136">		} catch (ServiceException e) {</span>
+<span class="nc" id="L137">			throw new ServiceRuntimeException(</span>
+					&quot;An exception occured while deleting ProductOptionValue [&quot; + optionValueId + &quot;]&quot;, e);
+<span class="nc" id="L139">		}</span>
+
+<span class="nc" id="L141">	}</span>
+
+	@Override
+	public ReadableProductOptionValueList optionValues(MerchantStore store, Language language, String name, int page,
+			int count) {
+<span class="nc" id="L146">		Validate.notNull(store, &quot;MerchantStore should not be null&quot;);</span>
+
+<span class="nc" id="L148">		Page&lt;ProductOptionValue&gt; options = productOptionValueService.getByMerchant(store, null, name, page, count);</span>
+<span class="nc" id="L149">		ReadableProductOptionValueList valueList = new ReadableProductOptionValueList();</span>
+<span class="nc" id="L150">		valueList.setTotalPages(options.getTotalPages());</span>
+<span class="nc" id="L151">		valueList.setRecordsTotal(options.getTotalElements());</span>
+<span class="nc" id="L152">		valueList.setNumber(options.getNumber());</span>
+
+<span class="nc" id="L154">		List&lt;ReadableProductOptionValue&gt; values = options.getContent().stream()</span>
+<span class="nc" id="L155">				.map(option -&gt; readableOptionValueMapper.convert(option, store, null)).collect(Collectors.toList());</span>
+
+<span class="nc" id="L157">		valueList.setOptionValues(values);</span>
+
+<span class="nc" id="L159">		return valueList;</span>
+	}
+
+	@Override
+	public ReadableProductOptionList options(MerchantStore store, Language language, String name, int page, int count) {
+<span class="nc" id="L164">		Validate.notNull(store, &quot;MerchantStore should not be null&quot;);</span>
+
+<span class="nc" id="L166">		Page&lt;ProductOption&gt; options = productOptionService.getByMerchant(store, null, name, page, count);</span>
+<span class="nc" id="L167">		ReadableProductOptionList valueList = new ReadableProductOptionList();</span>
+<span class="nc" id="L168">		valueList.setTotalPages(options.getTotalPages());</span>
+<span class="nc" id="L169">		valueList.setRecordsTotal(options.getTotalElements());</span>
+<span class="nc" id="L170">		valueList.setNumber(options.getNumber());</span>
+
+<span class="nc" id="L172">		List&lt;ReadableProductOptionEntity&gt; values = options.getContent().stream()</span>
+<span class="nc" id="L173">				.map(option -&gt; readableMapper.convert(option, store, null)).collect(Collectors.toList());</span>
+
+<span class="nc" id="L175">		valueList.setOptions(values);</span>
+
+<span class="nc" id="L177">		return valueList;</span>
+	}
+
+	@Override
+	public ReadableProductOptionEntity getOption(Long optionId, MerchantStore store, Language language) {
+
+<span class="nc" id="L183">		Validate.notNull(optionId, &quot;Option id cannot be null&quot;);</span>
+<span class="nc" id="L184">		Validate.notNull(store, &quot;Store cannot be null&quot;);</span>
+
+<span class="nc" id="L186">		ProductOption option = productOptionService.getById(store, optionId);</span>
+
+<span class="nc bnc" id="L188" title="All 2 branches missed.">		if (option == null) {</span>
+<span class="nc" id="L189">			throw new ResourceNotFoundException(&quot;Option id [&quot; + optionId + &quot;] not found&quot;);</span>
+		}
+
+<span class="nc" id="L192">		return readableMapper.convert(option, store, language);</span>
+	}
+
+	@Override
+	public boolean optionExists(String code, MerchantStore store) {
+<span class="nc" id="L197">		Validate.notNull(code, &quot;Option code must not be null&quot;);</span>
+<span class="nc" id="L198">		Validate.notNull(store, &quot;Store code must not be null&quot;);</span>
+<span class="nc" id="L199">		boolean exists = false;</span>
+<span class="nc" id="L200">		ProductOption option = productOptionService.getByCode(store, code);</span>
+<span class="nc bnc" id="L201" title="All 2 branches missed.">		if (option != null) {</span>
+<span class="nc" id="L202">			exists = true;</span>
+		}
+<span class="nc" id="L204">		return exists;</span>
+	}
+
+	@Override
+	public boolean optionValueExists(String code, MerchantStore store) {
+<span class="nc" id="L209">		Validate.notNull(code, &quot;Option value code must not be null&quot;);</span>
+<span class="nc" id="L210">		Validate.notNull(store, &quot;Store code must not be null&quot;);</span>
+<span class="nc" id="L211">		boolean exists = false;</span>
+<span class="nc" id="L212">		ProductOptionValue optionValue = productOptionValueService.getByCode(store, code);</span>
+<span class="nc bnc" id="L213" title="All 2 branches missed.">		if (optionValue != null) {</span>
+<span class="nc" id="L214">			exists = true;</span>
+		}
+<span class="nc" id="L216">		return exists;</span>
+	}
+
+	@Override
+	public ReadableProductOptionValue saveOptionValue(PersistableProductOptionValue optionValue,
+			MerchantStore store, Language language) {
+<span class="nc" id="L222">		Validate.notNull(optionValue, &quot;Option value code must not be null&quot;);</span>
+<span class="nc" id="L223">		Validate.notNull(store, &quot;Store code must not be null&quot;);</span>
+
+<span class="nc" id="L225">		ProductOptionValue value = new ProductOptionValue();</span>
+<span class="nc bnc" id="L226" title="All 4 branches missed.">		if (optionValue.getId() != null &amp;&amp; optionValue.getId().longValue() &gt; 0) {</span>
+<span class="nc" id="L227">			value = productOptionValueService.getById(store, optionValue.getId());</span>
+<span class="nc bnc" id="L228" title="All 2 branches missed.">			if (value == null) {</span>
+<span class="nc" id="L229">				throw new ResourceNotFoundException(&quot;ProductOptionValue [&quot; + optionValue.getId()</span>
+<span class="nc" id="L230">						+ &quot;] does not exists for store [&quot; + store.getCode() + &quot;]&quot;);</span>
+			}
+		}
+
+<span class="nc" id="L234">		value = persistableOptionValueMapper.merge(optionValue, value, store, language);</span>
+
+
+		try {
+<span class="nc" id="L238">			productOptionValueService.saveOrUpdate(value);</span>
+<span class="nc" id="L239">		} catch (ServiceException e) {</span>
+<span class="nc" id="L240">			throw new ServiceRuntimeException(&quot;Exception while saving option value&quot;, e);</span>
+<span class="nc" id="L241">		}</span>
+
+<span class="nc" id="L243">		ProductOptionValue optValue = productOptionValueService.getById(store, value.getId());</span>
+
+		// convert to readable
+<span class="nc" id="L246">		ReadableProductOptionValue readableProductOptionValue = new ReadableProductOptionValue();</span>
+<span class="nc" id="L247">		readableProductOptionValue = readableOptionValueMapper.merge(optValue, readableProductOptionValue, store,</span>
+				language);
+
+<span class="nc" id="L250">		return readableProductOptionValue;</span>
+	}
+
+	@Override
+	public ReadableProductOptionValue getOptionValue(Long optionValueId, MerchantStore store, Language language) {
+
+<span class="nc" id="L256">		Validate.notNull(optionValueId, &quot;OptionValue id cannot be null&quot;);</span>
+<span class="nc" id="L257">		Validate.notNull(store, &quot;Store cannot be null&quot;);</span>
+
+<span class="nc" id="L259">		ProductOptionValue optionValue = productOptionValueService.getById(store, optionValueId);</span>
+
+<span class="nc bnc" id="L261" title="All 2 branches missed.">		if (optionValue == null) {</span>
+<span class="nc" id="L262">			throw new ResourceNotFoundException(&quot;OptionValue id [&quot; + optionValueId + &quot;] not found&quot;);</span>
+		}
+
+<span class="nc" id="L265">		return readableOptionValueMapper.convert(optionValue, store, language);</span>
+	}
+
+	@Override
+	public ReadableProductAttributeEntity saveAttribute(Long productId, PersistableProductAttribute attribute,
+			MerchantStore store, Language language) {
+<span class="nc" id="L271">		Validate.notNull(productId, &quot;Product id cannot be null&quot;);</span>
+<span class="nc" id="L272">		Validate.notNull(attribute, &quot;ProductAttribute cannot be null&quot;);</span>
+<span class="nc" id="L273">		Validate.notNull(attribute.getOption(), &quot;ProductAttribute option cannot be null&quot;);</span>
+<span class="nc" id="L274">		Validate.notNull(attribute.getOptionValue(), &quot;ProductAttribute option value cannot be null&quot;);</span>
+<span class="nc" id="L275">		Validate.notNull(store, &quot;Store cannot be null&quot;);</span>
+
+<span class="nc" id="L277">		attribute.setProductId(productId);</span>
+<span class="nc" id="L278">		ProductAttribute attr = new ProductAttribute();</span>
+<span class="nc bnc" id="L279" title="All 4 branches missed.">		if (attribute.getId() != null &amp;&amp; attribute.getId().longValue() &gt; 0) {</span>
+<span class="nc" id="L280">			attr = productAttributeService.getById(attribute.getId());</span>
+<span class="nc bnc" id="L281" title="All 2 branches missed.">			if (attr == null) {</span>
+<span class="nc" id="L282">				throw new ResourceNotFoundException(&quot;Product attribute [&quot; + attribute.getId() + &quot;] not found&quot;);</span>
+			}
+
+<span class="nc bnc" id="L285" title="All 2 branches missed.">			if (productId != attr.getProduct().getId().longValue()) {</span>
+<span class="nc" id="L286">				throw new ResourceNotFoundException(</span>
+<span class="nc" id="L287">						&quot;Product attribute [&quot; + attribute.getId() + &quot;] not found for product [&quot; + productId + &quot;]&quot;);</span>
+			}
+		}
+
+<span class="nc" id="L291">		attr = persistableProductAttributeMapper.merge(attribute, attr, store, language);</span>
+
+		try {
+<span class="nc" id="L294">			productAttributeService.saveOrUpdate(attr);</span>
+<span class="nc" id="L295">		} catch (ServiceException e) {</span>
+<span class="nc" id="L296">			throw new ServiceRuntimeException(&quot;Exception while saving ProductAttribute&quot;, e);</span>
+<span class="nc" id="L297">		}</span>
+
+		// refresh
+<span class="nc" id="L300">		attr = productAttributeService.getById(attr.getId());</span>
+<span class="nc" id="L301">		ReadableProductAttributeEntity readable = readableProductAttributeMapper.convert(attr, store, language);</span>
+
+<span class="nc" id="L303">		return readable;</span>
+	}
+
+	@Override
+	public ReadableProductAttributeEntity getAttribute(Long productId, Long attributeId, MerchantStore store,
+			Language language) {
+
+<span class="nc" id="L310">		ProductAttribute attr = productAttributeService.getById(attributeId);</span>
+
+<span class="nc bnc" id="L312" title="All 2 branches missed.">		if (attr == null) {</span>
+<span class="nc" id="L313">			throw new ResourceNotFoundException(</span>
+<span class="nc" id="L314">					&quot;ProductAttribute not found for [&quot; + attributeId + &quot;] and store [&quot; + store.getCode() + &quot;]&quot;);</span>
+		}
+
+<span class="nc bnc" id="L317" title="All 2 branches missed.">		if (attr.getProduct().getId().longValue() != productId) {</span>
+<span class="nc" id="L318">			throw new ResourceNotFoundException(</span>
+					&quot;ProductAttribute not found for [&quot; + attributeId + &quot;] and product [&quot; + productId + &quot;]&quot;);
+		}
+
+<span class="nc bnc" id="L322" title="All 2 branches missed.">		if (attr.getProduct().getMerchantStore().getId().intValue() != store.getId().intValue()) {</span>
+<span class="nc" id="L323">			throw new ResourceNotFoundException(&quot;ProductAttribute not found for [&quot; + attributeId + &quot;] and product [&quot;</span>
+<span class="nc" id="L324">					+ productId + &quot;] and store [&quot; + store.getCode() + &quot;]&quot;);</span>
+		}
+
+<span class="nc" id="L327">		ReadableProductAttributeEntity readable = readableProductAttributeMapper.convert(attr, store, language);</span>
+
+<span class="nc" id="L329">		return readable;</span>
+	}
+	
+	private Product product(long id, MerchantStore store) {
+<span class="nc" id="L333">		Product product = productService.getById(id);</span>
+
+<span class="nc bnc" id="L335" title="All 2 branches missed.">		if (product == null) {</span>
+<span class="nc" id="L336">			throw new ResourceNotFoundException(&quot;Productnot found for id [&quot; + id + &quot;]&quot;);</span>
+		}
+
+<span class="nc bnc" id="L339" title="All 2 branches missed.">		if (product.getMerchantStore().getId().intValue() != store.getId().intValue()) {</span>
+<span class="nc" id="L340">			throw new ResourceNotFoundException(</span>
+<span class="nc" id="L341">					&quot;Productnot found id [&quot; + id + &quot;] for store [&quot; + store.getCode() + &quot;]&quot;);</span>
+		}
+		
+<span class="nc" id="L344">		return product;</span>
+	}
+
+	@Override
+	public ReadableProductAttributeList getAttributesList(Long productId, MerchantStore store, Language language, int page, int count) {
+
+		try {
+
+<span class="nc" id="L352">			Product product = this.product(productId, store);</span>
+
+<span class="nc" id="L354">			ReadableProductAttributeList attrList = new ReadableProductAttributeList();</span>
+<span class="nc" id="L355">			Page&lt;ProductAttribute&gt; attr = null;</span>
+			
+			
+<span class="nc bnc" id="L358" title="All 2 branches missed.">			if(language != null) { //all entry</span>
+				//attributes = productAttributeService.getByProductId(store, product, language);
+<span class="nc" id="L360">				attr = productAttributeService.getByProductId(store, product, language, page, count);</span>
+<span class="nc" id="L361">				attrList.setRecordsTotal(attr.getTotalElements());</span>
+<span class="nc" id="L362">				attrList.setNumber(attr.getNumberOfElements());</span>
+<span class="nc" id="L363">				attrList.setTotalPages(attr.getTotalPages());</span>
+			} else {
+<span class="nc" id="L365">				attr = productAttributeService.getByProductId(store, product, page, count);</span>
+<span class="nc" id="L366">				attrList.setRecordsTotal(attr.getTotalElements());</span>
+<span class="nc" id="L367">				attrList.setNumber(attr.getNumberOfElements());</span>
+<span class="nc" id="L368">				attrList.setTotalPages(attr.getTotalPages());</span>
+			}
+
+
+<span class="nc" id="L372">			List&lt;ReadableProductAttributeEntity&gt; values = attr.getContent().stream()</span>
+<span class="nc" id="L373">					.map(attribute -&gt; readableProductAttributeMapper.convert(attribute, store, language))</span>
+<span class="nc" id="L374">					.collect(Collectors.toList());</span>
+
+<span class="nc" id="L376">			attrList.setAttributes(values);</span>
+
+<span class="nc" id="L378">			return attrList;</span>
+
+<span class="nc" id="L380">		} catch (ServiceException e) {</span>
+<span class="nc" id="L381">			throw new ServiceRuntimeException(&quot;Error while getting attributes&quot;, e);</span>
+		}
+
+	}
+
+	@Override
+	public void deleteAttribute(Long productId, Long attributeId, MerchantStore store) {
+		try {
+
+<span class="nc" id="L390">			ProductAttribute attr = productAttributeService.getById(attributeId);</span>
+<span class="nc bnc" id="L391" title="All 2 branches missed.">			if (attr == null) {</span>
+<span class="nc" id="L392">				throw new ResourceNotFoundException(</span>
+<span class="nc" id="L393">						&quot;ProductAttribute not found for [&quot; + attributeId + &quot;] and store [&quot; + store.getCode() + &quot;]&quot;);</span>
+			}
+
+<span class="nc bnc" id="L396" title="All 2 branches missed.">			if (attr.getProduct().getId().longValue() != productId) {</span>
+<span class="nc" id="L397">				throw new ResourceNotFoundException(</span>
+						&quot;ProductAttribute not found for [&quot; + attributeId + &quot;] and product [&quot; + productId + &quot;]&quot;);
+			}
+
+<span class="nc bnc" id="L401" title="All 2 branches missed.">			if (attr.getProduct().getMerchantStore().getId().intValue() != store.getId().intValue()) {</span>
+<span class="nc" id="L402">				throw new ResourceNotFoundException(&quot;ProductAttribute not found for [&quot; + attributeId + &quot;] and product [&quot;</span>
+<span class="nc" id="L403">						+ productId + &quot;] and store [&quot; + store.getCode() + &quot;]&quot;);</span>
+			}
+
+<span class="nc" id="L406">			productAttributeService.delete(attr);</span>
+
+<span class="nc" id="L408">		} catch (ServiceException e) {</span>
+<span class="nc" id="L409">			throw new ServiceRuntimeException(</span>
+					&quot;An exception occured while deleting ProductAttribute [&quot; + attributeId + &quot;]&quot;, e);
+<span class="nc" id="L411">		}</span>
+
+<span class="nc" id="L413">	}</span>
+
+
+
+	@Override
+	public void addOptionValueImage(MultipartFile image, Long optionValueId,
+			MerchantStore store, Language language) {
+		
+		
+<span class="nc" id="L422">		Validate.notNull(optionValueId,&quot;OptionValueId must not be null&quot;);</span>
+<span class="nc" id="L423">		Validate.notNull(image,&quot;Image must not be null&quot;);</span>
+		//get option value
+<span class="nc" id="L425">		ProductOptionValue value = productOptionValueService.getById(store, optionValueId);</span>
+<span class="nc bnc" id="L426" title="All 2 branches missed.">		if(value == null) {</span>
+<span class="nc" id="L427">			throw new ResourceNotFoundException(&quot;Product option value [&quot; + optionValueId + &quot;] not found&quot;);</span>
+		}
+		
+		try {
+<span class="nc" id="L431">			String imageName = image.getOriginalFilename();</span>
+<span class="nc" id="L432">			InputStream inputStream = image.getInputStream();</span>
+<span class="nc" id="L433">			InputContentFile cmsContentImage = new InputContentFile();</span>
+<span class="nc" id="L434">			cmsContentImage.setFileName(imageName);</span>
+<span class="nc" id="L435">			cmsContentImage.setMimeType(image.getContentType());</span>
+<span class="nc" id="L436">			cmsContentImage.setFile(inputStream);</span>
+
+<span class="nc" id="L438">			contentService.addOptionImage(store.getCode(), cmsContentImage);</span>
+<span class="nc" id="L439">			value.setProductOptionValueImage(imageName);</span>
+<span class="nc" id="L440">			productOptionValueService.saveOrUpdate(value);</span>
+<span class="nc" id="L441">		} catch (Exception e) {</span>
+<span class="nc" id="L442">			throw new ServiceRuntimeException(&quot;Exception while adding option value image&quot;, e);</span>
+<span class="nc" id="L443">		}</span>
+
+
+		
+		
+<span class="nc" id="L448">		return;</span>
+	}
+
+	@Override
+	public void removeOptionValueImage(Long optionValueId, MerchantStore store,
+			Language language) {
+<span class="nc" id="L454">		Validate.notNull(optionValueId,&quot;OptionValueId must not be null&quot;);</span>
+<span class="nc" id="L455">		ProductOptionValue value = productOptionValueService.getById(store, optionValueId);</span>
+<span class="nc bnc" id="L456" title="All 2 branches missed.">		if(value == null) {</span>
+<span class="nc" id="L457">			throw new ResourceNotFoundException(&quot;Product option value [&quot; + optionValueId + &quot;] not found&quot;);</span>
+		}
+		
+		try {
+
+<span class="nc" id="L462">			contentService.removeFile(store.getCode(), FileContentType.PROPERTY, value.getProductOptionValueImage());</span>
+<span class="nc" id="L463">			value.setProductOptionValueImage(null);</span>
+<span class="nc" id="L464">			productOptionValueService.saveOrUpdate(value);</span>
+<span class="nc" id="L465">		} catch (Exception e) {</span>
+<span class="nc" id="L466">			throw new ServiceRuntimeException(&quot;Exception while removing option value image&quot;, e);</span>
+<span class="nc" id="L467">		}</span>
+
+<span class="nc" id="L469">		return;</span>
+	}
+
+	@Override
+	public List&lt;CodeEntity&gt; createAttributes(List&lt;PersistableProductAttribute&gt; attributes, Long productId,
+			MerchantStore store) {
+<span class="nc" id="L475">		Validate.notNull(productId,&quot;Product id must not be null&quot;);</span>
+<span class="nc" id="L476">		Validate.notNull(store,&quot;Merchant cannot be null&quot;);</span>
+
+		//convert to model
+		
+<span class="nc" id="L480">		List&lt;ProductAttribute&gt; modelAttributes = attributes.stream().map(attr -&gt; persistableProductAttributeMapper.convert(attr, store, null)).collect(Collectors.toList());</span>
+		
+		try {
+<span class="nc" id="L483">			productAttributeService.saveAll(modelAttributes);</span>
+		
+			//save to a product
+<span class="nc" id="L486">			Product product = this.product(productId, store);</span>
+<span class="nc" id="L487">			product.getAttributes().addAll(modelAttributes);</span>
+		
+		
+<span class="nc" id="L490">			productService.save(product);</span>
+<span class="nc" id="L491">		} catch (ServiceException e) {</span>
+<span class="nc" id="L492">			throw new ServiceRuntimeException(&quot;Exception while saving product with attributes&quot;, e);</span>
+<span class="nc" id="L493">		}</span>
+		
+<span class="nc" id="L495">		return modelAttributes.stream().map(e -&gt; codeEntity(e)).collect(Collectors.toList());</span>
+
+	}
+	
+	private CodeEntity codeEntity(ProductAttribute attr) {
+<span class="nc" id="L500">		CodeEntity entity = new CodeEntity();</span>
+<span class="nc" id="L501">		entity.setId(attr.getId());</span>
+<span class="nc" id="L502">		entity.setCode(attr.getProductOption().getCode());</span>
+<span class="nc" id="L503">		return entity;</span>
+	}
+
+	@Override
+	public void updateAttributes(List&lt;PersistableProductAttribute&gt; attributes, Long productId, MerchantStore store) {
+		// TODO Auto-generated method stub
+<span class="nc" id="L509">		throw new NotImplementedException(&quot;Method not implemented&quot;);</span>
+		
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

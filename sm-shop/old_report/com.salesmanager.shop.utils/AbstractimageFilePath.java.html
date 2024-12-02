@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AbstractimageFilePath.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.utils</a> &gt; <span class="el_source">AbstractimageFilePath.java</span></div><h1>AbstractimageFilePath.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.utils;
+
+import java.util.Properties;
+
+import javax.annotation.Resource;
+
+import org.apache.commons.lang3.StringUtils;
+
+import com.salesmanager.core.model.catalog.product.Product;
+import com.salesmanager.core.model.catalog.product.manufacturer.Manufacturer;
+import com.salesmanager.core.model.content.FileContentType;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.shop.constants.Constants;
+
+
+
+
+
+<span class="fc" id="L19">public abstract class AbstractimageFilePath implements ImageFilePath {</span>
+
+
+	public abstract String getBasePath(MerchantStore store);
+
+	public abstract void setBasePath(String basePath);
+	
+	public abstract void setContentUrlPath(String contentUrl);
+	
+	protected static final String CONTEXT_PATH = &quot;CONTEXT_PATH&quot;;
+	
+<span class="fc" id="L30">	public @Resource(name=&quot;shopizer-properties&quot;) Properties properties = new Properties();//shopizer-properties</span>
+
+	
+	public Properties getProperties() {
+<span class="nc" id="L34">		return properties;</span>
+	}
+
+	public void setProperties(Properties properties) {
+<span class="nc" id="L38">		this.properties = properties;</span>
+<span class="nc" id="L39">	}</span>
+
+	/**
+	 * Builds a static content image file path that can be used by image servlet
+	 * utility for getting the physical image
+	 * @param store
+	 * @param imageName
+	 * @return
+	 */
+	public String buildStaticImageUtils(MerchantStore store, String imageName) {
+<span class="nc" id="L49">		StringBuilder imgName = new StringBuilder().append(getBasePath(store)).append(Constants.FILES_URI).append(Constants.SLASH).append(store.getCode()).append(Constants.SLASH).append(FileContentType.IMAGE.name()).append(Constants.SLASH);</span>
+<span class="nc bnc" id="L50" title="All 2 branches missed.">				if(!StringUtils.isBlank(imageName)) {</span>
+<span class="nc" id="L51">					imgName.append(imageName);</span>
+				}
+<span class="nc" id="L53">		return imgName.toString();</span>
+				
+	}
+	
+	/**
+	 * Builds a static content image file path that can be used by image servlet
+	 * utility for getting the physical image by specifying the image type
+	 * @param store
+	 * @param imageName
+	 * @return
+	 */
+	public String buildStaticImageUtils(MerchantStore store, String type, String imageName) {
+<span class="nc" id="L65">		StringBuilder imgName = new StringBuilder().append(getBasePath(store)).append(Constants.FILES_URI).append(Constants.SLASH).append(store.getCode()).append(Constants.SLASH).append(type).append(Constants.SLASH);</span>
+<span class="nc bnc" id="L66" title="All 2 branches missed.">		if(!StringUtils.isBlank(imageName)) {</span>
+<span class="nc" id="L67">				imgName.append(imageName);</span>
+		}
+<span class="nc" id="L69">		return imgName.toString();</span>
+
+	}
+	
+	/**
+	 * Builds a manufacturer image file path that can be used by image servlet
+	 * utility for getting the physical image
+	 * @param store
+	 * @param manufacturer
+	 * @param imageName
+	 * @return
+	 */
+	public String buildManufacturerImageUtils(MerchantStore store, Manufacturer manufacturer, String imageName) {
+<span class="nc" id="L82">		return new StringBuilder().append(getBasePath(store)).append(Constants.SLASH).append(store.getCode()).append(Constants.SLASH).</span>
+<span class="nc" id="L83">				append(FileContentType.MANUFACTURER.name()).append(Constants.SLASH)</span>
+<span class="nc" id="L84">				.append(manufacturer.getId()).append(Constants.SLASH)</span>
+<span class="nc" id="L85">				.append(imageName).toString();</span>
+	}
+	
+	/**
+	 * Builds a product image file path that can be used by image servlet
+	 * utility for getting the physical image
+	 * @param store
+	 * @param product
+	 * @param imageName
+	 * @return
+	 */
+	public String buildProductImageUtils(MerchantStore store, Product product, String imageName) {
+<span class="nc" id="L97">		return new StringBuilder().append(getBasePath(store)).append(Constants.PRODUCTS_URI).append(Constants.SLASH).append(store.getCode()).append(Constants.SLASH)</span>
+<span class="nc" id="L98">				.append(product.getSku()).append(Constants.SLASH).append(Constants.SMALL_IMAGE).append(Constants.SLASH).append(imageName).toString();</span>
+	}
+	
+	/**
+	 * Builds a default product image file path that can be used by image servlet
+	 * utility for getting the physical image
+	 * @param store
+	 * @param sku
+	 * @param imageName
+	 * @return
+	 */
+	public String buildProductImageUtils(MerchantStore store, String sku, String imageName) {
+<span class="nc" id="L110">		return new StringBuilder().append(getBasePath(store)).append(Constants.PRODUCTS_URI).append(Constants.SLASH).append(store.getCode()).append(Constants.SLASH)</span>
+<span class="nc" id="L111">				.append(sku).append(Constants.SLASH).append(Constants.SMALL_IMAGE).append(Constants.SLASH).append(imageName).toString();</span>
+	}
+	
+	/**
+	 * Builds a large product image file path that can be used by the image servlet
+	 * @param store
+	 * @param sku
+	 * @param imageName
+	 * @return
+	 */
+	public String buildLargeProductImageUtils(MerchantStore store, String sku, String imageName) {
+<span class="nc" id="L122">		return new StringBuilder().append(getBasePath(store)).append(Constants.SLASH).append(store.getCode()).append(Constants.SLASH)</span>
+<span class="nc" id="L123">				.append(sku).append(Constants.SLASH).append(Constants.SMALL_IMAGE).append(Constants.SLASH).append(imageName).toString();</span>
+	}
+
+
+	
+	/**
+	 * Builds a merchant store logo path
+	 * @param store
+	 * @return
+	 */
+	public String buildStoreLogoFilePath(MerchantStore store) {
+<span class="nc" id="L134">		return new StringBuilder().append(getBasePath(store)).append(Constants.FILES_URI).append(Constants.SLASH).append(store.getCode()).append(Constants.SLASH).append(FileContentType.LOGO).append(Constants.SLASH)</span>
+<span class="nc" id="L135">				.append(store.getStoreLogo()).toString();</span>
+	}
+	
+	/**
+	 * Builds product property image url path
+	 * @param store
+	 * @param imageName
+	 * @return
+	 */
+	public String buildProductPropertyImageFilePath(MerchantStore store, String imageName) {
+<span class="nc" id="L145">		return new StringBuilder().append(getBasePath(store)).append(Constants.SLASH).append(store.getCode()).append(Constants.SLASH).append(FileContentType.PROPERTY).append(Constants.SLASH)</span>
+<span class="nc" id="L146">				.append(imageName).toString();</span>
+	}
+	
+	public String buildProductPropertyImageUtils(MerchantStore store, String imageName) {
+<span class="nc" id="L150">		return new StringBuilder().append(getBasePath(store)).append(Constants.FILES_URI).append(Constants.SLASH).append(store.getCode()).append(&quot;/&quot;).append(FileContentType.PROPERTY).append(&quot;/&quot;)</span>
+<span class="nc" id="L151">				.append(imageName).toString();</span>
+	}
+	
+	public String buildCustomTypeImageUtils(MerchantStore store, String imageName, FileContentType type) {
+<span class="nc" id="L155">		return new StringBuilder().append(getBasePath(store)).append(Constants.FILES_URI).append(Constants.SLASH).append(store.getCode()).append(&quot;/&quot;).append(type).append(&quot;/&quot;)</span>
+<span class="nc" id="L156">				.append(imageName).toString();</span>
+	}
+	
+	/**
+	 * Builds static file url path
+	 * @param store
+	 * @param imageName
+	 * @return
+	 */
+	public String buildStaticContentFilePath(MerchantStore store, String fileName) {
+<span class="nc" id="L166">		StringBuilder sb = new StringBuilder().append(getBasePath(store)).append(Constants.FILES_URI).append(Constants.SLASH).append(store.getCode()).append(Constants.SLASH);</span>
+<span class="nc bnc" id="L167" title="All 2 branches missed.">		if(!StringUtils.isBlank(fileName)) {</span>
+<span class="nc" id="L168">			sb.append(fileName);</span>
+		}
+<span class="nc" id="L170">		return sb.toString();</span>
+	}
+	
+
+	
+	
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

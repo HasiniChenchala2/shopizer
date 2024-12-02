@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReadableOrderPopulator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.populator.order</a> &gt; <span class="el_source">ReadableOrderPopulator.java</span></div><h1>ReadableOrderPopulator.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.populator.order;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+
+
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.services.reference.country.CountryService;
+import com.salesmanager.core.business.services.reference.zone.ZoneService;
+import com.salesmanager.core.business.utils.AbstractDataPopulator;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.order.Order;
+import com.salesmanager.core.model.order.OrderTotal;
+import com.salesmanager.core.model.order.OrderTotalType;
+import com.salesmanager.core.model.order.attributes.OrderAttribute;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.model.customer.ReadableBilling;
+import com.salesmanager.shop.model.customer.ReadableDelivery;
+import com.salesmanager.shop.model.customer.address.Address;
+import com.salesmanager.shop.model.order.v0.ReadableOrder;
+import com.salesmanager.shop.model.store.ReadableMerchantStore;
+
+import org.springframework.beans.factory.annotation.Qualifier;
+import com.salesmanager.shop.populator.store.ReadableMerchantStorePopulator;
+import com.salesmanager.shop.utils.ImageFilePath;
+
+@Component
+<span class="fc" id="L33">public class ReadableOrderPopulator extends</span>
+		AbstractDataPopulator&lt;Order, ReadableOrder&gt; {
+	
+	@Autowired
+	private CountryService countryService;
+	@Autowired
+	private ZoneService zoneService;
+	
+	@Autowired
+	@Qualifier(&quot;img&quot;)
+	private ImageFilePath filePath;
+	
+	@Autowired
+	private ReadableMerchantStorePopulator readableMerchantStorePopulator;
+
+
+	@Override
+	public ReadableOrder populate(Order source, ReadableOrder target,
+			MerchantStore store, Language language) throws ConversionException {
+		
+		
+		
+<span class="nc" id="L55">		target.setId(source.getId());</span>
+<span class="nc" id="L56">		target.setDatePurchased(source.getDatePurchased());</span>
+<span class="nc" id="L57">		target.setOrderStatus(source.getStatus());</span>
+<span class="nc" id="L58">		target.setCurrency(source.getCurrency().getCode());</span>
+		//target.setCurrencyModel(source.getCurrency());
+		
+<span class="nc" id="L61">		target.setPaymentType(source.getPaymentType());</span>
+<span class="nc" id="L62">		target.setPaymentModule(source.getPaymentModuleCode());</span>
+<span class="nc" id="L63">		target.setShippingModule(source.getShippingModuleCode());</span>
+		
+<span class="nc bnc" id="L65" title="All 2 branches missed.">		if(source.getMerchant()!=null) {</span>
+/*			ReadableMerchantStorePopulator merchantPopulator = new ReadableMerchantStorePopulator();
+			merchantPopulator.setCountryService(countryService);
+			merchantPopulator.setFilePath(filePath);
+			merchantPopulator.setZoneService(zoneService);*/
+<span class="nc" id="L70">			ReadableMerchantStore readableStore = </span>
+<span class="nc" id="L71">			readableMerchantStorePopulator.populate(source.getMerchant(), null, store, source.getMerchant().getDefaultLanguage());</span>
+<span class="nc" id="L72">			target.setStore(readableStore);</span>
+		}
+		
+		
+<span class="nc bnc" id="L76" title="All 2 branches missed.">		if(source.getCustomerAgreement()!=null) {</span>
+<span class="nc" id="L77">			target.setCustomerAgreed(source.getCustomerAgreement());</span>
+		}
+<span class="nc bnc" id="L79" title="All 2 branches missed.">		if(source.getConfirmedAddress()!=null) {</span>
+<span class="nc" id="L80">			target.setConfirmedAddress(source.getConfirmedAddress());</span>
+		}
+		
+<span class="nc" id="L83">		com.salesmanager.shop.model.order.total.OrderTotal taxTotal = null;</span>
+<span class="nc" id="L84">		com.salesmanager.shop.model.order.total.OrderTotal shippingTotal = null;</span>
+		
+		
+<span class="nc bnc" id="L87" title="All 2 branches missed.">		if(source.getBilling()!=null) {</span>
+<span class="nc" id="L88">			ReadableBilling address = new ReadableBilling();</span>
+<span class="nc" id="L89">			address.setEmail(source.getCustomerEmailAddress());</span>
+<span class="nc" id="L90">			address.setCity(source.getBilling().getCity());</span>
+<span class="nc" id="L91">			address.setAddress(source.getBilling().getAddress());</span>
+<span class="nc" id="L92">			address.setCompany(source.getBilling().getCompany());</span>
+<span class="nc" id="L93">			address.setFirstName(source.getBilling().getFirstName());</span>
+<span class="nc" id="L94">			address.setLastName(source.getBilling().getLastName());</span>
+<span class="nc" id="L95">			address.setPostalCode(source.getBilling().getPostalCode());</span>
+<span class="nc" id="L96">			address.setPhone(source.getBilling().getTelephone());</span>
+<span class="nc bnc" id="L97" title="All 2 branches missed.">			if(source.getBilling().getCountry()!=null) {</span>
+<span class="nc" id="L98">				address.setCountry(source.getBilling().getCountry().getIsoCode());</span>
+			}
+<span class="nc bnc" id="L100" title="All 2 branches missed.">			if(source.getBilling().getZone()!=null) {</span>
+<span class="nc" id="L101">				address.setZone(source.getBilling().getZone().getCode());</span>
+			}
+			
+<span class="nc" id="L104">			target.setBilling(address);</span>
+		}
+		
+<span class="nc bnc" id="L107" title="All 4 branches missed.">		if(source.getOrderAttributes()!=null &amp;&amp; source.getOrderAttributes().size()&gt;0) {</span>
+<span class="nc bnc" id="L108" title="All 2 branches missed.">			for(OrderAttribute attr : source.getOrderAttributes()) {</span>
+<span class="nc" id="L109">				com.salesmanager.shop.model.order.OrderAttribute a = new com.salesmanager.shop.model.order.OrderAttribute();</span>
+<span class="nc" id="L110">				a.setKey(attr.getKey());</span>
+<span class="nc" id="L111">				a.setValue(attr.getValue());</span>
+<span class="nc" id="L112">				target.getAttributes().add(a);</span>
+<span class="nc" id="L113">			}</span>
+		}
+		
+<span class="nc bnc" id="L116" title="All 2 branches missed.">		if(source.getDelivery()!=null) {</span>
+<span class="nc" id="L117">			ReadableDelivery address = new ReadableDelivery();</span>
+<span class="nc" id="L118">			address.setCity(source.getDelivery().getCity());</span>
+<span class="nc" id="L119">			address.setAddress(source.getDelivery().getAddress());</span>
+<span class="nc" id="L120">			address.setCompany(source.getDelivery().getCompany());</span>
+<span class="nc" id="L121">			address.setFirstName(source.getDelivery().getFirstName());</span>
+<span class="nc" id="L122">			address.setLastName(source.getDelivery().getLastName());</span>
+<span class="nc" id="L123">			address.setPostalCode(source.getDelivery().getPostalCode());</span>
+<span class="nc" id="L124">			address.setPhone(source.getDelivery().getTelephone());</span>
+<span class="nc bnc" id="L125" title="All 2 branches missed.">			if(source.getDelivery().getCountry()!=null) {</span>
+<span class="nc" id="L126">				address.setCountry(source.getDelivery().getCountry().getIsoCode());</span>
+			}
+<span class="nc bnc" id="L128" title="All 2 branches missed.">			if(source.getDelivery().getZone()!=null) {</span>
+<span class="nc" id="L129">				address.setZone(source.getDelivery().getZone().getCode());</span>
+			}
+			
+<span class="nc" id="L132">			target.setDelivery(address);</span>
+		}
+		
+<span class="nc" id="L135">		List&lt;com.salesmanager.shop.model.order.total.OrderTotal&gt; totals = new ArrayList&lt;com.salesmanager.shop.model.order.total.OrderTotal&gt;();</span>
+<span class="nc bnc" id="L136" title="All 2 branches missed.">		for(OrderTotal t : source.getOrderTotal()) {</span>
+<span class="nc bnc" id="L137" title="All 2 branches missed.">			if(t.getOrderTotalType()==null) {</span>
+<span class="nc" id="L138">				continue;</span>
+			}
+<span class="nc bnc" id="L140" title="All 2 branches missed.">			if(t.getOrderTotalType().name().equals(OrderTotalType.TOTAL.name())) {</span>
+<span class="nc" id="L141">				com.salesmanager.shop.model.order.total.OrderTotal totalTotal = createTotal(t);</span>
+<span class="nc" id="L142">				target.setTotal(totalTotal);</span>
+<span class="nc" id="L143">				totals.add(totalTotal);</span>
+<span class="nc" id="L144">			}</span>
+<span class="nc bnc" id="L145" title="All 2 branches missed.">			else if(t.getOrderTotalType().name().equals(OrderTotalType.TAX.name())) {</span>
+<span class="nc" id="L146">				com.salesmanager.shop.model.order.total.OrderTotal totalTotal = createTotal(t);</span>
+<span class="nc bnc" id="L147" title="All 2 branches missed.">				if(taxTotal==null) {</span>
+<span class="nc" id="L148">					taxTotal = totalTotal;</span>
+				} else {
+<span class="nc" id="L150">					BigDecimal v = taxTotal.getValue();</span>
+<span class="nc" id="L151">					v = v.add(totalTotal.getValue());</span>
+<span class="nc" id="L152">					taxTotal.setValue(v);</span>
+				}
+<span class="nc" id="L154">				target.setTax(totalTotal);</span>
+<span class="nc" id="L155">				totals.add(totalTotal);</span>
+<span class="nc" id="L156">			}</span>
+<span class="nc bnc" id="L157" title="All 2 branches missed.">			else if(t.getOrderTotalType().name().equals(OrderTotalType.SHIPPING.name())) {</span>
+<span class="nc" id="L158">				com.salesmanager.shop.model.order.total.OrderTotal totalTotal = createTotal(t);</span>
+<span class="nc bnc" id="L159" title="All 2 branches missed.">				if(shippingTotal==null) {</span>
+<span class="nc" id="L160">					shippingTotal = totalTotal;</span>
+				} else {
+<span class="nc" id="L162">					BigDecimal v = shippingTotal.getValue();</span>
+<span class="nc" id="L163">					v = v.add(totalTotal.getValue());</span>
+<span class="nc" id="L164">					shippingTotal.setValue(v);</span>
+				}
+<span class="nc" id="L166">				target.setShipping(totalTotal);</span>
+<span class="nc" id="L167">				totals.add(totalTotal);</span>
+<span class="nc" id="L168">			}</span>
+<span class="nc bnc" id="L169" title="All 2 branches missed.">			else if(t.getOrderTotalType().name().equals(OrderTotalType.HANDLING.name())) {</span>
+<span class="nc" id="L170">				com.salesmanager.shop.model.order.total.OrderTotal totalTotal = createTotal(t);</span>
+<span class="nc bnc" id="L171" title="All 2 branches missed.">				if(shippingTotal==null) {</span>
+<span class="nc" id="L172">					shippingTotal = totalTotal;</span>
+				} else {
+<span class="nc" id="L174">					BigDecimal v = shippingTotal.getValue();</span>
+<span class="nc" id="L175">					v = v.add(totalTotal.getValue());</span>
+<span class="nc" id="L176">					shippingTotal.setValue(v);</span>
+				}
+<span class="nc" id="L178">				target.setShipping(totalTotal);</span>
+<span class="nc" id="L179">				totals.add(totalTotal);</span>
+<span class="nc" id="L180">			}</span>
+<span class="nc bnc" id="L181" title="All 2 branches missed.">			else if(t.getOrderTotalType().name().equals(OrderTotalType.SUBTOTAL.name())) {</span>
+<span class="nc" id="L182">				com.salesmanager.shop.model.order.total.OrderTotal subTotal = createTotal(t);</span>
+<span class="nc" id="L183">				totals.add(subTotal);</span>
+				
+<span class="nc" id="L185">			}</span>
+			else {
+<span class="nc" id="L187">				com.salesmanager.shop.model.order.total.OrderTotal otherTotal = createTotal(t);</span>
+<span class="nc" id="L188">				totals.add(otherTotal);</span>
+			}
+<span class="nc" id="L190">		}</span>
+		
+<span class="nc" id="L192">		target.setTotals(totals);</span>
+		
+<span class="nc" id="L194">		return target;</span>
+	}
+	
+	private com.salesmanager.shop.model.order.total.OrderTotal createTotal(OrderTotal t) {
+<span class="nc" id="L198">		com.salesmanager.shop.model.order.total.OrderTotal totalTotal = new com.salesmanager.shop.model.order.total.OrderTotal();</span>
+<span class="nc" id="L199">		totalTotal.setCode(t.getOrderTotalCode());</span>
+<span class="nc" id="L200">		totalTotal.setId(t.getId());</span>
+<span class="nc" id="L201">		totalTotal.setModule(t.getModule());</span>
+<span class="nc" id="L202">		totalTotal.setOrder(t.getSortOrder());</span>
+<span class="nc" id="L203">		totalTotal.setValue(t.getValue());</span>
+<span class="nc" id="L204">		return totalTotal;</span>
+	}
+
+	@Override
+	protected ReadableOrder createTarget() {
+
+<span class="nc" id="L210">		return null;</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ShoppingCartItemPopulator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.populator.order</a> &gt; <span class="el_source">ShoppingCartItemPopulator.java</span></div><h1>ShoppingCartItemPopulator.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.populator.order;
+
+import org.apache.commons.lang3.Validate;
+
+import com.salesmanager.core.model.catalog.product.Product;
+import com.salesmanager.core.model.catalog.product.attribute.ProductAttribute;
+import com.salesmanager.core.business.services.catalog.product.ProductService;
+import com.salesmanager.core.business.services.catalog.product.attribute.ProductAttributeService;
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.core.model.shoppingcart.ShoppingCartItem;
+import com.salesmanager.core.business.services.shoppingcart.ShoppingCartService;
+import com.salesmanager.core.business.utils.AbstractDataPopulator;
+import com.salesmanager.shop.model.order.PersistableOrderProduct;
+import com.salesmanager.shop.store.api.exception.ResourceNotFoundException;
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+
+<span class="nc" id="L20">public class ShoppingCartItemPopulator extends</span>
+		AbstractDataPopulator&lt;PersistableOrderProduct, ShoppingCartItem&gt; {
+
+
+	private ProductService productService;
+	private ProductAttributeService productAttributeService;
+	private ShoppingCartService shoppingCartService;
+
+	@Override
+	public ShoppingCartItem populate(PersistableOrderProduct source, /** TODO: Fix, target not used possible future bug ! **/ShoppingCartItem target,
+									 MerchantStore store, Language language)
+			throws ConversionException {
+<span class="nc" id="L32">		Validate.notNull(productService, &quot;Requires to set productService&quot;);</span>
+<span class="nc" id="L33">		Validate.notNull(productAttributeService, &quot;Requires to set productAttributeService&quot;);</span>
+<span class="nc" id="L34">		Validate.notNull(shoppingCartService, &quot;Requires to set shoppingCartService&quot;);</span>
+
+<span class="nc" id="L36">		Product product = null;</span>
+		try {
+<span class="nc" id="L38">			product = productService.getBySku(source.getSku(), store, language);</span>
+<span class="nc" id="L39">		} catch (ServiceException e) {</span>
+<span class="nc" id="L40">			throw new ServiceRuntimeException(e);</span>
+<span class="nc" id="L41">		}</span>
+<span class="nc bnc" id="L42" title="All 2 branches missed.">		if(product==null ) {</span>
+<span class="nc" id="L43">			throw new ResourceNotFoundException(&quot;No product found for sku [&quot; + source.getSku() +&quot;]&quot;);</span>
+		}
+
+<span class="nc bnc" id="L46" title="All 2 branches missed.">		if(source.getAttributes()!=null) {</span>
+
+<span class="nc bnc" id="L48" title="All 2 branches missed.">			for(com.salesmanager.shop.model.catalog.product.attribute.ProductAttribute attr : source.getAttributes()) {</span>
+<span class="nc" id="L49">				ProductAttribute attribute = productAttributeService.getById(attr.getId());</span>
+<span class="nc bnc" id="L50" title="All 2 branches missed.">				if(attribute==null) {</span>
+<span class="nc" id="L51">					throw new ConversionException(&quot;ProductAttribute with id &quot; + attr.getId() + &quot; is null&quot;);</span>
+				}
+<span class="nc bnc" id="L53" title="All 2 branches missed.">				if(attribute.getProduct().getId().longValue()!=source.getProduct().getId().longValue()) {</span>
+<span class="nc" id="L54">					throw new ConversionException(&quot;ProductAttribute with id &quot; + attr.getId() + &quot; is not assigned to Product id &quot; + source.getProduct().getId());</span>
+				}
+<span class="nc" id="L56">				product.getAttributes().add(attribute);</span>
+<span class="nc" id="L57">			}</span>
+		}
+
+		try {
+<span class="nc" id="L61">			return shoppingCartService.populateShoppingCartItem(product, store);</span>
+<span class="nc" id="L62">		} catch (ServiceException e) {</span>
+<span class="nc" id="L63">			throw new ConversionException(e);</span>
+		}
+
+	}
+
+	@Override
+	protected ShoppingCartItem createTarget() {
+		// TODO Auto-generated method stub
+<span class="nc" id="L71">		return null;</span>
+	}
+
+	public void setProductAttributeService(ProductAttributeService productAttributeService) {
+<span class="nc" id="L75">		this.productAttributeService = productAttributeService;</span>
+<span class="nc" id="L76">	}</span>
+
+	public ProductAttributeService getProductAttributeService() {
+<span class="nc" id="L79">		return productAttributeService;</span>
+	}
+
+	public void setProductService(ProductService productService) {
+<span class="nc" id="L83">		this.productService = productService;</span>
+<span class="nc" id="L84">	}</span>
+
+	public ProductService getProductService() {
+<span class="nc" id="L87">		return productService;</span>
+	}
+
+	public void setShoppingCartService(ShoppingCartService shoppingCartService) {
+<span class="nc" id="L91">		this.shoppingCartService = shoppingCartService;</span>
+<span class="nc" id="L92">	}</span>
+
+	public ShoppingCartService getShoppingCartService() {
+<span class="nc" id="L95">		return shoppingCartService;</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

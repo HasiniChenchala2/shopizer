@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PersistableProductVariantMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.mapper.catalog.product</a> &gt; <span class="el_source">PersistableProductVariantMapper.java</span></div><h1>PersistableProductVariantMapper.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.mapper.catalog.product;
+
+import java.util.Date;
+import java.util.Optional;
+
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import com.salesmanager.core.business.services.catalog.product.ProductService;
+import com.salesmanager.core.business.services.catalog.product.variation.ProductVariationService;
+import com.salesmanager.core.model.catalog.product.Product;
+import com.salesmanager.core.model.catalog.product.availability.ProductAvailability;
+import com.salesmanager.core.model.catalog.product.variant.ProductVariant;
+import com.salesmanager.core.model.catalog.product.variation.ProductVariation;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.mapper.Mapper;
+import com.salesmanager.shop.model.catalog.product.product.variant.PersistableProductVariant;
+import com.salesmanager.shop.store.api.exception.OperationNotAllowedException;
+import com.salesmanager.shop.store.api.exception.ResourceNotFoundException;
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+import com.salesmanager.shop.utils.DateUtil;
+
+@Component
+<span class="fc" id="L26">public class PersistableProductVariantMapper implements Mapper&lt;PersistableProductVariant, ProductVariant&gt; {</span>
+	
+	@Autowired
+	private ProductVariationService productVariationService;
+	
+	@Autowired
+	private PersistableProductAvailabilityMapper persistableProductAvailabilityMapper;
+	
+	@Autowired
+	private ProductService productService;
+
+	@Override
+	public ProductVariant convert(PersistableProductVariant source, MerchantStore store, Language language) {
+<span class="nc" id="L39">		ProductVariant productVariantModel = new ProductVariant();</span>
+<span class="nc" id="L40">		return this.merge(source, productVariantModel, store, language);</span>
+	}
+
+	@Override
+	public ProductVariant merge(PersistableProductVariant source, ProductVariant destination, MerchantStore store,
+			Language language) {
+		
+		//
+<span class="nc" id="L48">		Long productVariation = source.getVariation();</span>
+<span class="nc" id="L49">		Long productVariationValue = source.getVariationValue();</span>
+		
+<span class="nc" id="L51">		String productVariationCode = source.getVariationCode();</span>
+<span class="nc" id="L52">		String productVariationValueCode = source.getVariationValueCode();</span>
+		
+<span class="nc" id="L54">		Optional&lt;ProductVariation&gt; variation = null;</span>
+<span class="nc" id="L55">		Optional&lt;ProductVariation&gt; variationValue = null;</span>
+		
+<span class="nc bnc" id="L57" title="All 2 branches missed.">		if(StringUtils.isEmpty(productVariationCode)) {</span>
+		
+<span class="nc" id="L59">			variation = productVariationService.getById(store, productVariation);</span>
+<span class="nc bnc" id="L60" title="All 2 branches missed.">			if(productVariationValue != null) {</span>
+<span class="nc" id="L61">				variationValue = productVariationService.getById(store, productVariationValue);</span>
+<span class="nc bnc" id="L62" title="All 2 branches missed.">				if(variationValue.isEmpty()) {</span>
+<span class="nc" id="L63">					throw new ResourceNotFoundException(&quot;ProductVaritionValue [&quot; + productVariationValue + &quot;] + not found for store [&quot; + store.getCode() + &quot;]&quot;);</span>
+				}
+				
+			}
+		} else {
+<span class="nc" id="L68">			variation = productVariationService.getByCode(store, productVariationCode);</span>
+<span class="nc bnc" id="L69" title="All 2 branches missed.">			if(productVariationValueCode != null) {</span>
+<span class="nc" id="L70">				variationValue = productVariationService.getByCode(store, productVariationValueCode);</span>
+<span class="nc bnc" id="L71" title="All 2 branches missed.">				if(variationValue.isEmpty()) {</span>
+<span class="nc" id="L72">					throw new ResourceNotFoundException(&quot;ProductVaritionValue [&quot; + productVariationValue + &quot;] + not found for store [&quot; + store.getCode() + &quot;]&quot;);</span>
+				}
+				
+			}
+		}
+				
+		
+<span class="nc bnc" id="L79" title="All 2 branches missed.">		if(variation.isEmpty()) {</span>
+<span class="nc" id="L80">			throw new ResourceNotFoundException(&quot;ProductVarition [&quot; + productVariation + &quot;] + not found for store [&quot; + store.getCode() + &quot;]&quot;);</span>
+		}
+		
+<span class="nc" id="L83">		destination.setVariation(variation.get());</span>
+
+		
+<span class="nc bnc" id="L86" title="All 2 branches missed.">		if(productVariationValue != null) {</span>
+<span class="nc" id="L87">			destination.setVariationValue(variationValue.get());</span>
+		}
+		
+<span class="nc" id="L90">		StringBuilder instanceCode = new StringBuilder();</span>
+<span class="nc" id="L91">		instanceCode.append(variation.get().getCode());</span>
+<span class="nc bnc" id="L92" title="All 4 branches missed.">		if(productVariationValue != null &amp;&amp; variationValue.get()!=null) {</span>
+<span class="nc" id="L93">			instanceCode.append(&quot;:&quot;).append(variationValue.get().getCode());</span>
+		}
+		
+<span class="nc" id="L96">		destination.setCode(instanceCode.toString());</span>
+		
+<span class="nc" id="L98">		destination.setAvailable(source.isAvailable());</span>
+<span class="nc" id="L99">		destination.setDefaultSelection(source.isDefaultSelection());</span>
+<span class="nc" id="L100">		destination.setSku(source.getSku());</span>
+		
+<span class="nc bnc" id="L102" title="All 2 branches missed.">		if(StringUtils.isBlank(source.getDateAvailable())) {</span>
+<span class="nc" id="L103">			source.setDateAvailable(DateUtil.formatDate(new Date()));</span>
+		}
+		
+<span class="nc bnc" id="L106" title="All 2 branches missed.">		if(source.getDateAvailable()!=null) {</span>
+			try {
+<span class="nc" id="L108">				destination.setDateAvailable(DateUtil.getDate(source.getDateAvailable()));</span>
+<span class="nc" id="L109">			} catch (Exception e) {</span>
+<span class="nc" id="L110">				throw new ServiceRuntimeException(&quot;Cant format date [&quot; + source.getDateAvailable() + &quot;]&quot;);</span>
+<span class="nc" id="L111">			}</span>
+		}
+		
+<span class="nc" id="L114">		destination.setSortOrder(source.getSortOrder());</span>
+		
+		
+		/**
+		 * Inventory
+		 */
+<span class="nc bnc" id="L120" title="All 2 branches missed.">		if(source.getInventory() != null) {</span>
+<span class="nc" id="L121">			ProductAvailability availability = persistableProductAvailabilityMapper.convert(source.getInventory(), store, language);</span>
+<span class="nc" id="L122">			availability.setProductVariant(destination);</span>
+<span class="nc" id="L123">			destination.getAvailabilities().add(availability);</span>
+		}
+		
+		
+<span class="nc" id="L127">		Product product = null;</span>
+				
+<span class="nc bnc" id="L129" title="All 4 branches missed.">		if(source.getProductId() != null &amp;&amp; source.getProductId().longValue() &gt; 0) {</span>
+<span class="nc" id="L130">			product = productService.findOne(source.getProductId(), store);</span>
+			
+<span class="nc bnc" id="L132" title="All 2 branches missed.">			if(product == null) {</span>
+<span class="nc" id="L133">				throw new ResourceNotFoundException(&quot;Product [&quot; + source.getId() + &quot;] + not found for store [&quot; + store.getCode() + &quot;]&quot;);</span>
+			}
+
+<span class="nc bnc" id="L136" title="All 2 branches missed.">			if(product.getMerchantStore().getId() != store.getId()) {</span>
+<span class="nc" id="L137">				throw new ResourceNotFoundException(&quot;Product [&quot; + source.getId() + &quot;] + not found for store [&quot; + store.getCode() + &quot;]&quot;);</span>
+			}
+			
+<span class="nc bnc" id="L140" title="All 4 branches missed.">			if(product.getSku() != null &amp;&amp; product.getSku().equals(source.getSku())) {</span>
+<span class="nc" id="L141">				throw new OperationNotAllowedException(&quot;Product variant sku [&quot; + source.getSku() + &quot;] + must be different than product instance sku [&quot; + product.getSku() + &quot;]&quot;);</span>
+			}
+			
+<span class="nc" id="L144">			destination.setProduct(product);</span>
+			
+			
+		}
+
+
+		
+<span class="nc" id="L151">		return destination;</span>
+
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

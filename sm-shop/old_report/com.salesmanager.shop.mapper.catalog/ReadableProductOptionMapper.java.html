@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReadableProductOptionMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.mapper.catalog</a> &gt; <span class="el_source">ReadableProductOptionMapper.java</span></div><h1>ReadableProductOptionMapper.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.mapper.catalog;
+
+import java.util.ArrayList;
+import java.util.List;
+import org.apache.commons.collections4.CollectionUtils;
+import org.springframework.stereotype.Component;
+import com.salesmanager.core.model.catalog.product.attribute.ProductOption;
+import com.salesmanager.core.model.catalog.product.attribute.ProductOptionDescription;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.mapper.Mapper;
+import com.salesmanager.shop.model.catalog.product.attribute.api.ReadableProductOptionEntity;
+import com.salesmanager.shop.model.catalog.product.attribute.api.ReadableProductOptionFull;
+
+@Component
+<span class="fc" id="L16">public class ReadableProductOptionMapper implements Mapper&lt;ProductOption, ReadableProductOptionEntity&gt; {</span>
+
+  @Override
+  public ReadableProductOptionEntity convert(ProductOption source, MerchantStore store,
+      Language language) {
+<span class="fc" id="L21">    ReadableProductOptionEntity destination = new ReadableProductOptionEntity();</span>
+<span class="fc" id="L22">    return merge(source, destination, store, language);</span>
+  }
+
+
+  @Override
+  public ReadableProductOptionEntity merge(ProductOption source,
+                                           ReadableProductOptionEntity destination, MerchantStore store, Language language) {
+<span class="fc" id="L29">    ReadableProductOptionEntity readableProductOption = new ReadableProductOptionEntity();</span>
+<span class="pc bpc" id="L30" title="1 of 2 branches missed.">    if(language == null) {</span>
+<span class="nc" id="L31">      readableProductOption = new ReadableProductOptionFull();</span>
+<span class="nc" id="L32">      List&lt;com.salesmanager.shop.model.catalog.product.attribute.ProductOptionDescription&gt; descriptions = new ArrayList&lt;com.salesmanager.shop.model.catalog.product.attribute.ProductOptionDescription&gt;();</span>
+<span class="nc bnc" id="L33" title="All 2 branches missed.">      for(ProductOptionDescription desc : source.getDescriptions()) {</span>
+<span class="nc" id="L34">          com.salesmanager.shop.model.catalog.product.attribute.ProductOptionDescription d = this.description(desc);</span>
+<span class="nc" id="L35">          descriptions.add(d);</span>
+<span class="nc" id="L36">      }</span>
+<span class="nc" id="L37">      ((ReadableProductOptionFull)readableProductOption).setDescriptions(descriptions);</span>
+<span class="nc" id="L38">    } else {</span>
+<span class="fc" id="L39">      readableProductOption = new ReadableProductOptionEntity();</span>
+<span class="pc bpc" id="L40" title="1 of 2 branches missed.">      if(!CollectionUtils.isEmpty(source.getDescriptions())) {</span>
+<span class="fc bfc" id="L41" title="All 2 branches covered.">        for(ProductOptionDescription desc : source.getDescriptions()) {</span>
+<span class="pc bpc" id="L42" title="3 of 6 branches missed.">          if(desc != null &amp;&amp; desc.getLanguage()!= null &amp;&amp; desc.getLanguage().getId() == language.getId()) {</span>
+<span class="fc" id="L43">            com.salesmanager.shop.model.catalog.product.attribute.ProductOptionDescription d = this.description(desc);</span>
+<span class="fc" id="L44">            readableProductOption.setDescription(d);</span>
+          }
+<span class="fc" id="L46">        }</span>
+      }
+    }
+    
+<span class="fc" id="L50">    readableProductOption.setCode(source.getCode());</span>
+<span class="fc" id="L51">    readableProductOption.setId(source.getId());</span>
+<span class="fc" id="L52">    readableProductOption.setType(source.getProductOptionType());</span>
+    
+    
+<span class="fc" id="L55">    return readableProductOption;</span>
+  }
+
+
+
+  com.salesmanager.shop.model.catalog.product.attribute.ProductOptionDescription description(ProductOptionDescription description) {
+<span class="fc" id="L61">    com.salesmanager.shop.model.catalog.product.attribute.ProductOptionDescription desc = new com.salesmanager.shop.model.catalog.product.attribute.ProductOptionDescription();</span>
+<span class="fc" id="L62">    desc.setDescription(description.getDescription());</span>
+<span class="fc" id="L63">    desc.setName(description.getName());</span>
+<span class="fc" id="L64">    desc.setId(description.getId());</span>
+<span class="fc" id="L65">    desc.setLanguage(description.getLanguage().getCode());</span>
+<span class="fc" id="L66">    return desc;</span>
+  }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

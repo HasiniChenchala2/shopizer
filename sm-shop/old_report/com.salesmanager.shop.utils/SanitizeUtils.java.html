@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SanitizeUtils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.utils</a> &gt; <span class="el_source">SanitizeUtils.java</span></div><h1>SanitizeUtils.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.utils;
+
+import java.io.InputStream;
+import java.util.Arrays;
+import java.util.List;
+
+import org.apache.commons.lang3.StringEscapeUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.owasp.validator.html.AntiSamy;
+import org.owasp.validator.html.CleanResults;
+import org.owasp.validator.html.Policy;
+
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+
+public class SanitizeUtils {
+
+	/**
+	 * should not contain /
+	 */
+<span class="fc" id="L20">    private static List&lt;Character&gt; blackList = Arrays.asList(';','%', '&amp;', '=', '|', '*', '+', '_',</span>
+<span class="fc" id="L21">            '^', '%','$','(', ')', '{', '}', '&lt;', '&gt;', '[',</span>
+<span class="fc" id="L22">            ']', '`', '\'', '~','\\', '?','\'');</span>
+    
+    private final static String POLICY_FILE = &quot;antisamy-slashdot.xml&quot;;
+    
+<span class="fc" id="L26">    private static Policy policy = null;</span>
+    
+    static { 
+		try {
+<span class="fc" id="L30">			ClassLoader loader = Policy.class.getClassLoader();</span>
+<span class="fc" id="L31">	        InputStream configStream = loader.getResourceAsStream(POLICY_FILE);</span>
+<span class="fc" id="L32">			policy = Policy.getInstance(configStream);</span>
+	        
+<span class="nc" id="L34">		} catch (Exception e) {</span>
+<span class="nc" id="L35">			throw new ServiceRuntimeException(e);</span>
+<span class="fc" id="L36">		}</span>
+<span class="fc" id="L37">    } </span>
+
+    private SanitizeUtils() {
+        //Utility class
+    }
+    
+    public static String getSafeString(String value) {
+
+		try {
+
+<span class="pc bpc" id="L47" title="1 of 2 branches missed.">			if(policy == null) {</span>
+<span class="nc" id="L48">				throw new ServiceRuntimeException(&quot;Error in &quot; + SanitizeUtils.class.getName() + &quot; html sanitize utils is null&quot;);		}</span>
+
+<span class="fc" id="L50">	        AntiSamy as = new AntiSamy();</span>
+<span class="fc" id="L51">	        CleanResults cr = as.scan(value, policy);</span>
+	        
+<span class="fc" id="L53">	        return cr.getCleanHTML();</span>
+	        
+<span class="nc" id="L55">		} catch (Exception e) {</span>
+<span class="nc" id="L56">			throw new ServiceRuntimeException(e);</span>
+		}
+
+
+    	
+    }
+    
+    
+    public static String getSafeRequestParamString(String value) {
+
+<span class="nc" id="L66">    StringBuilder safe = new StringBuilder();</span>
+<span class="nc bnc" id="L67" title="All 2 branches missed.">    if(StringUtils.isNotEmpty(value)) {</span>
+        // Fastest way for short strings - https://stackoverflow.com/a/11876086/195904
+<span class="nc bnc" id="L69" title="All 2 branches missed.">        for(int i=0; i&lt;value.length(); i++) {</span>
+<span class="nc" id="L70">            char current = value.charAt(i);</span>
+<span class="nc bnc" id="L71" title="All 2 branches missed.">            if(!blackList.contains(current)) {</span>
+<span class="nc" id="L72">                safe.append(current);</span>
+            }
+        }
+    }
+<span class="nc" id="L76">    return StringEscapeUtils.escapeXml11(safe.toString());</span>
+}
+    
+
+
+/*	public static String getSafeString(String value) {
+		
+		
+        //value = value.replaceAll(&quot;&lt;&quot;, &quot;&amp; lt;&quot;).replaceAll(&quot;&gt;&quot;, &quot;&amp; gt;&quot;);
+        //value = value.replaceAll(&quot;\\(&quot;, &quot;&amp; #40;&quot;).replaceAll(&quot;\\)&quot;, &quot;&amp; #41;&quot;);
+        //value = value.replaceAll(&quot;'&quot;, &quot;&amp; #39;&quot;);
+        value = value.replaceAll(&quot;eval\\((.*)\\)&quot;, &quot;&quot;);
+        value = value.replaceAll(&quot;[\\\&quot;\\\'][\\s]*javascript:(.*)[\\\&quot;\\\']&quot;, &quot;\&quot;\&quot;&quot;);
+
+        value = value.replaceAll(&quot;(?i)&lt;script.*?&gt;.*?&lt;script.*?&gt;&quot;, &quot;&quot;);
+        value = value.replaceAll(&quot;(?i)&lt;script.*?&gt;.*?&lt;/script.*?&gt;&quot;, &quot;&quot;);
+        value = value.replaceAll(&quot;(?i)&lt;.*?javascript:.*?&gt;.*?&lt;/.*?&gt;&quot;, &quot;&quot;);
+        value = value.replaceAll(&quot;(?i)&lt;.*?\\s+on.*?&gt;.*?&lt;/.*?&gt;&quot;, &quot;&quot;);
+        //value = value.replaceAll(&quot;&lt;script&gt;&quot;, &quot;&quot;);
+        //value = value.replaceAll(&quot;&lt;/script&gt;&quot;, &quot;&quot;);
+        
+        //return HtmlUtils.htmlEscape(value);	
+		
+        StringBuilder safe = new StringBuilder();
+        if(StringUtils.isNotEmpty(value)) {
+            // Fastest way for short strings - https://stackoverflow.com/a/11876086/195904
+            for(int i=0; i&lt;value.length(); i++) {
+                char current = value.charAt(i);
+                if(!blackList.contains(current)) {
+                    safe.append(current);
+                }
+            }
+        }
+        return StringEscapeUtils.escapeXml11(safe.toString());
+	}*/
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

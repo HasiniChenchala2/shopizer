@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ProductVariantApi.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.api.v2.product</a> &gt; <span class="el_source">ProductVariantApi.java</span></div><h1>ProductVariantApi.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.api.v2.product;
+
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import javax.inject.Inject;
+import javax.validation.Valid;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
+
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.constants.Constants;
+import com.salesmanager.shop.model.catalog.product.product.variant.PersistableProductVariant;
+import com.salesmanager.shop.model.catalog.product.product.variant.ReadableProductVariant;
+import com.salesmanager.shop.model.entity.Entity;
+import com.salesmanager.shop.model.entity.EntityExists;
+import com.salesmanager.shop.model.entity.ReadableEntityList;
+import com.salesmanager.shop.store.api.exception.UnauthorizedException;
+import com.salesmanager.shop.store.controller.product.facade.ProductVariantFacade;
+import com.salesmanager.shop.store.controller.user.facade.UserFacade;
+
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiImplicitParams;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
+import io.swagger.annotations.SwaggerDefinition;
+import io.swagger.annotations.Tag;
+import springfox.documentation.annotations.ApiIgnore;
+
+/**
+ * Api to manage productVariant
+ * 
+ * Product variant allows to specify product
+ * size, sku and options related to this product variant
+ * 
+ * @author carlsamson
+ *
+ */
+@Controller
+@RequestMapping(&quot;/api/v2&quot;)
+@Api(tags = { &quot;Product variants api&quot; })
+@SwaggerDefinition(tags = {
+		@Tag(name = &quot;Product variants resource&quot;, description = &quot;Manage inventory for a given product&quot;) })
+<span class="fc" id="L62">public class ProductVariantApi {</span>
+
+<span class="fc" id="L64">	private static final Logger LOGGER = LoggerFactory.getLogger(ProductVariantApi.class);</span>
+
+	@Autowired
+	private ProductVariantFacade productVariantFacade;
+
+	@Inject
+	private UserFacade userFacade;
+
+	@ResponseStatus(HttpStatus.CREATED)
+	@PostMapping(value = { &quot;/private/product/{productId}/variant&quot; })
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;string&quot;, defaultValue = &quot;DEFAULT&quot;),
+		@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;string&quot;, defaultValue = &quot;en&quot;) })
+	public @ResponseBody Entity create(
+			@Valid @RequestBody PersistableProductVariant variant, 
+			@PathVariable Long productId,
+			@ApiIgnore MerchantStore merchantStore, 
+			@ApiIgnore Language language) {
+
+<span class="nc" id="L82">		String authenticatedUser = userFacade.authenticatedUser();</span>
+<span class="nc bnc" id="L83" title="All 2 branches missed.">		if (authenticatedUser == null) {</span>
+<span class="nc" id="L84">			throw new UnauthorizedException();</span>
+		}
+
+<span class="nc" id="L87">		userFacade.authorizedGroup(authenticatedUser, Stream.of(Constants.GROUP_SUPERADMIN, Constants.GROUP_ADMIN,</span>
+<span class="nc" id="L88">				Constants.GROUP_ADMIN_CATALOGUE, Constants.GROUP_ADMIN_RETAIL).collect(Collectors.toList()));</span>
+
+<span class="nc" id="L90">		Long id = productVariantFacade.create(variant, productId, merchantStore, language);</span>
+<span class="nc" id="L91">		return new Entity(id);</span>
+		
+	}
+
+
+	@ResponseStatus(HttpStatus.OK)
+	@PutMapping(value = { &quot;/private/product/{id}/variant/{variantId}&quot; })
+	@ApiOperation(httpMethod = &quot;PUT&quot;, value = &quot;Update product variant&quot;, notes = &quot;&quot;, produces = &quot;application/json&quot;, response = Void.class)
+	public @ResponseBody void update(@PathVariable Long id, @PathVariable Long variantId,
+			@Valid @RequestBody PersistableProductVariant variant, @ApiIgnore MerchantStore merchantStore,
+			@ApiIgnore Language language) {
+
+<span class="nc" id="L103">		String authenticatedUser = userFacade.authenticatedUser();</span>
+<span class="nc bnc" id="L104" title="All 2 branches missed.">		if (authenticatedUser == null) {</span>
+<span class="nc" id="L105">			throw new UnauthorizedException();</span>
+		}
+
+<span class="nc" id="L108">		userFacade.authorizedGroup(authenticatedUser, Stream.of(Constants.GROUP_SUPERADMIN, Constants.GROUP_ADMIN,</span>
+<span class="nc" id="L109">				Constants.GROUP_ADMIN_CATALOGUE, Constants.GROUP_ADMIN_RETAIL).collect(Collectors.toList()));</span>
+
+<span class="nc" id="L111">		productVariantFacade.update(variantId, variant, id, merchantStore, language);</span>
+<span class="nc" id="L112">	}</span>
+
+	@ResponseStatus(HttpStatus.OK)
+	@GetMapping(value = { &quot;/private/product/{id}/variant/{sku}/unique&quot; }, produces = &quot;application/json&quot;)
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;string&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;string&quot;, defaultValue = &quot;en&quot;) })
+	@ApiOperation(httpMethod = &quot;GET&quot;, value = &quot;Check if option set code already exists&quot;, notes = &quot;&quot;, response = EntityExists.class)
+	public @ResponseBody ResponseEntity&lt;EntityExists&gt; exists(
+			@PathVariable Long id, 
+			@PathVariable String sku,
+			@ApiIgnore MerchantStore merchantStore, 
+			@ApiIgnore Language language) {
+
+<span class="nc" id="L125">		String authenticatedUser = userFacade.authenticatedUser();</span>
+<span class="nc bnc" id="L126" title="All 2 branches missed.">		if (authenticatedUser == null) {</span>
+<span class="nc" id="L127">			throw new UnauthorizedException();</span>
+		}
+
+<span class="nc" id="L130">		userFacade.authorizedGroup(authenticatedUser, Stream.of(Constants.GROUP_SUPERADMIN, Constants.GROUP_ADMIN,</span>
+<span class="nc" id="L131">				Constants.GROUP_ADMIN_CATALOGUE, Constants.GROUP_ADMIN_RETAIL).collect(Collectors.toList()));</span>
+
+<span class="nc" id="L133">		boolean exist = productVariantFacade.exists(sku, merchantStore, id, language);</span>
+<span class="nc" id="L134">		return new ResponseEntity&lt;EntityExists&gt;(new EntityExists(exist), HttpStatus.OK);</span>
+
+	}
+
+	@GetMapping(value = &quot;/private/product/{id}/variant/{variantId}&quot;, produces = &quot;application/json&quot;)
+	@ApiOperation(httpMethod = &quot;GET&quot;, value = &quot;Get a productVariant by id&quot;, notes = &quot;For administration and shop purpose. Specifying ?merchant is required otherwise it falls back to DEFAULT&quot;)
+	@ApiResponses(value = {
+			@ApiResponse(code = 200, message = &quot;Single product found&quot;, response = ReadableProductVariant.class) })
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	public @ResponseBody ReadableProductVariant get(
+			@PathVariable final Long id, 
+			@PathVariable Long variantId,
+			@RequestParam(value = &quot;lang&quot;, required = false) String lang, 
+			@ApiIgnore MerchantStore merchantStore,
+			@ApiIgnore Language language) throws Exception {
+
+<span class="nc" id="L151">		return productVariantFacade.get(variantId, id, merchantStore, language);</span>
+
+	}
+
+	@ResponseStatus(HttpStatus.OK)
+	@RequestMapping(value = { &quot;/private/product/{id}/variants&quot; }, method = RequestMethod.GET)
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	public @ResponseBody ReadableEntityList&lt;ReadableProductVariant&gt; list(@PathVariable final Long id,
+			@ApiIgnore MerchantStore merchantStore, @ApiIgnore Language language,
+			@RequestParam(value = &quot;page&quot;, required = false, defaultValue = &quot;0&quot;) Integer page,
+			@RequestParam(value = &quot;count&quot;, required = false, defaultValue = &quot;10&quot;) Integer count) {
+
+<span class="nc" id="L164">		return productVariantFacade.list(id, merchantStore, language, page, count);</span>
+
+	}
+	
+	@ResponseStatus(HttpStatus.OK)
+	@RequestMapping(value = { &quot;/private/product/{id}/variant/{variantId}&quot; }, method = RequestMethod.DELETE)
+	@ApiImplicitParams({ 
+		@ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	public void delete(
+			@PathVariable Long id,
+			@PathVariable Long variantId,
+			@ApiIgnore MerchantStore merchantStore,
+			@ApiIgnore Language language) {
+
+<span class="nc" id="L179">		productVariantFacade.delete(variantId, id, merchantStore);</span>
+
+
+<span class="nc" id="L182">	}</span>
+	
+	
+	/**
+	
+	@ResponseStatus(HttpStatus.CREATED)
+	@RequestMapping(value = { &quot;/private/product/{id}/{variantId}/image&quot; }, method = RequestMethod.POST)
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	public void addvariantImage(
+			@PathVariable Long id,
+			@RequestParam(name = &quot;file&quot;, required = true) MultipartFile file, 
+			@ApiIgnore MerchantStore merchantStore,
+			@ApiIgnore Language language, 
+			HttpServletRequest request, 
+			HttpServletResponse response) {
+
+		//productOptionFacade.addOptionValueImage(file, id, merchantStore, language);
+
+
+	}
+	
+	**/
+	
+	
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

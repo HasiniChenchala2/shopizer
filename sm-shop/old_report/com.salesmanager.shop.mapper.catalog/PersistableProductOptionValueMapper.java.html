@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PersistableProductOptionValueMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.mapper.catalog</a> &gt; <span class="el_source">PersistableProductOptionValueMapper.java</span></div><h1>PersistableProductOptionValueMapper.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.mapper.catalog;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.jsoup.helper.Validate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import com.salesmanager.core.business.services.reference.language.LanguageService;
+import com.salesmanager.core.model.catalog.product.attribute.ProductOptionValue;
+import com.salesmanager.core.model.catalog.product.attribute.ProductOptionValueDescription;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.mapper.Mapper;
+import com.salesmanager.shop.model.catalog.product.attribute.PersistableProductOptionValue;
+import com.salesmanager.shop.model.catalog.product.attribute.api.PersistableProductOptionValueEntity;
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+
+@Component
+<span class="fc" id="L20">public class PersistableProductOptionValueMapper</span>
+		implements Mapper&lt;PersistableProductOptionValue, ProductOptionValue&gt; {
+
+	@Autowired
+	private LanguageService languageService;
+
+	ProductOptionValueDescription description(
+			com.salesmanager.shop.model.catalog.product.attribute.ProductOptionValueDescription description)
+			throws Exception {
+<span class="nc" id="L29">		Validate.notNull(description.getLanguage(), &quot;description.language should not be null&quot;);</span>
+<span class="nc" id="L30">		ProductOptionValueDescription desc = new ProductOptionValueDescription();</span>
+<span class="nc" id="L31">		desc.setId(null);</span>
+<span class="nc" id="L32">		desc.setDescription(description.getDescription());</span>
+<span class="nc" id="L33">		desc.setName(description.getName());</span>
+<span class="nc bnc" id="L34" title="All 2 branches missed.">		if(StringUtils.isBlank(desc.getName())) {</span>
+<span class="nc" id="L35">			desc.setName(description.getDescription());</span>
+		}
+<span class="nc bnc" id="L37" title="All 4 branches missed.">		if (description.getId() != null &amp;&amp; description.getId().longValue() &gt; 0) {</span>
+<span class="nc" id="L38">			desc.setId(description.getId());</span>
+		}
+<span class="nc" id="L40">		Language lang = languageService.getByCode(description.getLanguage());</span>
+<span class="nc" id="L41">		desc.setLanguage(lang);</span>
+<span class="nc" id="L42">		return desc;</span>
+	}
+
+	@Override
+	public ProductOptionValue merge(PersistableProductOptionValue source, ProductOptionValue destination,
+									MerchantStore store, Language language) {
+<span class="nc bnc" id="L48" title="All 2 branches missed.">		if (destination == null) {</span>
+<span class="nc" id="L49">			destination = new ProductOptionValue();</span>
+		}
+
+		try {
+			
+<span class="nc bnc" id="L54" title="All 2 branches missed.">			if(StringUtils.isBlank(source.getCode())) {</span>
+<span class="nc bnc" id="L55" title="All 2 branches missed.">				if(!StringUtils.isBlank(destination.getCode())) {</span>
+<span class="nc" id="L56">					source.setCode(destination.getCode());</span>
+				}
+			}
+
+<span class="nc bnc" id="L60" title="All 2 branches missed.">			if (!CollectionUtils.isEmpty(source.getDescriptions())) {</span>
+<span class="nc bnc" id="L61" title="All 2 branches missed.">				for (com.salesmanager.shop.model.catalog.product.attribute.ProductOptionValueDescription desc : source</span>
+<span class="nc" id="L62">						.getDescriptions()) {</span>
+<span class="nc" id="L63">					ProductOptionValueDescription description = null;</span>
+<span class="nc bnc" id="L64" title="All 2 branches missed.">					if (!CollectionUtils.isEmpty(destination.getDescriptions())) {</span>
+<span class="nc bnc" id="L65" title="All 2 branches missed.">						for (ProductOptionValueDescription d : destination.getDescriptions()) {</span>
+<span class="nc bnc" id="L66" title="All 2 branches missed.">							if (!StringUtils.isBlank(desc.getLanguage())</span>
+<span class="nc bnc" id="L67" title="All 2 branches missed.">									&amp;&amp; desc.getLanguage().equals(d.getLanguage().getCode())) {</span>
+								
+<span class="nc" id="L69">				            	  d.setDescription(desc.getDescription());</span>
+<span class="nc" id="L70">				            	  d.setName(desc.getName());</span>
+<span class="nc" id="L71">				            	  d.setTitle(desc.getTitle());</span>
+<span class="nc bnc" id="L72" title="All 2 branches missed.">				            	  if(StringUtils.isBlank(d.getName())) {</span>
+<span class="nc" id="L73">				            		  d.setName(d.getDescription());</span>
+				            	  }
+<span class="nc" id="L75">				            	  description = d;</span>
+<span class="nc" id="L76">				            	  break;</span>
+
+							}
+<span class="nc" id="L79">						}</span>
+					} //else {
+<span class="nc bnc" id="L81" title="All 2 branches missed.">			          if(description == null) {</span>
+<span class="nc" id="L82">				          description = description(desc);</span>
+<span class="nc" id="L83">				          description.setProductOptionValue(destination);</span>
+<span class="nc" id="L84">				          destination.getDescriptions().add(description);</span>
+			          }
+						//description = description(desc);
+						//description.setProductOptionValue(destination);
+					//}
+					//destination.getDescriptions().add(description);
+<span class="nc" id="L90">				}</span>
+			}
+
+<span class="nc" id="L93">			destination.setCode(source.getCode());</span>
+<span class="nc" id="L94">			destination.setMerchantStore(store);</span>
+<span class="nc" id="L95">			destination.setProductOptionValueSortOrder(source.getSortOrder());</span>
+
+
+<span class="nc" id="L98">			return destination;</span>
+<span class="nc" id="L99">		} catch (Exception e) {</span>
+<span class="nc" id="L100">			throw new ServiceRuntimeException(&quot;Error while converting product option&quot;, e);</span>
+		}
+	}
+
+	@Override
+	public ProductOptionValue convert(PersistableProductOptionValue source, MerchantStore store,
+			Language language) {
+<span class="nc" id="L107">		ProductOptionValue destination = new ProductOptionValue();</span>
+<span class="nc" id="L108">		return merge(source, destination, store, language);</span>
+	}
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

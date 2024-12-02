@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ProductManufacturerApi.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.api.v1.product</a> &gt; <span class="el_source">ProductManufacturerApi.java</span></div><h1>ProductManufacturerApi.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.api.v1.product;
+
+import java.util.List;
+import javax.inject.Inject;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import com.salesmanager.core.business.services.catalog.product.manufacturer.ManufacturerService;
+import com.salesmanager.core.model.catalog.product.manufacturer.Manufacturer;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.model.catalog.manufacturer.PersistableManufacturer;
+import com.salesmanager.shop.model.catalog.manufacturer.ReadableManufacturer;
+import com.salesmanager.shop.model.catalog.manufacturer.ReadableManufacturerList;
+import com.salesmanager.shop.model.entity.EntityExists;
+import com.salesmanager.shop.model.entity.ListCriteria;
+import com.salesmanager.shop.store.controller.manufacturer.facade.ManufacturerFacade;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiImplicitParams;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.SwaggerDefinition;
+import io.swagger.annotations.Tag;
+import springfox.documentation.annotations.ApiIgnore;
+
+/**
+ * Manufacturer management Collection, Manufacturer ...
+ *
+ * @author c.samson
+ */
+@Controller
+@RequestMapping(&quot;/api/v1&quot;)
+@Api(tags = { &quot;Manufacturer / Brand management resource (Manufacturer / Brand Management Api)&quot; })
+@SwaggerDefinition(tags = {
+		@Tag(name = &quot;Manufacturer / Brand Management Api&quot;, description = &quot;Edit Manufacturer / Brand&quot;) })
+<span class="fc" id="L50">public class ProductManufacturerApi {</span>
+
+<span class="fc" id="L52">	private static final Logger LOGGER = LoggerFactory.getLogger(ProductManufacturerApi.class);</span>
+
+	@Inject
+	private ManufacturerService manufacturerService;
+
+	@Inject
+	private ManufacturerFacade manufacturerFacade;
+
+	/**
+	 * Method for creating a manufacturer
+	 *
+	 * @param manufacturer
+	 * @param request
+	 * @param response
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value = &quot;/private/manufacturer&quot;, method = RequestMethod.POST)
+	@ResponseStatus(HttpStatus.CREATED)
+	@ResponseBody
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	public PersistableManufacturer create(@Valid @RequestBody PersistableManufacturer manufacturer,
+			@ApiIgnore MerchantStore merchantStore, @ApiIgnore Language language, HttpServletResponse response) {
+
+		try {
+<span class="fc" id="L78">			manufacturerFacade.saveOrUpdateManufacturer(manufacturer, merchantStore, language);</span>
+
+<span class="fc" id="L80">			return manufacturer;</span>
+
+<span class="nc" id="L82">		} catch (Exception e) {</span>
+<span class="nc" id="L83">			LOGGER.error(&quot;Error while creating manufacturer&quot;, e);</span>
+			try {
+<span class="nc" id="L85">				response.sendError(503, &quot;Error while creating manufacturer &quot; + e.getMessage());</span>
+<span class="nc" id="L86">			} catch (Exception ignore) {</span>
+<span class="nc" id="L87">			}</span>
+
+<span class="nc" id="L89">			return null;</span>
+		}
+	}
+
+	@RequestMapping(value = &quot;/manufacturer/{id}&quot;, method = RequestMethod.GET)
+	@ResponseStatus(HttpStatus.OK)
+	@ResponseBody
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	public ReadableManufacturer get(@PathVariable Long id, @ApiIgnore MerchantStore merchantStore,
+			@ApiIgnore Language language, HttpServletResponse response) {
+
+		try {
+<span class="nc" id="L102">			ReadableManufacturer manufacturer = manufacturerFacade.getManufacturer(id, merchantStore, language);</span>
+
+<span class="nc bnc" id="L104" title="All 2 branches missed.">			if (manufacturer == null) {</span>
+<span class="nc" id="L105">				response.sendError(404, &quot;No Manufacturer found for ID : &quot; + id);</span>
+			}
+
+<span class="nc" id="L108">			return manufacturer;</span>
+
+<span class="nc" id="L110">		} catch (Exception e) {</span>
+<span class="nc" id="L111">			LOGGER.error(&quot;Error while getting manufacturer&quot;, e);</span>
+			try {
+<span class="nc" id="L113">				response.sendError(503, &quot;Error while getting manufacturer &quot; + e.getMessage());</span>
+<span class="nc" id="L114">			} catch (Exception ignore) {</span>
+<span class="nc" id="L115">			}</span>
+		}
+
+<span class="nc" id="L118">		return null;</span>
+	}
+
+	
+	@RequestMapping(value = &quot;/private/manufacturers&quot;, method = RequestMethod.GET)
+	@ResponseStatus(HttpStatus.OK)
+	@ResponseBody
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	@ApiOperation(httpMethod = &quot;GET&quot;, value = &quot;List manufacturers by store&quot;, notes = &quot;This request supports paging or not. Paging supports page number and request count&quot;, response = ReadableManufacturerList.class)
+	public ReadableManufacturerList listByStore(
+			@ApiIgnore MerchantStore merchantStore,
+			@ApiIgnore Language language,
+			@RequestParam(value = &quot;name&quot;, required = false) String name,
+			@RequestParam(value = &quot;page&quot;, required = false, defaultValue = &quot;0&quot;) Integer page,
+			@RequestParam(value = &quot;count&quot;, required = false, defaultValue = &quot;10&quot;) Integer count) {
+
+<span class="nc" id="L135">		ListCriteria listCriteria = new ListCriteria();</span>
+<span class="nc" id="L136">		listCriteria.setName(name);</span>
+<span class="nc" id="L137">		return manufacturerFacade.listByStore(merchantStore, language, listCriteria, page, count);</span>
+	}
+	
+	
+	@RequestMapping(value = &quot;/manufacturers&quot;, method = RequestMethod.GET)
+	@ResponseStatus(HttpStatus.OK)
+	@ResponseBody
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	@ApiOperation(httpMethod = &quot;GET&quot;, value = &quot;List manufacturers by store&quot;, notes = &quot;This request supports paging or not. Paging supports page number and request count&quot;, response = ReadableManufacturerList.class)
+	public ReadableManufacturerList list(@ApiIgnore MerchantStore merchantStore, @ApiIgnore Language language,
+			@RequestParam(value = &quot;name&quot;, required = false) String name,
+			@RequestParam(value = &quot;page&quot;, required = false, defaultValue = &quot;0&quot;) Integer page,
+			@RequestParam(value = &quot;count&quot;, required = false, defaultValue = &quot;10&quot;) Integer count) {
+
+<span class="nc" id="L152">		ListCriteria listCriteria = new ListCriteria();</span>
+<span class="nc" id="L153">		listCriteria.setName(name);</span>
+<span class="nc" id="L154">		return manufacturerFacade.getAllManufacturers(merchantStore, language, listCriteria, page, count);</span>
+	}
+
+	@ResponseStatus(HttpStatus.OK)
+	@GetMapping(value = { &quot;/private/manufacturer/unique&quot; }, produces = MediaType.APPLICATION_JSON_VALUE)
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;string&quot;, defaultValue = &quot;DEFAULT&quot;) })
+	@ApiOperation(httpMethod = &quot;GET&quot;, value = &quot;Check if manufacturer code already exists&quot;, notes = &quot;&quot;, response = EntityExists.class)
+	public ResponseEntity&lt;EntityExists&gt; exists(@RequestParam(value = &quot;code&quot;) String code,
+			@ApiIgnore MerchantStore merchantStore, @ApiIgnore Language language) {
+
+<span class="nc" id="L164">		boolean exists = manufacturerFacade.manufacturerExist(merchantStore, code);</span>
+<span class="nc" id="L165">		return new ResponseEntity&lt;EntityExists&gt;(new EntityExists(exists), HttpStatus.OK);</span>
+
+	}
+
+	@RequestMapping(value = &quot;/private/manufacturer/{id}&quot;, method = RequestMethod.PUT)
+	@ResponseStatus(HttpStatus.OK)
+	@ResponseBody
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	public void update(@PathVariable Long id,
+			@Valid @RequestBody PersistableManufacturer manufacturer, @ApiIgnore MerchantStore merchantStore,
+			@ApiIgnore Language language, HttpServletRequest request, HttpServletResponse response) {
+
+		try {
+<span class="nc" id="L179">			manufacturer.setId(id);</span>
+<span class="nc" id="L180">			manufacturerFacade.saveOrUpdateManufacturer(manufacturer, merchantStore, language);</span>
+<span class="nc" id="L181">		} catch (Exception e) {</span>
+<span class="nc" id="L182">			LOGGER.error(&quot;Error while creating manufacturer&quot;, e);</span>
+			try {
+<span class="nc" id="L184">				response.sendError(503, &quot;Error while creating manufacturer &quot; + e.getMessage());</span>
+<span class="nc" id="L185">			} catch (Exception ignore) {</span>
+<span class="nc" id="L186">			}</span>
+<span class="nc" id="L187">		}</span>
+<span class="nc" id="L188">	}</span>
+
+	@RequestMapping(value = &quot;/private/manufacturer/{id}&quot;, method = RequestMethod.DELETE)
+	@ResponseStatus(HttpStatus.OK)
+	@ResponseBody
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	public void delete(@PathVariable Long id, @ApiIgnore MerchantStore merchantStore, @ApiIgnore Language language,
+			HttpServletResponse response) {
+
+		try {
+<span class="nc" id="L199">			Manufacturer manufacturer = manufacturerService.getById(id);</span>
+
+<span class="nc bnc" id="L201" title="All 2 branches missed.">			if (manufacturer != null) {</span>
+<span class="nc" id="L202">				manufacturerFacade.deleteManufacturer(manufacturer, merchantStore, language);</span>
+			} else {
+<span class="nc" id="L204">				response.sendError(404, &quot;No Manufacturer found for ID : &quot; + id);</span>
+			}
+
+<span class="nc" id="L207">		} catch (Exception e) {</span>
+<span class="nc" id="L208">			LOGGER.error(&quot;Error while deleting manufacturer id &quot; + id, e);</span>
+			try {
+<span class="nc" id="L210">				response.sendError(503, &quot;Error while deleting manufacturer id &quot; + id + &quot; - &quot; + e.getMessage());</span>
+<span class="nc" id="L211">			} catch (Exception ignore) {</span>
+<span class="nc" id="L212">			}</span>
+<span class="nc" id="L213">		}</span>
+<span class="nc" id="L214">	}</span>
+
+	@RequestMapping(value = &quot;/category/{id}/manufacturer&quot;, method = RequestMethod.GET)
+	@ResponseStatus(HttpStatus.OK)
+	@ApiOperation(httpMethod = &quot;GET&quot;, value = &quot;Get all manufacturers for all items in a given category&quot;, notes = &quot;&quot;, produces = &quot;application/json&quot;, response = List.class)
+	@ResponseBody
+	@ApiImplicitParams({ @ApiImplicitParam(name = &quot;store&quot;, dataType = &quot;String&quot;, defaultValue = &quot;DEFAULT&quot;),
+			@ApiImplicitParam(name = &quot;lang&quot;, dataType = &quot;String&quot;, defaultValue = &quot;en&quot;) })
+	public List&lt;ReadableManufacturer&gt; list(@PathVariable final Long id, // category
+																					// id
+			@ApiIgnore MerchantStore merchantStore, @ApiIgnore Language language, HttpServletResponse response)
+			throws Exception {
+
+<span class="fc" id="L227">		return manufacturerFacade.getByProductInCategory(merchantStore, language, id);</span>
+
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

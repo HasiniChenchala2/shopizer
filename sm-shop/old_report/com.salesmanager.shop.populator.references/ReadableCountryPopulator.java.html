@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReadableCountryPopulator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.populator.references</a> &gt; <span class="el_source">ReadableCountryPopulator.java</span></div><h1>ReadableCountryPopulator.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.populator.references;
+
+import org.apache.commons.collections4.CollectionUtils;
+
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.utils.AbstractDataPopulator;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.country.Country;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.core.model.reference.zone.Zone;
+import com.salesmanager.core.model.reference.zone.ZoneDescription;
+import com.salesmanager.shop.model.references.ReadableCountry;
+import com.salesmanager.shop.model.references.ReadableZone;
+
+<span class="nc" id="L15">public class ReadableCountryPopulator extends AbstractDataPopulator&lt;Country, ReadableCountry&gt; {</span>
+
+	@Override
+	public ReadableCountry populate(Country source, ReadableCountry target, MerchantStore store, Language language)
+			throws ConversionException {
+		
+<span class="nc bnc" id="L21" title="All 2 branches missed.">		if(target==null) {</span>
+<span class="nc" id="L22">			target = new ReadableCountry();</span>
+		}
+		
+<span class="nc" id="L25">		target.setId(new Long(source.getId()));</span>
+<span class="nc" id="L26">		target.setCode(source.getIsoCode());</span>
+<span class="nc" id="L27">		target.setSupported(source.getSupported());</span>
+<span class="nc bnc" id="L28" title="All 2 branches missed.">		if(!CollectionUtils.isEmpty(source.getDescriptions())) {</span>
+<span class="nc" id="L29">			target.setName(source.getDescriptions().iterator().next().getName());</span>
+	    }
+		
+<span class="nc bnc" id="L32" title="All 2 branches missed.">		if(!CollectionUtils.isEmpty(source.getZones())) {</span>
+<span class="nc bnc" id="L33" title="All 2 branches missed.">			for(Zone z : source.getZones()) {</span>
+<span class="nc" id="L34">				ReadableZone readableZone = new ReadableZone();</span>
+<span class="nc" id="L35">				readableZone.setCountryCode(target.getCode());</span>
+<span class="nc" id="L36">				readableZone.setId(z.getId());</span>
+<span class="nc bnc" id="L37" title="All 2 branches missed.">				if(!CollectionUtils.isEmpty(z.getDescriptions())) {</span>
+<span class="nc bnc" id="L38" title="All 2 branches missed.">					for(ZoneDescription d : z.getDescriptions()) {</span>
+<span class="nc bnc" id="L39" title="All 2 branches missed.">						if(d.getLanguage().getId() == language.getId()) {</span>
+<span class="nc" id="L40">							readableZone.setName(d.getName());</span>
+<span class="nc" id="L41">							continue;</span>
+						}
+<span class="nc" id="L43">					}</span>
+				}
+<span class="nc" id="L45">				target.getZones().add(readableZone);</span>
+<span class="nc" id="L46">			}</span>
+		}
+		
+<span class="nc" id="L49">		return target;</span>
+	}
+
+	@Override
+	protected ReadableCountry createTarget() {
+		// TODO Auto-generated method stub
+<span class="nc" id="L55">		return null;</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

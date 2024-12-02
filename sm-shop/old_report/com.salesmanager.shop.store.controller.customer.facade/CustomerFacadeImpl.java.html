@@ -1,0 +1,1123 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CustomerFacadeImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.controller.customer.facade</a> &gt; <span class="el_source">CustomerFacadeImpl.java</span></div><h1>CustomerFacadeImpl.java</h1><pre class="source lang-java linenums">/**
+ *
+ */
+package com.salesmanager.shop.store.controller.customer.facade;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import javax.inject.Inject;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Validate;
+import org.jgroups.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.modules.email.Email;
+import com.salesmanager.core.business.services.customer.CustomerService;
+import com.salesmanager.core.business.services.customer.optin.CustomerOptinService;
+import com.salesmanager.core.business.services.customer.review.CustomerReviewService;
+import com.salesmanager.core.business.services.reference.country.CountryService;
+import com.salesmanager.core.business.services.reference.language.LanguageService;
+import com.salesmanager.core.business.services.reference.zone.ZoneService;
+import com.salesmanager.core.business.services.shoppingcart.ShoppingCartService;
+import com.salesmanager.core.business.services.system.EmailService;
+import com.salesmanager.core.business.services.system.optin.OptinService;
+import com.salesmanager.core.business.services.user.GroupService;
+import com.salesmanager.core.business.services.user.PermissionService;
+import com.salesmanager.core.business.utils.CoreConfiguration;
+import com.salesmanager.core.model.customer.Customer;
+import com.salesmanager.core.model.customer.CustomerCriteria;
+import com.salesmanager.core.model.customer.CustomerList;
+import com.salesmanager.core.model.customer.review.CustomerReview;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.country.Country;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.core.model.reference.zone.Zone;
+import com.salesmanager.core.model.shoppingcart.ShoppingCart;
+import com.salesmanager.core.model.system.optin.CustomerOptin;
+import com.salesmanager.core.model.system.optin.Optin;
+import com.salesmanager.core.model.system.optin.OptinType;
+import com.salesmanager.core.model.user.Group;
+import com.salesmanager.core.model.user.GroupType;
+import com.salesmanager.core.model.user.Permission;
+import com.salesmanager.shop.constants.Constants;
+import com.salesmanager.shop.constants.EmailConstants;
+import com.salesmanager.shop.model.customer.CustomerEntity;
+import com.salesmanager.shop.model.customer.PersistableCustomer;
+import com.salesmanager.shop.model.customer.PersistableCustomerReview;
+import com.salesmanager.shop.model.customer.ReadableCustomer;
+import com.salesmanager.shop.model.customer.ReadableCustomerReview;
+import com.salesmanager.shop.model.customer.UserAlreadyExistException;
+import com.salesmanager.shop.model.customer.address.Address;
+import com.salesmanager.shop.model.customer.optin.PersistableCustomerOptin;
+import com.salesmanager.shop.populator.customer.CustomerBillingAddressPopulator;
+import com.salesmanager.shop.populator.customer.CustomerDeliveryAddressPopulator;
+import com.salesmanager.shop.populator.customer.CustomerEntityPopulator;
+import com.salesmanager.shop.populator.customer.CustomerPopulator;
+import com.salesmanager.shop.populator.customer.PersistableCustomerBillingAddressPopulator;
+import com.salesmanager.shop.populator.customer.PersistableCustomerReviewPopulator;
+import com.salesmanager.shop.populator.customer.PersistableCustomerShippingAddressPopulator;
+import com.salesmanager.shop.populator.customer.ReadableCustomerList;
+import com.salesmanager.shop.populator.customer.ReadableCustomerPopulator;
+import com.salesmanager.shop.populator.customer.ReadableCustomerReviewPopulator;
+import com.salesmanager.shop.store.api.exception.ConversionRuntimeException;
+import com.salesmanager.shop.store.api.exception.ResourceNotFoundException;
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+import com.salesmanager.shop.utils.EmailTemplatesUtils;
+import com.salesmanager.shop.utils.EmailUtils;
+import com.salesmanager.shop.utils.ImageFilePath;
+import com.salesmanager.shop.utils.LabelUtils;
+import com.salesmanager.shop.utils.LocaleUtils;
+
+
+/**
+ * Customer Facade work as an abstraction layer between Controller and Service layer. It work as an
+ * entry point to service layer.
+ * 
+ * @author Umesh Awasthi
+ * @version 2.2.1, 2.8.0
+ * @modified Carl Samson
+ *
+ */
+
+@Service(&quot;customerFacade&quot;)
+<span class="fc" id="L103">public class CustomerFacadeImpl implements CustomerFacade {</span>
+
+<span class="fc" id="L105">  private static final Logger LOG = LoggerFactory.getLogger(CustomerFacadeImpl.class);</span>
+  public final static int USERNAME_LENGTH = 6;
+
+  private final static String RESET_PASSWORD_TPL = &quot;email_template_password_reset_customer.ftl&quot;;
+
+  public final static String ROLE_PREFIX = &quot;ROLE_&quot;;// Spring Security 4
+
+
+  @Inject
+  private CustomerService customerService;
+
+  @Inject
+  private OptinService optinService;
+
+  @Inject
+  private CustomerOptinService customerOptinService;
+
+  @Inject
+  private ShoppingCartService shoppingCartService;
+
+  @Inject
+  private LanguageService languageService;
+
+  @Inject
+  private LabelUtils messages;
+
+  @Inject
+  private CountryService countryService;
+
+  @Inject
+  private GroupService groupService;
+
+  @Inject
+  private PermissionService permissionService;
+
+  @Inject
+  private ZoneService zoneService;
+
+  @Inject
+  private PasswordEncoder passwordEncoder;
+
+  @Inject
+  private EmailService emailService;
+
+  @Inject
+  private EmailTemplatesUtils emailTemplatesUtils;
+
+  @Inject
+  private AuthenticationManager customerAuthenticationManager;
+
+  @Inject
+  private CustomerReviewService customerReviewService;
+
+  @Inject
+  private CoreConfiguration coreConfiguration;
+  
+  @Autowired
+  private CustomerPopulator customerPopulator;
+
+  @Inject
+  private EmailUtils emailUtils;
+
+  @Inject
+  @Qualifier(&quot;img&quot;)
+  private ImageFilePath imageUtils;
+
+  /**
+   * Method used to fetch customer based on the username and storecode. Customer username is unique
+   * to each store.
+   *
+   * @param userName
+   * @param store
+   * @throws ConversionException
+   */
+  @Override
+  public CustomerEntity getCustomerDataByUserName(final String userName, final MerchantStore store,
+      final Language language) throws Exception {
+<span class="nc" id="L182">    LOG.info(&quot;Fetching customer with userName&quot; + userName);</span>
+<span class="nc" id="L183">    Customer customer = customerService.getByNick(userName);</span>
+
+<span class="nc bnc" id="L185" title="All 2 branches missed.">    if (customer != null) {</span>
+<span class="nc" id="L186">      LOG.info(&quot;Found customer, converting to CustomerEntity&quot;);</span>
+      try {
+<span class="nc" id="L188">        CustomerEntityPopulator customerEntityPopulator = new CustomerEntityPopulator();</span>
+<span class="nc" id="L189">        return customerEntityPopulator.populate(customer, store, language); // store, language</span>
+
+<span class="nc" id="L191">      } catch (ConversionException ex) {</span>
+<span class="nc" id="L192">        LOG.error(&quot;Error while converting Customer to CustomerEntity&quot;, ex);</span>
+<span class="nc" id="L193">        throw new Exception(ex);</span>
+      }
+    }
+
+<span class="nc" id="L197">    return null;</span>
+
+  }
+
+
+  /*
+   * (non-Javadoc)
+   * 
+   * @see com.salesmanager.web.shop.controller.customer.facade#mergeCart(final Customer
+   * customerModel, final String sessionShoppingCartId ,final MerchantStore store,final Language
+   * language)
+   */
+  @Override
+  public ShoppingCart mergeCart(final Customer customerModel, final String sessionShoppingCartId,
+      final MerchantStore store, final Language language) throws Exception {
+
+<span class="nc" id="L213">    LOG.debug(&quot;Starting merge cart process&quot;);</span>
+<span class="nc bnc" id="L214" title="All 2 branches missed.">    if (customerModel != null) {</span>
+<span class="nc" id="L215">      ShoppingCart customerCart = shoppingCartService.getShoppingCart(customerModel, store);</span>
+<span class="nc bnc" id="L216" title="All 2 branches missed.">      if (StringUtils.isNotBlank(sessionShoppingCartId)) {</span>
+<span class="nc" id="L217">        ShoppingCart sessionShoppingCart =</span>
+<span class="nc" id="L218">            shoppingCartService.getByCode(sessionShoppingCartId, store);</span>
+<span class="nc bnc" id="L219" title="All 2 branches missed.">        if (sessionShoppingCart != null) {</span>
+<span class="nc bnc" id="L220" title="All 2 branches missed.">          if (customerCart == null) {</span>
+<span class="nc bnc" id="L221" title="All 2 branches missed.">            if (sessionShoppingCart.getCustomerId() == null) {// saved shopping cart does not belong</span>
+                                                              // to a customer
+<span class="nc" id="L223">              LOG.debug(&quot;Not able to find any shoppingCart with current customer&quot;);</span>
+              // give it to the customer
+<span class="nc" id="L225">              sessionShoppingCart.setCustomerId(customerModel.getId());</span>
+<span class="nc" id="L226">              shoppingCartService.saveOrUpdate(sessionShoppingCart);</span>
+<span class="nc" id="L227">              customerCart = shoppingCartService.getById(sessionShoppingCart.getId(), store);</span>
+<span class="nc" id="L228">              return customerCart;</span>
+              // return populateShoppingCartData(customerCart,store,language);
+            } else {
+<span class="nc" id="L231">              return null;</span>
+            }
+          } else {
+<span class="nc bnc" id="L234" title="All 2 branches missed.">            if (sessionShoppingCart.getCustomerId() == null) {// saved shopping cart does not belong</span>
+                                                              // to a customer
+              // assign it to logged in user
+<span class="nc" id="L237">              LOG.debug(&quot;Customer shopping cart as well session cart is available, merging carts&quot;);</span>
+<span class="nc" id="L238">              customerCart =</span>
+<span class="nc" id="L239">                  shoppingCartService.mergeShoppingCarts(customerCart, sessionShoppingCart, store);</span>
+<span class="nc" id="L240">              customerCart = shoppingCartService.getById(customerCart.getId(), store);</span>
+<span class="nc" id="L241">              return customerCart;</span>
+              // return populateShoppingCartData(customerCart,store,language);
+            } else {
+<span class="nc" id="L244">              if (sessionShoppingCart.getCustomerId().longValue() == customerModel.getId()</span>
+<span class="nc bnc" id="L245" title="All 2 branches missed.">                  .longValue()) {</span>
+<span class="nc" id="L246">                if (!customerCart.getShoppingCartCode()</span>
+<span class="nc bnc" id="L247" title="All 2 branches missed.">                    .equals(sessionShoppingCart.getShoppingCartCode())) {</span>
+                  // merge carts
+<span class="nc" id="L249">                  LOG.info(&quot;Customer shopping cart as well session cart is available&quot;);</span>
+<span class="nc" id="L250">                  customerCart = shoppingCartService.mergeShoppingCarts(customerCart,</span>
+                      sessionShoppingCart, store);
+<span class="nc" id="L252">                  customerCart = shoppingCartService.getById(customerCart.getId(), store);</span>
+<span class="nc" id="L253">                  return customerCart;</span>
+                  // return populateShoppingCartData(customerCart,store,language);
+                } else {
+<span class="nc" id="L256">                  return customerCart;</span>
+                  // return populateShoppingCartData(sessionShoppingCart,store,language);
+                }
+              } else {
+                // the saved cart belongs to another user
+<span class="nc" id="L261">                return null;</span>
+              }
+            }
+
+
+          }
+        }
+<span class="nc" id="L268">      } else {</span>
+<span class="nc bnc" id="L269" title="All 2 branches missed.">        if (customerCart != null) {</span>
+          // return populateShoppingCartData(customerCart,store,language);
+<span class="nc" id="L271">          return customerCart;</span>
+        }
+<span class="nc" id="L273">        return null;</span>
+
+      }
+    }
+<span class="nc" id="L277">    LOG.info(</span>
+        &quot;Seems some issue with system, unable to find any customer after successful authentication&quot;);
+<span class="nc" id="L279">    return null;</span>
+
+  }
+
+
+
+  @Override
+  //KEEP
+  public Customer getCustomerByUserName(String userName, MerchantStore store){
+	 
+	  try {
+<span class="nc" id="L290">		 return customerService.getByNick(userName, store.getId());</span>
+<span class="nc" id="L291">	 } catch(Exception e) {</span>
+<span class="nc" id="L292">		 throw new ServiceRuntimeException(e);</span>
+	 }
+
+  }
+  
+  @Override
+  public ReadableCustomer getByUserName(String userName, MerchantStore merchantStore, Language language) {
+<span class="nc" id="L299">    Validate.notNull(userName,&quot;Username cannot be null&quot;);</span>
+<span class="nc" id="L300">    Validate.notNull(merchantStore,&quot;MerchantStore cannot be null&quot;);</span>
+
+<span class="nc" id="L302">    Customer customerModel = getCustomerByNickAndStoreId(userName, merchantStore);</span>
+<span class="nc" id="L303">    return convertCustomerToReadableCustomer(customerModel, merchantStore, language);</span>
+  }
+
+  private Customer getCustomerByNickAndStoreId(String userName, MerchantStore merchantStore) {
+<span class="nc" id="L307">    return Optional.ofNullable(customerService.getByNick(userName, merchantStore.getId()))</span>
+<span class="nc" id="L308">        .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;No Customer found for ID : &quot; + userName));</span>
+  }
+
+
+  /**
+   * &lt;p&gt;
+   * Method to check if given user exists for given username under given store. System treat
+   * username as unique for a given store, customer is not allowed to use same username twice for a
+   * given store, however it can be used for different stores.
+   * &lt;/p&gt;
+   * 
+   * @param userName Customer slected userName
+   * @param store store for which customer want to register
+   * @return boolean flag indicating if user exists for given store or not
+   * @throws Exception
+   * 
+   */
+  @Override
+  public boolean checkIfUserExists(final String userName, final MerchantStore store)
+      throws Exception {
+<span class="pc bpc" id="L328" title="2 of 4 branches missed.">    if (StringUtils.isNotBlank(userName) &amp;&amp; store != null) {</span>
+<span class="fc" id="L329">      Customer customer = customerService.getByNick(userName, store.getId());</span>
+<span class="pc bpc" id="L330" title="1 of 2 branches missed.">      if (customer != null) {</span>
+<span class="nc" id="L331">        LOG.info(&quot;Customer with userName {} already exists for store {} &quot;, userName,</span>
+<span class="nc" id="L332">            store.getStorename());</span>
+<span class="nc" id="L333">        return true;</span>
+      }
+
+<span class="fc" id="L336">      LOG.info(&quot;No customer found with userName {} for store {} &quot;, userName, store.getStorename());</span>
+<span class="fc" id="L337">      return false;</span>
+
+    }
+<span class="nc" id="L340">    LOG.info(&quot;Either userName is empty or we have not found any value for store&quot;);</span>
+<span class="nc" id="L341">    return false;</span>
+  }
+
+
+  @Override
+  public PersistableCustomer registerCustomer(final PersistableCustomer customer,
+      final MerchantStore merchantStore, Language language) throws Exception {
+<span class="fc" id="L348">    LOG.info(&quot;Starting customer registration process..&quot;);</span>
+
+<span class="pc bpc" id="L350" title="1 of 2 branches missed.">    if (userExist(customer.getUserName())) {</span>
+<span class="nc" id="L351">      throw new UserAlreadyExistException(&quot;User already exist&quot;);</span>
+    }
+
+<span class="fc" id="L354">    Customer customerModel = getCustomerModel(customer, merchantStore, language);</span>
+<span class="pc bpc" id="L355" title="1 of 2 branches missed.">    if (customerModel == null) {</span>
+<span class="nc" id="L356">      LOG.equals(&quot;Unable to create customer in system&quot;);</span>
+      // throw new CustomerRegistrationException( &quot;Unable to register customer&quot; );
+<span class="nc" id="L358">      throw new Exception(&quot;Unable to register customer&quot;);</span>
+    }
+
+<span class="fc" id="L361">    LOG.info(&quot;About to persist customer to database.&quot;);</span>
+<span class="fc" id="L362">    customerService.saveOrUpdate(customerModel);</span>
+
+<span class="fc" id="L364">    LOG.info(&quot;Returning customer data to controller..&quot;);</span>
+    // return customerEntityPoulator(customerModel,merchantStore);
+<span class="fc" id="L366">    customer.setId(customerModel.getId());</span>
+<span class="fc" id="L367">    return customer;</span>
+  }
+
+  @Override
+  public Customer getCustomerModel(final PersistableCustomer customer,
+      final MerchantStore merchantStore, Language language) throws Exception {
+
+<span class="fc" id="L374">    LOG.info(&quot;Starting to populate customer model from customer data&quot;);</span>
+<span class="fc" id="L375">    Customer customerModel = null;</span>
+
+<span class="fc" id="L377">    customerModel = customerPopulator.populate(customer, merchantStore, language);</span>
+    // we are creating or resetting a customer
+<span class="pc bpc" id="L379" title="1 of 2 branches missed.">    if (StringUtils.isBlank(customerModel.getPassword())</span>
+<span class="nc bnc" id="L380" title="All 2 branches missed.">        &amp;&amp; !StringUtils.isBlank(customer.getPassword())) {</span>
+<span class="nc" id="L381">      customerModel.setPassword(customer.getPassword());</span>
+    }
+    // set groups
+<span class="pc bpc" id="L384" title="1 of 2 branches missed.">    if (!StringUtils.isBlank(customerModel.getPassword())</span>
+<span class="pc bpc" id="L385" title="1 of 2 branches missed.">        &amp;&amp; !StringUtils.isBlank(customerModel.getNick())) {</span>
+<span class="fc" id="L386">      customerModel.setPassword(passwordEncoder.encode(customer.getPassword()));</span>
+<span class="fc" id="L387">      setCustomerModelDefaultProperties(customerModel, merchantStore);</span>
+    }
+
+
+<span class="fc" id="L391">    return customerModel;</span>
+
+  }
+
+
+
+  @Override
+  public void setCustomerModelDefaultProperties(Customer customer, MerchantStore store)
+      throws Exception {
+<span class="fc" id="L400">    Validate.notNull(customer, &quot;Customer object cannot be null&quot;);</span>
+<span class="pc bpc" id="L401" title="3 of 4 branches missed.">    if (customer.getId() == null || customer.getId() == 0) {</span>
+<span class="pc bpc" id="L402" title="1 of 2 branches missed.">      if (StringUtils.isBlank(customer.getNick())) {</span>
+<span class="nc" id="L403">        String userName = customer.getEmailAddress();</span>
+<span class="nc" id="L404">        customer.setNick(userName);</span>
+      }
+<span class="pc bpc" id="L406" title="1 of 2 branches missed.">      if (StringUtils.isBlank(customer.getPassword())) {</span>
+<span class="nc" id="L407">        String password = new String(UUID.generateRandomBytes());</span>
+<span class="nc" id="L408">        String encodedPassword = passwordEncoder.encode(password);</span>
+<span class="nc" id="L409">        customer.setPassword(encodedPassword);</span>
+      }
+    }
+
+<span class="pc bpc" id="L413" title="1 of 2 branches missed.">    if (CollectionUtils.isEmpty(customer.getGroups())) {</span>
+<span class="fc" id="L414">      List&lt;Group&gt; groups = getListOfGroups(GroupType.CUSTOMER);</span>
+<span class="fc bfc" id="L415" title="All 2 branches covered.">      for (Group group : groups) {</span>
+<span class="pc bpc" id="L416" title="1 of 2 branches missed.">        if (group.getGroupName().equals(Constants.GROUP_CUSTOMER)) {</span>
+<span class="fc" id="L417">          customer.getGroups().add(group);</span>
+        }
+<span class="fc" id="L419">      }</span>
+
+    }
+
+<span class="fc" id="L423">  }</span>
+
+
+
+  public void authenticate(Customer customer, String userName, String password) throws Exception {
+
+<span class="nc" id="L429">    Validate.notNull(customer, &quot;Customer cannot be null&quot;);</span>
+
+<span class="nc" id="L431">    Collection&lt;GrantedAuthority&gt; authorities = new ArrayList&lt;GrantedAuthority&gt;();</span>
+<span class="nc" id="L432">    GrantedAuthority role =</span>
+        new SimpleGrantedAuthority(ROLE_PREFIX + Constants.PERMISSION_CUSTOMER_AUTHENTICATED);// required
+                                                                                              // to
+                                                                                              // login
+<span class="nc" id="L436">    authorities.add(role);</span>
+<span class="nc" id="L437">    List&lt;Integer&gt; groupsId = new ArrayList&lt;Integer&gt;();</span>
+<span class="nc" id="L438">    List&lt;Group&gt; groups = customer.getGroups();</span>
+<span class="nc bnc" id="L439" title="All 2 branches missed.">    if (groups != null) {</span>
+<span class="nc bnc" id="L440" title="All 2 branches missed.">      for (Group group : groups) {</span>
+<span class="nc" id="L441">        groupsId.add(group.getId());</span>
+
+<span class="nc" id="L443">      }</span>
+<span class="nc bnc" id="L444" title="All 4 branches missed.">      if (groupsId != null &amp;&amp; groupsId.size() &gt; 0) {</span>
+<span class="nc" id="L445">        List&lt;Permission&gt; permissions = permissionService.getPermissions(groupsId);</span>
+<span class="nc bnc" id="L446" title="All 2 branches missed.">        for (Permission permission : permissions) {</span>
+<span class="nc" id="L447">          GrantedAuthority auth = new SimpleGrantedAuthority(permission.getPermissionName());</span>
+<span class="nc" id="L448">          authorities.add(auth);</span>
+<span class="nc" id="L449">        }</span>
+      }
+    }
+
+<span class="nc" id="L453">    Authentication authenticationToken =</span>
+        new UsernamePasswordAuthenticationToken(userName, password, authorities);
+
+<span class="nc" id="L456">    Authentication authentication = customerAuthenticationManager.authenticate(authenticationToken);</span>
+
+<span class="nc" id="L458">    SecurityContextHolder.getContext().setAuthentication(authentication);</span>
+
+<span class="nc" id="L460">  }</span>
+
+
+  @Override
+  public Address getAddress(Long userId, final MerchantStore merchantStore,
+      boolean isBillingAddress) throws Exception {
+<span class="nc" id="L466">    LOG.info(&quot;Fetching customer for id {} &quot;, userId);</span>
+<span class="nc" id="L467">    Address address = null;</span>
+<span class="nc" id="L468">    final Customer customerModel = customerService.getById(userId);</span>
+
+<span class="nc bnc" id="L470" title="All 2 branches missed.">    if (customerModel == null) {</span>
+<span class="nc" id="L471">      LOG.error(&quot;Customer with ID {} does not exists..&quot;, userId);</span>
+      // throw new CustomerNotFoundException( &quot;customer with given id does not exists&quot; );
+<span class="nc" id="L473">      throw new Exception(&quot;customer with given id does not exists&quot;);</span>
+    }
+
+<span class="nc bnc" id="L476" title="All 2 branches missed.">    if (isBillingAddress) {</span>
+<span class="nc" id="L477">      LOG.info(&quot;getting billing address..&quot;);</span>
+<span class="nc" id="L478">      CustomerBillingAddressPopulator billingAddressPopulator =</span>
+          new CustomerBillingAddressPopulator();
+<span class="nc" id="L480">      address = billingAddressPopulator.populate(customerModel, merchantStore,</span>
+<span class="nc" id="L481">          merchantStore.getDefaultLanguage());</span>
+<span class="nc" id="L482">      address.setBillingAddress(true);</span>
+<span class="nc" id="L483">      return address;</span>
+    }
+
+<span class="nc" id="L486">    LOG.info(&quot;getting Delivery address..&quot;);</span>
+<span class="nc" id="L487">    CustomerDeliveryAddressPopulator deliveryAddressPopulator =</span>
+        new CustomerDeliveryAddressPopulator();
+<span class="nc" id="L489">    return deliveryAddressPopulator.populate(customerModel, merchantStore,</span>
+<span class="nc" id="L490">        merchantStore.getDefaultLanguage());</span>
+
+  }
+
+
+  @Override
+  public void updateAddress(Long userId, MerchantStore merchantStore, Address address,
+      final Language language) throws Exception {
+
+<span class="nc" id="L499">    Customer customerModel = customerService.getById(userId);</span>
+<span class="nc" id="L500">    Map&lt;String, Country&gt; countriesMap = countryService.getCountriesMap(language);</span>
+<span class="nc" id="L501">    Country country = countriesMap.get(address.getCountry());</span>
+
+<span class="nc bnc" id="L503" title="All 2 branches missed.">    if (customerModel == null) {</span>
+<span class="nc" id="L504">      LOG.error(&quot;Customer with ID {} does not exists..&quot;, userId);</span>
+      // throw new CustomerNotFoundException( &quot;customer with given id does not exists&quot; );
+<span class="nc" id="L506">      throw new Exception(&quot;customer with given id does not exists&quot;);</span>
+
+    }
+<span class="nc bnc" id="L509" title="All 2 branches missed.">    if (address.isBillingAddress()) {</span>
+<span class="nc" id="L510">      LOG.info(&quot;updating customer billing address..&quot;);</span>
+<span class="nc" id="L511">      PersistableCustomerBillingAddressPopulator billingAddressPopulator =</span>
+          new PersistableCustomerBillingAddressPopulator();
+<span class="nc" id="L513">      customerModel = billingAddressPopulator.populate(address, customerModel, merchantStore,</span>
+<span class="nc" id="L514">          merchantStore.getDefaultLanguage());</span>
+<span class="nc" id="L515">      customerModel.getBilling().setCountry(country);</span>
+<span class="nc bnc" id="L516" title="All 2 branches missed.">      if (StringUtils.isNotBlank(address.getZone())) {</span>
+<span class="nc" id="L517">        Zone zone = zoneService.getByCode(address.getZone());</span>
+<span class="nc bnc" id="L518" title="All 2 branches missed.">        if (zone == null) {</span>
+<span class="nc" id="L519">          throw new ConversionException(&quot;Unsuported zone code &quot; + address.getZone());</span>
+        }
+<span class="nc" id="L521">        customerModel.getBilling().setZone(zone);</span>
+<span class="nc" id="L522">        customerModel.getBilling().setState(null);</span>
+
+<span class="nc" id="L524">      } else {</span>
+<span class="nc" id="L525">        customerModel.getBilling().setZone(null);</span>
+      }
+
+<span class="nc" id="L528">    } else {</span>
+<span class="nc" id="L529">      LOG.info(&quot;updating customer shipping address..&quot;);</span>
+<span class="nc" id="L530">      PersistableCustomerShippingAddressPopulator shippingAddressPopulator =</span>
+          new PersistableCustomerShippingAddressPopulator();
+<span class="nc" id="L532">      customerModel = shippingAddressPopulator.populate(address, customerModel, merchantStore,</span>
+<span class="nc" id="L533">          merchantStore.getDefaultLanguage());</span>
+<span class="nc" id="L534">      customerModel.getDelivery().setCountry(country);</span>
+<span class="nc bnc" id="L535" title="All 2 branches missed.">      if (StringUtils.isNotBlank(address.getZone())) {</span>
+<span class="nc" id="L536">        Zone zone = zoneService.getByCode(address.getZone());</span>
+<span class="nc bnc" id="L537" title="All 2 branches missed.">        if (zone == null) {</span>
+<span class="nc" id="L538">          throw new ConversionException(&quot;Unsuported zone code &quot; + address.getZone());</span>
+        }
+
+<span class="nc" id="L541">        customerModel.getDelivery().setZone(zone);</span>
+<span class="nc" id="L542">        customerModel.getDelivery().setState(null);</span>
+
+<span class="nc" id="L544">      } else {</span>
+<span class="nc" id="L545">        customerModel.getDelivery().setZone(null);</span>
+      }
+
+    }
+
+
+    // same update address with customer model
+<span class="nc" id="L552">    this.customerService.saveOrUpdate(customerModel);</span>
+
+<span class="nc" id="L554">  }</span>
+
+  @Override
+  public ReadableCustomer getCustomerById(final Long id, final MerchantStore merchantStore,
+      final Language language) {
+
+<span class="nc" id="L560">    Customer customerModel = Optional.ofNullable(customerService.getById(id))</span>
+<span class="nc" id="L561">        .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;No Customer found for ID : &quot; + id));</span>
+
+<span class="nc" id="L563">    return convertCustomerToReadableCustomer(customerModel, merchantStore, language);</span>
+  }
+
+
+  @Override
+  public Customer populateCustomerModel(Customer customerModel, PersistableCustomer customer,
+      MerchantStore merchantStore, Language language) throws Exception {
+<span class="nc" id="L570">      LOG.info(&quot;Starting to populate customer model from customer data&quot;);</span>
+
+
+<span class="nc" id="L573">    customerModel = customerPopulator.populate(customer, customerModel, merchantStore, language);</span>
+
+<span class="nc" id="L575">    LOG.info(&quot;About to persist customer to database.&quot;);</span>
+<span class="nc" id="L576">    customerService.saveOrUpdate(customerModel);</span>
+<span class="nc" id="L577">    return customerModel;</span>
+  }
+
+
+  @Override
+  public ReadableCustomer create(PersistableCustomer customer, MerchantStore store, Language language) {
+
+<span class="nc" id="L584">	Validate.notNull(customer, &quot;Customer cannot be null&quot;);</span>
+<span class="nc" id="L585">	Validate.notNull(customer.getEmailAddress(), &quot;Customer email address is required&quot;);</span>
+
+	//set customer user name
+<span class="nc" id="L588">	customer.setUserName(customer.getEmailAddress());</span>
+<span class="nc bnc" id="L589" title="All 2 branches missed.">    if (userExist(customer.getUserName())) {</span>
+<span class="nc" id="L590">      throw new ServiceRuntimeException(&quot;User already exist&quot;);</span>
+    }
+    //end user exists
+
+<span class="nc" id="L594">    Customer customerToPopulate = convertPersistableCustomerToCustomer(customer, store);</span>
+    try {
+<span class="nc" id="L596">		setCustomerModelDefaultProperties(customerToPopulate, store);</span>
+<span class="nc" id="L597">	} catch (Exception e) {</span>
+<span class="nc" id="L598">		throw new ServiceRuntimeException(&quot;Cannot set default customer properties&quot;,e);</span>
+<span class="nc" id="L599">	}</span>
+<span class="nc" id="L600">    saveCustomer(customerToPopulate);</span>
+<span class="nc" id="L601">    customer.setId(customerToPopulate.getId());</span>
+
+<span class="nc" id="L603">    notifyNewCustomer(customer, store, customerToPopulate.getDefaultLanguage());</span>
+    //convert to readable
+<span class="nc" id="L605">    return convertCustomerToReadableCustomer(customerToPopulate, store, language);</span>
+    
+
+  }
+
+  private void saveCustomer(Customer customerToPopulate) {
+    try{
+<span class="nc" id="L612">      customerService.save(customerToPopulate);</span>
+<span class="nc" id="L613">    } catch (ServiceException exception) {</span>
+<span class="nc" id="L614">      throw new ServiceRuntimeException(exception);</span>
+<span class="nc" id="L615">    }</span>
+
+<span class="nc" id="L617">  }</span>
+
+  private boolean userExist(String userName) {
+<span class="fc" id="L620">    return Optional.ofNullable(customerService.getByNick(userName))</span>
+<span class="fc" id="L621">        .isPresent();</span>
+  }
+
+  private List&lt;Group&gt; getListOfGroups(GroupType groupType) {
+    try{
+<span class="fc" id="L626">      return groupService.listGroup(groupType);</span>
+<span class="nc" id="L627">    } catch (ServiceException e) {</span>
+<span class="nc" id="L628">      throw new ServiceRuntimeException(e);</span>
+    }
+
+  }
+
+  private Customer convertPersistableCustomerToCustomer(PersistableCustomer customer, MerchantStore store) {
+
+<span class="nc" id="L635">    Customer cust = new Customer();</span>
+
+    try{
+<span class="nc" id="L638">      customerPopulator.populate(customer, cust, store, store.getDefaultLanguage());</span>
+<span class="nc" id="L639">    } catch (ConversionException e) {</span>
+<span class="nc" id="L640">      throw new ConversionRuntimeException(e);</span>
+<span class="nc" id="L641">    }</span>
+
+
+<span class="nc" id="L644">    List&lt;Group&gt; groups = getListOfGroups(GroupType.CUSTOMER);</span>
+<span class="nc" id="L645">    cust.setGroups(groups);</span>
+
+<span class="nc" id="L647">    String password = customer.getPassword();</span>
+<span class="nc bnc" id="L648" title="All 2 branches missed.">    if (StringUtils.isBlank(password)) {</span>
+<span class="nc" id="L649">      password = new String(UUID.generateRandomBytes());</span>
+<span class="nc" id="L650">      customer.setPassword(password);</span>
+    }
+
+
+<span class="nc" id="L654">    return cust;</span>
+
+  }
+
+  @Async
+  private void notifyNewCustomer(PersistableCustomer customer, MerchantStore store, Language lang) {
+<span class="nc" id="L660">		System.out.println(&quot;Customer notification&quot;);</span>
+<span class="nc" id="L661">		long startTime = System.nanoTime();</span>
+<span class="nc" id="L662">	Locale customerLocale = LocaleUtils.getLocale(lang);</span>
+<span class="nc" id="L663">    String shopSchema = coreConfiguration.getProperty(&quot;SHOP_SCHEME&quot;);</span>
+<span class="nc" id="L664">    emailTemplatesUtils.sendRegistrationEmail(customer, store, customerLocale, shopSchema);</span>
+<span class="nc" id="L665">    long endTime = System.nanoTime();</span>
+<span class="nc" id="L666">    long duration = (endTime - startTime)/1000;</span>
+<span class="nc" id="L667">    System.out.println(&quot;End Notification &quot; + duration);</span>
+<span class="nc" id="L668">  }</span>
+  
+  
+  private PersistableCustomer updateAuthCustomer(PersistableCustomer customer, MerchantStore store) {
+
+<span class="nc bnc" id="L673" title="All 4 branches missed.">	    if (customer.getId() == null || customer.getId() == 0) {</span>
+<span class="nc" id="L674">	      throw new ServiceRuntimeException(&quot;Can't update a customer with null id&quot;);</span>
+	    }
+
+<span class="nc" id="L677">	    Customer cust = customerService.getById(customer.getId());</span>
+
+	    try{
+<span class="nc" id="L680">	      customerPopulator.populate(customer, cust, store, store.getDefaultLanguage());</span>
+<span class="nc" id="L681">	    } catch (ConversionException e) {</span>
+<span class="nc" id="L682">	      throw new ConversionRuntimeException(e);</span>
+<span class="nc" id="L683">	    }</span>
+
+<span class="nc" id="L685">	    saveCustomer(cust);</span>
+<span class="nc" id="L686">	    customer.setId(cust.getId());</span>
+
+<span class="nc" id="L688">	    return customer;</span>
+	  }
+
+
+  @Override
+  public PersistableCustomer update(PersistableCustomer customer, MerchantStore store) {
+
+<span class="nc bnc" id="L695" title="All 4 branches missed.">    if (customer.getId() == null || customer.getId() == 0) {</span>
+<span class="nc" id="L696">      throw new ServiceRuntimeException(&quot;Can't update a customer with null id&quot;);</span>
+    }
+
+<span class="nc" id="L699">    Customer cust = customerService.getById(customer.getId());</span>
+
+    try{
+<span class="nc" id="L702">      customerPopulator.populate(customer, cust, store, store.getDefaultLanguage());</span>
+<span class="nc" id="L703">    } catch (ConversionException e) {</span>
+<span class="nc" id="L704">      throw new ConversionRuntimeException(e);</span>
+<span class="nc" id="L705">    }</span>
+
+<span class="nc" id="L707">    String password = customer.getPassword();</span>
+<span class="nc bnc" id="L708" title="All 2 branches missed.">    if (StringUtils.isBlank(password)) {</span>
+<span class="nc" id="L709">      password = new String(UUID.generateRandomBytes());</span>
+<span class="nc" id="L710">      customer.setPassword(password);</span>
+    }
+
+<span class="nc" id="L713">    saveCustomer(cust);</span>
+<span class="nc" id="L714">    customer.setId(cust.getId());</span>
+
+<span class="nc" id="L716">    return customer;</span>
+  }
+
+
+  @Override
+  public PersistableCustomerReview saveOrUpdateCustomerReview(PersistableCustomerReview reviewTO, MerchantStore store,
+      Language language) {
+<span class="nc" id="L723">    CustomerReview review = convertPersistableCustomerReviewToCustomerReview(reviewTO, store, language);</span>
+<span class="nc" id="L724">    createReview(review);</span>
+<span class="nc" id="L725">    reviewTO.setId(review.getId());</span>
+<span class="nc" id="L726">    return reviewTO;</span>
+  }
+
+  private void createReview(CustomerReview review) {
+    try{
+<span class="nc" id="L731">      customerReviewService.create(review);</span>
+<span class="nc" id="L732">    } catch (ServiceException e) {</span>
+<span class="nc" id="L733">      throw new ServiceRuntimeException(e);</span>
+<span class="nc" id="L734">    }</span>
+
+<span class="nc" id="L736">  }</span>
+
+  private CustomerReview convertPersistableCustomerReviewToCustomerReview(
+      PersistableCustomerReview review, MerchantStore store, Language language) {
+<span class="nc" id="L740">    PersistableCustomerReviewPopulator populator = new PersistableCustomerReviewPopulator();</span>
+<span class="nc" id="L741">    populator.setCustomerService(customerService);</span>
+<span class="nc" id="L742">    populator.setLanguageService(languageService);</span>
+    try{
+<span class="nc" id="L744">      return populator.populate(review, new CustomerReview(), store, language);</span>
+<span class="nc" id="L745">    } catch (ConversionException e) {</span>
+<span class="nc" id="L746">      throw new ConversionRuntimeException(e);</span>
+    }
+  }
+
+
+  @Override
+  public List&lt;ReadableCustomerReview&gt; getAllCustomerReviewsByReviewed(Long customerId,
+      MerchantStore store, Language language) {
+
+    //customer exist
+<span class="nc" id="L756">    Customer customer = getCustomerById(customerId);</span>
+<span class="nc" id="L757">    Validate.notNull(customer, &quot;Reviewed customer cannot be null&quot;);</span>
+
+<span class="nc" id="L759">    return customerReviewService.getByReviewedCustomer(customer)</span>
+<span class="nc" id="L760">        .stream()</span>
+<span class="nc" id="L761">        .map(</span>
+            customerReview -&gt;
+<span class="nc" id="L763">                convertCustomerReviewToReadableCustomerReview(customerReview, store, language))</span>
+<span class="nc" id="L764">        .collect(Collectors.toList());</span>
+  }
+
+  private ReadableCustomerReview convertCustomerReviewToReadableCustomerReview(
+      CustomerReview customerReview, MerchantStore store, Language language) {
+    try{
+<span class="nc" id="L770">      ReadableCustomerReviewPopulator populator = new ReadableCustomerReviewPopulator();</span>
+<span class="nc" id="L771">      return populator.populate(customerReview, new ReadableCustomerReview(), store, language);</span>
+<span class="nc" id="L772">    } catch (ConversionException e){</span>
+<span class="nc" id="L773">      throw new ConversionRuntimeException(e);</span>
+    }
+  }
+
+  private Customer getCustomerById(Long customerId) {
+<span class="nc" id="L778">    return Optional.ofNullable(customerService.getById(customerId))</span>
+<span class="nc" id="L779">          .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Customer id &quot; + customerId + &quot; does not exists&quot;));</span>
+  }
+
+
+  @Override
+  public void deleteCustomerReview(Long customerId, Long reviewId, MerchantStore store, Language language) {
+
+<span class="nc" id="L786">    CustomerReview customerReview = getCustomerReviewById(reviewId);</span>
+
+<span class="nc bnc" id="L788" title="All 2 branches missed.">    if(!customerReview.getReviewedCustomer().getId().equals(customerId)) {</span>
+<span class="nc" id="L789">      throw new ResourceNotFoundException(&quot;Customer review with id &quot; + reviewId + &quot; does not exist for this customer&quot;);</span>
+    }
+<span class="nc" id="L791">    deleteCustomerReview(customerReview);</span>
+<span class="nc" id="L792">  }</span>
+
+  private CustomerReview getCustomerReviewById(Long reviewId) {
+<span class="nc" id="L795">    return Optional.ofNullable(customerReviewService.getById(reviewId))</span>
+<span class="nc" id="L796">        .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Customer review with id &quot; + reviewId + &quot; does not exist&quot;));</span>
+  }
+
+  private void deleteCustomerReview(CustomerReview review) {
+    try{
+<span class="nc" id="L801">      customerReviewService.delete(review);</span>
+<span class="nc" id="L802">    } catch (ServiceException e) {</span>
+<span class="nc" id="L803">      throw new ServiceRuntimeException(e);</span>
+<span class="nc" id="L804">    }</span>
+<span class="nc" id="L805">  }</span>
+
+
+  @Override
+  public void optinCustomer(PersistableCustomerOptin optin, MerchantStore store) {
+    // check if customer optin exists
+<span class="nc" id="L811">    Optin optinDef = getOptinByCode(store);</span>
+
+<span class="nc" id="L813">    CustomerOptin customerOptin = getCustomerOptinByEmailAddress(optin.getEmail(), store, OptinType.NEWSLETTER);</span>
+
+<span class="nc bnc" id="L815" title="All 2 branches missed.">    if (customerOptin != null) {</span>
+      // exists update
+<span class="nc" id="L817">      customerOptin.setEmail(optin.getEmail());</span>
+<span class="nc" id="L818">      customerOptin.setFirstName(optin.getFirstName());</span>
+<span class="nc" id="L819">      customerOptin.setLastName(optin.getLastName());</span>
+    } else {
+<span class="nc" id="L821">      customerOptin = new com.salesmanager.core.model.system.optin.CustomerOptin();</span>
+<span class="nc" id="L822">      customerOptin.setEmail(optin.getEmail());</span>
+<span class="nc" id="L823">      customerOptin.setFirstName(optin.getFirstName());</span>
+<span class="nc" id="L824">      customerOptin.setLastName(optin.getLastName());</span>
+<span class="nc" id="L825">      customerOptin.setOptinDate(new Date());</span>
+<span class="nc" id="L826">      customerOptin.setOptin(optinDef);</span>
+<span class="nc" id="L827">      customerOptin.setMerchantStore(store);</span>
+    }
+<span class="nc" id="L829">    saveCustomerOption(customerOptin);</span>
+<span class="nc" id="L830">  }</span>
+
+  private void saveCustomerOption(CustomerOptin customerOptin) {
+    try {
+<span class="nc" id="L834">      customerOptinService.save(customerOptin);</span>
+<span class="nc" id="L835">    } catch (ServiceException e) {</span>
+<span class="nc" id="L836">      throw new ServiceRuntimeException(e);</span>
+<span class="nc" id="L837">    }</span>
+<span class="nc" id="L838">  }</span>
+
+  private Optin getOptinByCode(MerchantStore store) {
+    try{
+<span class="nc" id="L842">      return Optional.ofNullable(optinService.getOptinByCode(store, OptinType.NEWSLETTER.name()))</span>
+<span class="nc" id="L843">          .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Optin newsletter does not exist&quot;));</span>
+<span class="nc" id="L844">    } catch (ServiceException e){</span>
+<span class="nc" id="L845">      throw new ServiceRuntimeException(e);</span>
+    }
+  }
+
+  private CustomerOptin getCustomerOptinByEmailAddress(String optinEmail,
+      MerchantStore store, OptinType optinType) {
+    try{
+<span class="nc" id="L852">      return customerOptinService.findByEmailAddress(store, optinEmail, optinType.name());</span>
+<span class="nc" id="L853">    } catch (ServiceException e){</span>
+<span class="nc" id="L854">      throw new ServiceRuntimeException(e);</span>
+    }
+
+  }
+
+
+  @Override
+  public void resetPassword(Customer customer, MerchantStore store, Language language) {
+
+
+<span class="nc" id="L864">    String password = new String(UUID.generateRandomBytes());</span>
+<span class="nc" id="L865">    String encodedPassword = passwordEncoder.encode(password);</span>
+
+<span class="nc" id="L867">    customer.setPassword(encodedPassword);</span>
+    
+    try {
+<span class="nc" id="L870">    	customerService.saveOrUpdate(customer);</span>
+<span class="nc" id="L871">    } catch (Exception e) {</span>
+<span class="nc" id="L872">        throw new ServiceRuntimeException(e);</span>
+<span class="nc" id="L873">    }</span>
+
+
+<span class="nc" id="L876">    Locale locale = languageService.toLocale(language, store);</span>
+
+    // send email
+
+    try {
+
+      // creation of a user, send an email
+<span class="nc" id="L883">      String[] storeEmail = {store.getStoreEmailAddress()};</span>
+
+
+<span class="nc" id="L886">      Map&lt;String, String&gt; templateTokens =</span>
+<span class="nc" id="L887">          emailUtils.createEmailObjectsMap(imageUtils.getContextPath(), store, messages, locale);</span>
+<span class="nc" id="L888">      templateTokens.put(EmailConstants.LABEL_HI, messages.getMessage(&quot;label.generic.hi&quot;, locale));</span>
+<span class="nc" id="L889">      templateTokens.put(EmailConstants.EMAIL_CUSTOMER_FIRSTNAME,</span>
+<span class="nc" id="L890">          customer.getBilling().getFirstName());</span>
+<span class="nc" id="L891">      templateTokens.put(EmailConstants.EMAIL_CUSTOMER_LASTNAME,</span>
+<span class="nc" id="L892">          customer.getBilling().getLastName());</span>
+<span class="nc" id="L893">      templateTokens.put(EmailConstants.EMAIL_RESET_PASSWORD_TXT,</span>
+<span class="nc" id="L894">          messages.getMessage(&quot;email.customer.resetpassword.text&quot;, locale));</span>
+<span class="nc" id="L895">      templateTokens.put(EmailConstants.EMAIL_CONTACT_OWNER,</span>
+<span class="nc" id="L896">          messages.getMessage(&quot;email.contactowner&quot;, storeEmail, locale));</span>
+<span class="nc" id="L897">      templateTokens.put(EmailConstants.EMAIL_PASSWORD_LABEL,</span>
+<span class="nc" id="L898">          messages.getMessage(&quot;label.generic.password&quot;, locale));</span>
+<span class="nc" id="L899">      templateTokens.put(EmailConstants.EMAIL_CUSTOMER_PASSWORD, password);</span>
+
+
+<span class="nc" id="L902">      Email email = new Email();</span>
+<span class="nc" id="L903">      email.setFrom(store.getStorename());</span>
+<span class="nc" id="L904">      email.setFromEmail(store.getStoreEmailAddress());</span>
+<span class="nc" id="L905">      email.setSubject(messages.getMessage(&quot;label.generic.changepassword&quot;, locale));</span>
+<span class="nc" id="L906">      email.setTo(customer.getEmailAddress());</span>
+<span class="nc" id="L907">      email.setTemplateName(RESET_PASSWORD_TPL);</span>
+<span class="nc" id="L908">      email.setTemplateTokens(templateTokens);</span>
+
+
+
+<span class="nc" id="L912">      emailService.sendHtmlEmail(store, email);</span>
+
+<span class="nc" id="L914">    } catch (Exception e) {</span>
+<span class="nc" id="L915">      LOG.error(&quot;Cannot send email to customer&quot;, e);</span>
+<span class="nc" id="L916">    }</span>
+
+
+<span class="nc" id="L919">  }</span>
+
+  @Override
+  public ReadableCustomer getCustomerByNick(String userName, MerchantStore merchantStore,
+      Language language) {
+<span class="nc" id="L924">    Customer customer = getByNick(userName);</span>
+<span class="nc" id="L925">    return convertCustomerToReadableCustomer(customer, merchantStore, language);</span>
+  }
+
+  @Override
+  public void deleteByNick(String userName) {
+<span class="nc" id="L930">    Customer customer = getByNick(userName);</span>
+<span class="nc" id="L931">    delete(customer);</span>
+<span class="nc" id="L932">  }</span>
+
+  private Customer getByNick(String userName) {
+<span class="nc" id="L935">    return Optional.ofNullable(customerService.getByNick(userName))</span>
+<span class="nc" id="L936">        .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;No Customer found for ID : &quot; + userName));</span>
+  }
+
+  @Override
+  public void delete(Customer entity) {
+    try{
+<span class="nc" id="L942">      customerService.delete(entity);</span>
+<span class="nc" id="L943">    } catch (ServiceException e) {</span>
+<span class="nc" id="L944">      throw new ServiceRuntimeException(e);</span>
+<span class="nc" id="L945">    }</span>
+<span class="nc" id="L946">  }</span>
+
+  @Override
+  public ReadableCustomerList getListByStore(MerchantStore store, CustomerCriteria criteria,
+      Language language) {
+<span class="nc" id="L951">    CustomerList customerList = customerService.getListByStore(store, criteria);</span>
+<span class="nc" id="L952">    return convertCustomerListToReadableCustomerList(customerList, store, language);</span>
+  }
+
+  private ReadableCustomerList convertCustomerListToReadableCustomerList(
+      CustomerList customerList, MerchantStore store, Language language) {
+<span class="nc" id="L957">    List&lt;ReadableCustomer&gt; readableCustomers = customerList.getCustomers()</span>
+<span class="nc" id="L958">        .stream()</span>
+<span class="nc" id="L959">        .map(customer -&gt; convertCustomerToReadableCustomer(customer, store, language))</span>
+<span class="nc" id="L960">        .collect(Collectors.toList());</span>
+
+<span class="nc" id="L962">    ReadableCustomerList readableCustomerList = new ReadableCustomerList();</span>
+<span class="nc" id="L963">    readableCustomerList.setCustomers(readableCustomers);</span>
+<span class="nc" id="L964">    readableCustomerList.setTotalPages(Math.toIntExact(customerList.getTotalCount()));</span>
+<span class="nc" id="L965">    return readableCustomerList;</span>
+  }
+
+  private ReadableCustomer convertCustomerToReadableCustomer(Customer customer, MerchantStore merchantStore, Language language) {
+<span class="nc" id="L969">    ReadableCustomerPopulator populator = new ReadableCustomerPopulator();</span>
+    try{
+<span class="nc" id="L971">      return populator.populate(customer, new ReadableCustomer(), merchantStore, language);</span>
+<span class="nc" id="L972">    } catch (ConversionException e) {</span>
+<span class="nc" id="L973">      throw new ConversionRuntimeException(e);</span>
+    }
+  }
+
+  @Override
+  public PersistableCustomerReview createCustomerReview(
+      Long customerId,
+      PersistableCustomerReview review,
+      MerchantStore merchantStore,
+      Language language) {
+
+    // rating already exist
+<span class="nc" id="L985">    Optional&lt;CustomerReview&gt; customerReview =</span>
+<span class="nc" id="L986">        Optional.ofNullable(</span>
+<span class="nc" id="L987">            customerReviewService.getByReviewerAndReviewed(review.getCustomerId(), customerId));</span>
+
+<span class="nc bnc" id="L989" title="All 2 branches missed.">    if(customerReview.isPresent()) {</span>
+<span class="nc" id="L990">      throw new ServiceRuntimeException(&quot;A review already exist for this customer and product&quot;);</span>
+    }
+
+    // rating maximum 5
+<span class="nc bnc" id="L994" title="All 2 branches missed.">    if (review.getRating() &gt; Constants.MAX_REVIEW_RATING_SCORE) {</span>
+<span class="nc" id="L995">      throw new ServiceRuntimeException(&quot;Maximum rating score is &quot; + Constants.MAX_REVIEW_RATING_SCORE);</span>
+    }
+
+<span class="nc" id="L998">    review.setReviewedCustomer(customerId);</span>
+
+<span class="nc" id="L1000">    saveOrUpdateCustomerReview(review, merchantStore, language);</span>
+
+<span class="nc" id="L1002">    return review;</span>
+  }
+
+  @Override
+  public PersistableCustomerReview updateCustomerReview(Long id, Long reviewId, PersistableCustomerReview review,
+      MerchantStore store, Language language) {
+
+<span class="nc" id="L1009">    CustomerReview customerReview = getCustomerReviewById(reviewId);</span>
+
+<span class="nc bnc" id="L1011" title="All 2 branches missed.">    if(! customerReview.getReviewedCustomer().getId().equals(id)) {</span>
+<span class="nc" id="L1012">      throw new ResourceNotFoundException(&quot;Customer review with id &quot; + reviewId + &quot; does not exist for this customer&quot;);</span>
+    }
+
+    //rating maximum 5
+<span class="nc bnc" id="L1016" title="All 2 branches missed.">    if(review.getRating()&gt;Constants.MAX_REVIEW_RATING_SCORE) {</span>
+<span class="nc" id="L1017">      throw new ServiceRuntimeException(&quot;Maximum rating score is &quot; + Constants.MAX_REVIEW_RATING_SCORE);</span>
+    }
+
+<span class="nc" id="L1020">    review.setReviewedCustomer(id);</span>
+<span class="nc" id="L1021">    return review;</span>
+  }
+
+
+  @Override
+  public void deleteById(Long id) {
+<span class="nc" id="L1027">    Customer customer = getCustomerById(id);</span>
+<span class="nc" id="L1028">    delete(customer);</span>
+    
+<span class="nc" id="L1030">  }</span>
+
+
+  @Override
+  public void updateAddress(PersistableCustomer customer, MerchantStore store) {
+
+
+<span class="nc bnc" id="L1037" title="All 2 branches missed.">    if(customer.getBilling() != null) {</span>
+<span class="nc" id="L1038">        Validate.notNull(customer.getBilling(), &quot;Billing address can not be null&quot;);</span>
+<span class="nc" id="L1039">        Validate.notNull(customer.getBilling().getAddress(), &quot;Billing address can not be null&quot;);</span>
+<span class="nc" id="L1040">        Validate.notNull(customer.getBilling().getCity(), &quot;Billing city can not be null&quot;);</span>
+<span class="nc" id="L1041">        Validate.notNull(customer.getBilling().getPostalCode(), &quot;Billing postal code can not be null&quot;);</span>
+<span class="nc" id="L1042">        Validate.notNull(customer.getBilling().getCountry(), &quot;Billing country can not be null&quot;);</span>
+    }
+<span class="nc bnc" id="L1044" title="All 2 branches missed.">    if(customer.getDelivery() == null) {</span>
+<span class="nc" id="L1045">      customer.setDelivery(customer.getBilling());</span>
+    } else {
+
+<span class="nc bnc" id="L1048" title="All 2 branches missed.">      if(StringUtils.isBlank(customer.getDelivery().getAddress())) {</span>
+<span class="nc" id="L1049">    	  customer.getDelivery().setAddress(customer.getBilling().getAddress());</span>
+      }
+<span class="nc bnc" id="L1051" title="All 2 branches missed.">      if(StringUtils.isBlank(customer.getDelivery().getCity())) {</span>
+<span class="nc" id="L1052">    	  customer.getDelivery().setAddress(customer.getBilling().getCity());</span>
+      }
+<span class="nc bnc" id="L1054" title="All 2 branches missed.">      if(StringUtils.isBlank(customer.getDelivery().getPostalCode())) {</span>
+<span class="nc" id="L1055">    	  customer.getDelivery().setAddress(customer.getBilling().getPostalCode());</span>
+      }
+<span class="nc bnc" id="L1057" title="All 2 branches missed.">      if(StringUtils.isBlank(customer.getDelivery().getCountryCode())) {</span>
+<span class="nc" id="L1058">    	  customer.getDelivery().setAddress(customer.getDelivery().getCountryCode());</span>
+      }
+    }
+    
+    try {
+      //update billing
+<span class="nc bnc" id="L1064" title="All 2 branches missed.">      if(customer.getBilling() != null) {</span>
+<span class="nc" id="L1065">    	  customer.getBilling().setBillingAddress(true);</span>
+<span class="nc" id="L1066">    	  updateAddress(customer.getId(), store, customer.getBilling(), store.getDefaultLanguage());</span>
+      }
+
+      
+      //update delivery
+<span class="nc bnc" id="L1071" title="All 2 branches missed.">      if(customer.getDelivery() != null) {</span>
+<span class="nc" id="L1072">    	  customer.getDelivery().setBillingAddress(false);</span>
+<span class="nc" id="L1073">          updateAddress(customer.getId(), store, customer.getDelivery(), store.getDefaultLanguage());</span>
+      }
+
+<span class="nc" id="L1076">    } catch (Exception e) {</span>
+<span class="nc" id="L1077">      throw new ServiceRuntimeException(&quot;Error while updating customer address&quot;);</span>
+<span class="nc" id="L1078">    }</span>
+    
+
+<span class="nc" id="L1081">  }</span>
+
+
+  @Override
+  public void updateAddress(String userName, PersistableCustomer customer, MerchantStore store) {
+    
+<span class="nc" id="L1087">    ReadableCustomer customerModel = getByUserName(userName, store, store.getDefaultLanguage());</span>
+<span class="nc" id="L1088">    customer.setId(customerModel.getId());</span>
+<span class="nc" id="L1089">    customer.setUserName(userName);</span>
+<span class="nc" id="L1090">    updateAddress(customer, store);</span>
+    
+<span class="nc" id="L1092">  }</span>
+
+
+  @Override
+  public PersistableCustomer update(String userName, PersistableCustomer customer,
+      MerchantStore store) {
+<span class="nc" id="L1098">    ReadableCustomer customerModel = getByUserName(userName, store, store.getDefaultLanguage());</span>
+<span class="nc" id="L1099">    customer.setId(customerModel.getId());</span>
+<span class="nc" id="L1100">    customer.setUserName(userName);</span>
+<span class="nc" id="L1101">    return updateAuthCustomer(customer, store);</span>
+  }
+
+
+  @Override
+  public boolean passwordMatch(String rawPassword, Customer customer) {
+<span class="nc" id="L1107">    return passwordEncoder.matches(rawPassword, customer.getPassword());</span>
+  }
+
+
+  @Override
+  public void changePassword(Customer customer, String newPassword) {
+<span class="nc" id="L1113">    String encoded = passwordEncoder.encode(newPassword);</span>
+<span class="nc" id="L1114">    customer.setPassword(encoded);</span>
+    try {
+<span class="nc" id="L1116">      customerService.update(customer);</span>
+<span class="nc" id="L1117">    } catch (ServiceException e) {</span>
+<span class="nc" id="L1118">      throw new ServiceRuntimeException(&quot;Exception while changing password&quot;, e);</span>
+<span class="nc" id="L1119">    }</span>
+    
+<span class="nc" id="L1121">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

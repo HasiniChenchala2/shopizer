@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PersistableCustomerOptionValuePopulator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.populator.customer</a> &gt; <span class="el_source">PersistableCustomerOptionValuePopulator.java</span></div><h1>PersistableCustomerOptionValuePopulator.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.populator.customer;
+
+import java.util.HashSet;
+import java.util.Set;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.Validate;
+
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.services.reference.language.LanguageService;
+import com.salesmanager.core.business.utils.AbstractDataPopulator;
+import com.salesmanager.core.model.customer.attribute.CustomerOptionValue;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.model.customer.attribute.CustomerOptionValueDescription;
+import com.salesmanager.shop.model.customer.attribute.PersistableCustomerOptionValue;
+
+<span class="nc" id="L18">public class PersistableCustomerOptionValuePopulator extends</span>
+		AbstractDataPopulator&lt;PersistableCustomerOptionValue, CustomerOptionValue&gt; {
+
+	
+	private LanguageService languageService;
+	
+	@Override
+	public CustomerOptionValue populate(PersistableCustomerOptionValue source,
+			CustomerOptionValue target, MerchantStore store, Language language)
+			throws ConversionException {
+		
+		
+<span class="nc" id="L30">		Validate.notNull(languageService, &quot;Requires to set LanguageService&quot;);</span>
+		
+		
+		try {
+			
+<span class="nc" id="L35">			target.setCode(source.getCode());</span>
+<span class="nc" id="L36">			target.setMerchantStore(store);</span>
+<span class="nc" id="L37">			target.setSortOrder(source.getOrder());</span>
+			
+<span class="nc bnc" id="L39" title="All 2 branches missed.">			if(!CollectionUtils.isEmpty(source.getDescriptions())) {</span>
+<span class="nc" id="L40">				Set&lt;com.salesmanager.core.model.customer.attribute.CustomerOptionValueDescription&gt; descriptions = new HashSet&lt;com.salesmanager.core.model.customer.attribute.CustomerOptionValueDescription&gt;();</span>
+<span class="nc bnc" id="L41" title="All 2 branches missed.">				for(CustomerOptionValueDescription desc  : source.getDescriptions()) {</span>
+<span class="nc" id="L42">					com.salesmanager.core.model.customer.attribute.CustomerOptionValueDescription description = new com.salesmanager.core.model.customer.attribute.CustomerOptionValueDescription();</span>
+<span class="nc" id="L43">					Language lang = languageService.getByCode(desc.getLanguage());</span>
+<span class="nc bnc" id="L44" title="All 2 branches missed.">					if(lang==null) {</span>
+<span class="nc" id="L45">						throw new ConversionException(&quot;Language is null for code &quot; + description.getLanguage() + &quot; use language ISO code [en, fr ...]&quot;);</span>
+					}
+<span class="nc" id="L47">					description.setLanguage(lang);</span>
+<span class="nc" id="L48">					description.setName(desc.getName());</span>
+<span class="nc" id="L49">					description.setTitle(desc.getTitle());</span>
+<span class="nc" id="L50">					description.setCustomerOptionValue(target);</span>
+<span class="nc" id="L51">					descriptions.add(description);</span>
+<span class="nc" id="L52">				}</span>
+<span class="nc" id="L53">				target.setDescriptions(descriptions);</span>
+			}
+			
+<span class="nc" id="L56">		} catch (Exception e) {</span>
+<span class="nc" id="L57">			throw new ConversionException(e);</span>
+<span class="nc" id="L58">		}</span>
+<span class="nc" id="L59">		return target;</span>
+	}
+
+	@Override
+	protected CustomerOptionValue createTarget() {
+<span class="nc" id="L64">		return null;</span>
+	}
+
+	public void setLanguageService(LanguageService languageService) {
+<span class="nc" id="L68">		this.languageService = languageService;</span>
+<span class="nc" id="L69">	}</span>
+
+	public LanguageService getLanguageService() {
+<span class="nc" id="L72">		return languageService;</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

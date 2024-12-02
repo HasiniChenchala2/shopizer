@@ -1,0 +1,269 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CustomerPopulator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.populator.customer</a> &gt; <span class="el_source">CustomerPopulator.java</span></div><h1>CustomerPopulator.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.populator.customer;
+
+
+import java.math.BigDecimal;
+import java.util.Map;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.services.customer.attribute.CustomerOptionService;
+import com.salesmanager.core.business.services.customer.attribute.CustomerOptionValueService;
+import com.salesmanager.core.business.services.reference.country.CountryService;
+import com.salesmanager.core.business.services.reference.language.LanguageService;
+import com.salesmanager.core.business.services.reference.zone.ZoneService;
+import com.salesmanager.core.business.utils.AbstractDataPopulator;
+import com.salesmanager.core.model.common.Billing;
+import com.salesmanager.core.model.common.Delivery;
+import com.salesmanager.core.model.customer.Customer;
+import com.salesmanager.core.model.customer.attribute.CustomerAttribute;
+import com.salesmanager.core.model.customer.attribute.CustomerOption;
+import com.salesmanager.core.model.customer.attribute.CustomerOptionValue;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.country.Country;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.core.model.reference.zone.Zone;
+import com.salesmanager.shop.model.customer.PersistableCustomer;
+import com.salesmanager.shop.model.customer.address.Address;
+import com.salesmanager.shop.model.customer.attribute.PersistableCustomerAttribute;
+
+@Component
+<span class="fc" id="L34">public class CustomerPopulator extends</span>
+		AbstractDataPopulator&lt;PersistableCustomer, Customer&gt; {
+	
+<span class="fc" id="L37">	protected static final Logger LOG=LoggerFactory.getLogger( CustomerPopulator.class );</span>
+    @Autowired
+	private CountryService countryService;
+    @Autowired
+    private ZoneService zoneService;
+    @Autowired
+    private LanguageService languageService;
+    @Autowired
+	private CustomerOptionService customerOptionService;
+    @Autowired
+    private CustomerOptionValueService customerOptionValueService;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+
+
+	/**
+	 * Creates a Customer entity ready to be saved
+	 */
+	@Override
+	public Customer populate(PersistableCustomer source, Customer target,
+			MerchantStore store, Language language) throws ConversionException {
+
+		try {
+			
+<span class="pc bpc" id="L62" title="2 of 4 branches missed.">			if(source.getId() !=null &amp;&amp; source.getId()&gt;0){</span>
+<span class="nc" id="L63">			    target.setId( source.getId() );</span>
+			}
+
+<span class="pc bpc" id="L66" title="1 of 2 branches missed.">			if(!StringUtils.isBlank(source.getPassword())) {</span>
+<span class="fc" id="L67">			  target.setPassword(passwordEncoder.encode(source.getPassword()));</span>
+<span class="fc" id="L68">			  target.setNick(source.getUserName());</span>
+<span class="fc" id="L69">			  target.setAnonymous(false);</span>
+			}
+
+<span class="pc bpc" id="L72" title="1 of 2 branches missed.">			if(source.getBilling() != null) {</span>
+<span class="fc" id="L73">				target.setBilling(new Billing());</span>
+<span class="pc bpc" id="L74" title="1 of 2 branches missed.">				if (!StringUtils.isEmpty(source.getFirstName())) {</span>
+<span class="nc" id="L75">					target.getBilling().setFirstName(</span>
+<span class="nc" id="L76">							source.getFirstName()</span>
+					);
+				}
+<span class="pc bpc" id="L79" title="1 of 2 branches missed.">				if (!StringUtils.isEmpty(source.getLastName())) {</span>
+<span class="nc" id="L80">					target.getBilling().setLastName(</span>
+<span class="nc" id="L81">							source.getLastName()</span>
+					);
+				}
+			}
+
+<span class="pc bpc" id="L86" title="1 of 2 branches missed.">			if(!StringUtils.isBlank(source.getProvider())) {</span>
+<span class="nc" id="L87">				target.setProvider(source.getProvider());</span>
+			}
+			
+<span class="pc bpc" id="L90" title="1 of 2 branches missed.">			if(!StringUtils.isBlank(source.getEmailAddress())) {</span>
+<span class="fc" id="L91">				target.setEmailAddress(source.getEmailAddress());</span>
+			}
+			
+<span class="pc bpc" id="L94" title="2 of 4 branches missed.">			if(source.getGender()!=null &amp;&amp; target.getGender()==null) {</span>
+<span class="fc" id="L95">				target.setGender( com.salesmanager.core.model.customer.CustomerGender.valueOf( source.getGender() ) );</span>
+			}
+<span class="pc bpc" id="L97" title="1 of 2 branches missed.">			if(target.getGender()==null) {</span>
+<span class="nc" id="L98">				target.setGender( com.salesmanager.core.model.customer.CustomerGender.M);</span>
+			}
+
+<span class="fc" id="L101">			Map&lt;String,Country&gt; countries = countryService.getCountriesMap(language);</span>
+<span class="fc" id="L102">			Map&lt;String,Zone&gt; zones = zoneService.getZones(language);</span>
+			
+<span class="fc" id="L104">			target.setMerchantStore( store );</span>
+
+<span class="fc" id="L106">			Address sourceBilling = source.getBilling();</span>
+<span class="pc bpc" id="L107" title="1 of 2 branches missed.">			if(sourceBilling!=null) {</span>
+<span class="fc" id="L108">				Billing billing = target.getBilling();</span>
+<span class="fc" id="L109">				billing.setAddress(sourceBilling.getAddress());</span>
+<span class="fc" id="L110">				billing.setCity(sourceBilling.getCity());</span>
+<span class="fc" id="L111">				billing.setCompany(sourceBilling.getCompany());</span>
+				//billing.setCountry(country);
+<span class="pc bpc" id="L113" title="1 of 2 branches missed.">				if (!StringUtils.isEmpty(sourceBilling.getFirstName()))</span>
+<span class="fc" id="L114">					billing.setFirstName(sourceBilling.getFirstName());</span>
+<span class="pc bpc" id="L115" title="1 of 2 branches missed.">				if (!StringUtils.isEmpty(sourceBilling.getLastName()))</span>
+<span class="fc" id="L116">					billing.setLastName(sourceBilling.getLastName());</span>
+<span class="fc" id="L117">				billing.setTelephone(sourceBilling.getPhone());</span>
+<span class="fc" id="L118">				billing.setPostalCode(sourceBilling.getPostalCode());</span>
+<span class="fc" id="L119">				billing.setState(sourceBilling.getStateProvince());</span>
+<span class="fc" id="L120">				Country billingCountry = null;</span>
+<span class="pc bpc" id="L121" title="1 of 2 branches missed.">				if(!StringUtils.isBlank(sourceBilling.getCountry())) {</span>
+<span class="fc" id="L122">					billingCountry = countries.get(sourceBilling.getCountry());</span>
+<span class="pc bpc" id="L123" title="1 of 2 branches missed.">					if(billingCountry==null) {</span>
+<span class="nc" id="L124">						throw new ConversionException(&quot;Unsuported country code &quot; + sourceBilling.getCountry());</span>
+					}
+<span class="fc" id="L126">					billing.setCountry(billingCountry);</span>
+				}
+				
+<span class="pc bpc" id="L129" title="2 of 4 branches missed.">				if(billingCountry!=null &amp;&amp; !StringUtils.isBlank(sourceBilling.getZone())) {</span>
+<span class="nc" id="L130">					Zone zone = zoneService.getByCode(sourceBilling.getZone());</span>
+<span class="nc bnc" id="L131" title="All 2 branches missed.">					if(zone==null) {</span>
+<span class="nc" id="L132">						throw new ConversionException(&quot;Unsuported zone code &quot; + sourceBilling.getZone());</span>
+					}
+<span class="nc" id="L134">					Zone zoneDescription = zones.get(zone.getCode());</span>
+<span class="nc" id="L135">					billing.setZone(zoneDescription);</span>
+				}
+				// target.setBilling(billing);
+
+			}
+<span class="pc bpc" id="L140" title="3 of 4 branches missed.">			if(target.getBilling() ==null &amp;&amp; source.getBilling()!=null){</span>
+<span class="nc" id="L141">			    LOG.info( &quot;Setting default values for billing&quot; );</span>
+<span class="nc" id="L142">			    Billing billing = new Billing();</span>
+<span class="nc" id="L143">			    Country billingCountry = null;</span>
+<span class="nc bnc" id="L144" title="All 2 branches missed.">			    if(StringUtils.isNotBlank( source.getBilling().getCountry() )) {</span>
+<span class="nc" id="L145">                    billingCountry = countries.get(source.getBilling().getCountry());</span>
+<span class="nc bnc" id="L146" title="All 2 branches missed.">                    if(billingCountry==null) {</span>
+<span class="nc" id="L147">                        throw new ConversionException(&quot;Unsuported country code &quot; + sourceBilling.getCountry());</span>
+                    }
+<span class="nc" id="L149">                    billing.setCountry(billingCountry);</span>
+<span class="nc" id="L150">                    target.setBilling( billing );</span>
+                }
+			}
+<span class="fc" id="L153">			Address sourceShipping = source.getDelivery();</span>
+<span class="pc bpc" id="L154" title="1 of 2 branches missed.">			if(sourceShipping!=null) {</span>
+<span class="nc" id="L155">				Delivery delivery = new Delivery();</span>
+<span class="nc" id="L156">				delivery.setAddress(sourceShipping.getAddress());</span>
+<span class="nc" id="L157">				delivery.setCity(sourceShipping.getCity());</span>
+<span class="nc" id="L158">				delivery.setCompany(sourceShipping.getCompany());</span>
+<span class="nc" id="L159">				delivery.setFirstName(sourceShipping.getFirstName());</span>
+<span class="nc" id="L160">				delivery.setLastName(sourceShipping.getLastName());</span>
+<span class="nc" id="L161">				delivery.setTelephone(sourceShipping.getPhone());</span>
+<span class="nc" id="L162">				delivery.setPostalCode(sourceShipping.getPostalCode());</span>
+<span class="nc" id="L163">				delivery.setState(sourceShipping.getStateProvince());</span>
+<span class="nc" id="L164">				Country deliveryCountry = null;</span>
+				
+				
+				
+<span class="nc bnc" id="L168" title="All 2 branches missed.">				if(!StringUtils.isBlank(sourceShipping.getCountry())) {</span>
+<span class="nc" id="L169">					deliveryCountry = countries.get(sourceShipping.getCountry());</span>
+<span class="nc bnc" id="L170" title="All 2 branches missed.">					if(deliveryCountry==null) {</span>
+<span class="nc" id="L171">						throw new ConversionException(&quot;Unsuported country code &quot; + sourceShipping.getCountry());</span>
+					}
+<span class="nc" id="L173">					delivery.setCountry(deliveryCountry);</span>
+				}
+				
+<span class="nc bnc" id="L176" title="All 4 branches missed.">				if(deliveryCountry!=null &amp;&amp; !StringUtils.isBlank(sourceShipping.getZone())) {</span>
+<span class="nc" id="L177">					Zone zone = zoneService.getByCode(sourceShipping.getZone());</span>
+<span class="nc bnc" id="L178" title="All 2 branches missed.">					if(zone==null) {</span>
+<span class="nc" id="L179">						throw new ConversionException(&quot;Unsuported zone code &quot; + sourceShipping.getZone());</span>
+					}
+<span class="nc" id="L181">					Zone zoneDescription = zones.get(zone.getCode());</span>
+<span class="nc" id="L182">					delivery.setZone(zoneDescription);</span>
+				}
+<span class="nc" id="L184">				target.setDelivery(delivery);</span>
+			}
+			
+<span class="pc bpc" id="L187" title="2 of 4 branches missed.">			if(source.getRating() != null &amp;&amp; source.getRating().doubleValue() &gt; 0) {</span>
+<span class="nc" id="L188">				target.setCustomerReviewAvg(new BigDecimal(source.getRating().doubleValue()));</span>
+			}
+			
+<span class="pc bpc" id="L191" title="1 of 2 branches missed.">			if(source.getRatingCount() &gt; 0) {</span>
+<span class="nc" id="L192">				target.setCustomerReviewCount(source.getRatingCount());</span>
+			}
+
+			
+<span class="pc bpc" id="L196" title="2 of 4 branches missed.">			if(target.getDelivery() ==null &amp;&amp; source.getDelivery()!=null){</span>
+<span class="nc" id="L197">			    LOG.info( &quot;Setting default value for delivery&quot; );</span>
+<span class="nc" id="L198">			    Delivery delivery = new Delivery();</span>
+<span class="nc" id="L199">			    Country deliveryCountry = null;</span>
+<span class="nc bnc" id="L200" title="All 2 branches missed.">                if(StringUtils.isNotBlank( source.getDelivery().getCountry() )) {</span>
+<span class="nc" id="L201">                    deliveryCountry = countries.get(source.getDelivery().getCountry());</span>
+<span class="nc bnc" id="L202" title="All 2 branches missed.">                    if(deliveryCountry==null) {</span>
+<span class="nc" id="L203">                        throw new ConversionException(&quot;Unsuported country code &quot; + sourceShipping.getCountry());</span>
+                    }
+<span class="nc" id="L205">                    delivery.setCountry(deliveryCountry);</span>
+<span class="nc" id="L206">                    target.setDelivery( delivery );</span>
+                }
+			}
+			
+<span class="pc bpc" id="L210" title="1 of 2 branches missed.">			if(source.getAttributes()!=null) {</span>
+<span class="nc bnc" id="L211" title="All 2 branches missed.">				for(PersistableCustomerAttribute attr : source.getAttributes()) {</span>
+
+<span class="nc" id="L213">					CustomerOption customerOption = customerOptionService.getById(attr.getCustomerOption().getId());</span>
+<span class="nc bnc" id="L214" title="All 2 branches missed.">					if(customerOption==null) {</span>
+<span class="nc" id="L215">						throw new ConversionException(&quot;Customer option id &quot; + attr.getCustomerOption().getId() + &quot; does not exist&quot;);</span>
+					}
+					
+<span class="nc" id="L218">					CustomerOptionValue customerOptionValue = customerOptionValueService.getById(attr.getCustomerOptionValue().getId());</span>
+<span class="nc bnc" id="L219" title="All 2 branches missed.">					if(customerOptionValue==null) {</span>
+<span class="nc" id="L220">						throw new ConversionException(&quot;Customer option value id &quot; + attr.getCustomerOptionValue().getId() + &quot; does not exist&quot;);</span>
+					}
+					
+<span class="nc bnc" id="L223" title="All 2 branches missed.">					if(customerOption.getMerchantStore().getId().intValue()!=store.getId().intValue()) {</span>
+<span class="nc" id="L224">						throw new ConversionException(&quot;Invalid customer option id &quot;);</span>
+					}
+					
+<span class="nc bnc" id="L227" title="All 2 branches missed.">					if(customerOptionValue.getMerchantStore().getId().intValue()!=store.getId().intValue()) {</span>
+<span class="nc" id="L228">						throw new ConversionException(&quot;Invalid customer option value id &quot;);</span>
+					}
+					
+<span class="nc" id="L231">					CustomerAttribute attribute = new CustomerAttribute();</span>
+<span class="nc" id="L232">					attribute.setCustomer(target);</span>
+<span class="nc" id="L233">					attribute.setCustomerOption(customerOption);</span>
+<span class="nc" id="L234">					attribute.setCustomerOptionValue(customerOptionValue);</span>
+<span class="nc" id="L235">					attribute.setTextValue(attr.getTextValue());</span>
+					
+<span class="nc" id="L237">					target.getAttributes().add(attribute);</span>
+					
+<span class="nc" id="L239">				}</span>
+			}
+			
+<span class="pc bpc" id="L242" title="1 of 2 branches missed.">			if(target.getDefaultLanguage()==null) {</span>
+				
+<span class="pc bpc" id="L244" title="1 of 2 branches missed.">				Language lang = source.getLanguage() == null ?</span>
+<span class="pc" id="L245">						language : languageService.getByCode(source.getLanguage());</span>
+
+				
+<span class="fc" id="L248">				target.setDefaultLanguage(lang);</span>
+			}
+
+		
+<span class="nc" id="L252">		} catch (Exception e) {</span>
+<span class="nc" id="L253">			throw new ConversionException(e);</span>
+<span class="fc" id="L254">		}</span>
+		
+		
+		
+		
+<span class="fc" id="L259">		return target;</span>
+	}
+
+	@Override
+	protected Customer createTarget() {
+<span class="fc" id="L264">		return new Customer();</span>
+	}
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

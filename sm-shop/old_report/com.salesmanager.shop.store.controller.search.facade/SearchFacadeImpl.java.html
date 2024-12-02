@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SearchFacadeImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.store.controller.search.facade</a> &gt; <span class="el_source">SearchFacadeImpl.java</span></div><h1>SearchFacadeImpl.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.store.controller.search.facade;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import javax.inject.Inject;
+
+import org.jsoup.helper.Validate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.catalog.category.CategoryService;
+import com.salesmanager.core.business.services.catalog.pricing.PricingService;
+import com.salesmanager.core.business.services.catalog.product.ProductService;
+import com.salesmanager.core.business.services.search.SearchService;
+import com.salesmanager.core.model.catalog.category.Category;
+import com.salesmanager.core.model.catalog.product.Product;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.model.catalog.SearchProductRequest;
+import com.salesmanager.shop.model.catalog.category.ReadableCategory;
+import com.salesmanager.shop.model.catalog.product.ReadableProduct;
+import com.salesmanager.shop.model.entity.ValueList;
+import com.salesmanager.shop.populator.catalog.ReadableCategoryPopulator;
+import com.salesmanager.shop.populator.catalog.ReadableProductPopulator;
+import com.salesmanager.shop.store.api.exception.ConversionRuntimeException;
+import com.salesmanager.shop.store.api.exception.ServiceRuntimeException;
+import com.salesmanager.shop.utils.ImageFilePath;
+
+import modules.commons.search.request.Aggregation;
+import modules.commons.search.request.SearchItem;
+import modules.commons.search.request.SearchRequest;
+import modules.commons.search.request.SearchResponse;
+
+@Service(&quot;searchFacade&quot;)
+<span class="fc" id="L42">public class SearchFacadeImpl implements SearchFacade {</span>
+
+<span class="fc" id="L44">	private static final Logger LOGGER = LoggerFactory.getLogger(SearchFacadeImpl.class);</span>
+
+	@Inject
+	private SearchService searchService;
+
+	@Inject
+	private ProductService productService;
+
+	@Inject
+	private CategoryService categoryService;
+
+	@Inject
+	private PricingService pricingService;
+
+	@Inject
+	@Qualifier(&quot;img&quot;)
+	private ImageFilePath imageUtils;
+
+	private final static String CATEGORY_FACET_NAME = &quot;categories&quot;;
+	private final static String MANUFACTURER_FACET_NAME = &quot;manufacturer&quot;;
+	private final static int AUTOCOMPLETE_ENTRIES_COUNT = 15;
+
+	/**
+	 * Index all products from the catalogue Better stop the system, remove ES
+	 * indexex manually restart ES and run this query
+	 */
+	@Override
+	@Async
+	public void indexAllData(MerchantStore store) throws Exception {
+<span class="nc" id="L73">		List&lt;Product&gt; products = productService.listByStore(store);</span>
+
+<span class="nc" id="L75">		products.stream().forEach(p -&gt; {</span>
+			try {
+<span class="nc" id="L77">				searchService.index(store, p);</span>
+<span class="nc" id="L78">			} catch (ServiceException e) {</span>
+<span class="nc" id="L79">				throw new RuntimeException(&quot;Exception while indexing products&quot;, e);</span>
+<span class="nc" id="L80">			}</span>
+<span class="nc" id="L81">		});</span>
+
+<span class="nc" id="L83">	}</span>
+
+	@Override
+	public List&lt;SearchItem&gt; search(MerchantStore store, Language language, SearchProductRequest searchRequest) {
+<span class="nc" id="L87">		SearchResponse response = search(store, language.getCode(), searchRequest.getQuery(), searchRequest.getCount(),</span>
+<span class="nc" id="L88">				searchRequest.getStart());</span>
+<span class="nc" id="L89">		return response.getItems();</span>
+	}
+
+	private SearchResponse search(MerchantStore store, String languageCode, String query, Integer count,
+			Integer start) {
+		
+<span class="nc" id="L95">		Validate.notNull(query,&quot;Search Keyword must not be null&quot;);</span>
+<span class="nc" id="L96">		Validate.notNull(languageCode, &quot;Language cannot be null&quot;);</span>
+<span class="nc" id="L97">		Validate.notNull(store,&quot;MerchantStore cannot be null&quot;);</span>
+		
+		
+		try {
+<span class="nc" id="L101">			LOGGER.debug(&quot;Search &quot; + query);</span>
+<span class="nc" id="L102">			SearchRequest searchRequest = new SearchRequest();</span>
+<span class="nc" id="L103">			searchRequest.setLanguage(languageCode);</span>
+<span class="nc" id="L104">			searchRequest.setSearchString(query);</span>
+<span class="nc" id="L105">			searchRequest.setStore(store.getCode().toLowerCase());</span>
+			
+			
+			//aggregations
+			
+			//TODO add scroll
+<span class="nc" id="L111">			return searchService.search(store, languageCode, searchRequest, count, start);</span>
+
+<span class="nc" id="L113">		} catch (ServiceException e) {</span>
+<span class="nc" id="L114">			throw new ServiceRuntimeException(e);</span>
+		}
+	}
+
+	private List&lt;ReadableCategory&gt; getCategoryFacets(MerchantStore merchantStore, Language language, List&lt;Aggregation&gt; facets) {
+		
+		
+		/**
+		List&lt;SearchFacet&gt; categoriesFacets = facets.entrySet().stream()
+				.filter(e -&gt; CATEGORY_FACET_NAME.equals(e.getKey())).findFirst().map(Entry::getValue)
+				.orElse(Collections.emptyList());
+
+		if (CollectionUtils.isNotEmpty(categoriesFacets)) {
+
+			List&lt;String&gt; categoryCodes = categoriesFacets.stream().map(SearchFacet::getName)
+					.collect(Collectors.toList());
+
+			Map&lt;String, Long&gt; productCategoryCount = categoriesFacets.stream()
+					.collect(Collectors.toMap(SearchFacet::getKey, SearchFacet::getCount));
+
+			List&lt;Category&gt; categories = categoryService.listByCodes(merchantStore, categoryCodes, language);
+			return categories.stream().map(category -&gt; convertCategoryToReadableCategory(merchantStore, language,
+					productCategoryCount, category)).collect(Collectors.toList());
+		} else {
+			return Collections.emptyList();
+		}
+		**/
+		
+<span class="nc" id="L142">		return null;</span>
+	}
+
+	private ReadableCategory convertCategoryToReadableCategory(MerchantStore merchantStore, Language language,
+			Map&lt;String, Long&gt; productCategoryCount, Category category) {
+<span class="nc" id="L147">		ReadableCategoryPopulator populator = new ReadableCategoryPopulator();</span>
+		try {
+<span class="nc" id="L149">			ReadableCategory categoryProxy = populator.populate(category, new ReadableCategory(), merchantStore,</span>
+					language);
+<span class="nc" id="L151">			Long total = productCategoryCount.get(categoryProxy.getCode());</span>
+<span class="nc bnc" id="L152" title="All 2 branches missed.">			if (total != null) {</span>
+<span class="nc" id="L153">				categoryProxy.setProductCount(total.intValue());</span>
+			}
+<span class="nc" id="L155">			return categoryProxy;</span>
+<span class="nc" id="L156">		} catch (ConversionException e) {</span>
+<span class="nc" id="L157">			throw new ConversionRuntimeException(e);</span>
+		}
+	}
+
+	private ReadableProduct convertProductToReadableProduct(Product product, MerchantStore merchantStore,
+			Language language) {
+
+<span class="nc" id="L164">		ReadableProductPopulator populator = new ReadableProductPopulator();</span>
+<span class="nc" id="L165">		populator.setPricingService(pricingService);</span>
+<span class="nc" id="L166">		populator.setimageUtils(imageUtils);</span>
+
+		try {
+<span class="nc" id="L169">			return populator.populate(product, new ReadableProduct(), merchantStore, language);</span>
+<span class="nc" id="L170">		} catch (ConversionException e) {</span>
+<span class="nc" id="L171">			throw new ConversionRuntimeException(e);</span>
+		}
+	}
+
+	@Override
+	public ValueList autocompleteRequest(String word, MerchantStore store, Language language) {
+<span class="nc" id="L177">		Validate.notNull(word,&quot;Search Keyword must not be null&quot;);</span>
+<span class="nc" id="L178">		Validate.notNull(language, &quot;Language cannot be null&quot;);</span>
+<span class="nc" id="L179">		Validate.notNull(store,&quot;MerchantStore cannot be null&quot;);</span>
+		
+<span class="nc" id="L181">		SearchRequest req = new SearchRequest();</span>
+<span class="nc" id="L182">		req.setLanguage(language.getCode());</span>
+<span class="nc" id="L183">		req.setStore(store.getCode().toLowerCase());</span>
+<span class="nc" id="L184">		req.setSearchString(word);</span>
+<span class="nc" id="L185">		req.setLanguage(language.getCode());</span>
+		
+		SearchResponse response;
+		try {
+<span class="nc" id="L189">			response = searchService.searchKeywords(store, language.getCode(), req, AUTOCOMPLETE_ENTRIES_COUNT);</span>
+<span class="nc" id="L190">		} catch (ServiceException e) {</span>
+<span class="nc" id="L191">			throw new RuntimeException(e);</span>
+<span class="nc" id="L192">		}</span>
+	
+		
+<span class="nc" id="L195">		List&lt;String&gt; keywords = response.getItems().stream().map(i -&gt; i.getSuggestions()).collect(Collectors.toList());</span>
+		
+<span class="nc" id="L197">		ValueList valueList = new ValueList();</span>
+<span class="nc" id="L198">		valueList.setValues(keywords);</span>
+		
+<span class="nc" id="L200">		return valueList;</span>
+		
+
+	}
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

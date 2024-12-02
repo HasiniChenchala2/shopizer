@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReadableManufacturerMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.mapper.catalog</a> &gt; <span class="el_source">ReadableManufacturerMapper.java</span></div><h1>ReadableManufacturerMapper.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.mapper.catalog;
+
+import java.util.Optional;
+import java.util.Set;
+import org.springframework.stereotype.Component;
+import com.salesmanager.core.model.catalog.product.manufacturer.Manufacturer;
+import com.salesmanager.core.model.catalog.product.manufacturer.ManufacturerDescription;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.mapper.Mapper;
+import com.salesmanager.shop.model.catalog.manufacturer.ReadableManufacturer;
+
+@Component
+<span class="fc" id="L14">public class ReadableManufacturerMapper implements Mapper&lt;Manufacturer, ReadableManufacturer&gt; {</span>
+
+  @Override
+  public ReadableManufacturer convert(Manufacturer source, MerchantStore store, Language language) {
+
+<span class="pc bpc" id="L19" title="1 of 2 branches missed.">	if(language == null) {</span>
+<span class="nc" id="L20">		language = store.getDefaultLanguage();</span>
+	}
+<span class="fc" id="L22">    ReadableManufacturer target = new ReadableManufacturer();</span>
+
+<span class="fc" id="L24">    Optional&lt;com.salesmanager.shop.model.catalog.manufacturer.ManufacturerDescription&gt; description =</span>
+<span class="fc" id="L25">        getDescription(source, language, target);</span>
+<span class="fc" id="L26">    description.ifPresent(target::setDescription);</span>
+
+<span class="fc" id="L28">    target.setCode(source.getCode());</span>
+<span class="fc" id="L29">    target.setId(source.getId());</span>
+<span class="fc" id="L30">    target.setOrder(source.getOrder());</span>
+<span class="fc" id="L31">    Optional&lt;com.salesmanager.shop.model.catalog.manufacturer.ManufacturerDescription&gt; desc = this.getDescription(source, language, target);</span>
+<span class="pc bpc" id="L32" title="1 of 2 branches missed.">    if(description.isPresent()) {</span>
+<span class="fc" id="L33">    	target.setDescription(desc.get());</span>
+    }
+    
+
+<span class="fc" id="L37">    return target;</span>
+  }
+
+  private Optional&lt;com.salesmanager.shop.model.catalog.manufacturer.ManufacturerDescription&gt; getDescription(
+      Manufacturer source, Language language, ReadableManufacturer target) {
+
+<span class="fc" id="L43">    Optional&lt;ManufacturerDescription&gt; description =</span>
+<span class="fc" id="L44">        getDescription(source.getDescriptions(), language);</span>
+<span class="pc bpc" id="L45" title="2 of 4 branches missed.">    if (source.getDescriptions() != null &amp;&amp; !source.getDescriptions().isEmpty()</span>
+<span class="pc bpc" id="L46" title="1 of 2 branches missed.">        &amp;&amp; description.isPresent()) {</span>
+<span class="fc" id="L47">      return Optional.of(convertDescription(description.get(), source));</span>
+    } else {
+<span class="nc" id="L49">      return Optional.empty();</span>
+    }
+  }
+
+  private Optional&lt;ManufacturerDescription&gt; getDescription(
+      Set&lt;ManufacturerDescription&gt; descriptionsLang, Language language) {
+<span class="fc" id="L55">    Optional&lt;ManufacturerDescription&gt; descriptionByLang = descriptionsLang.stream()</span>
+<span class="fc" id="L56">        .filter(desc -&gt; desc.getLanguage().getCode().equals(language.getCode())).findAny();</span>
+<span class="pc bpc" id="L57" title="1 of 2 branches missed.">    if (descriptionByLang.isPresent()) {</span>
+<span class="fc" id="L58">      return descriptionByLang;</span>
+    } else {
+<span class="nc" id="L60">      return Optional.empty();</span>
+    }
+  }
+
+  private com.salesmanager.shop.model.catalog.manufacturer.ManufacturerDescription convertDescription(
+      ManufacturerDescription description, Manufacturer source) {
+<span class="fc" id="L66">    final com.salesmanager.shop.model.catalog.manufacturer.ManufacturerDescription desc =</span>
+        new com.salesmanager.shop.model.catalog.manufacturer.ManufacturerDescription();
+
+<span class="fc" id="L69">    desc.setFriendlyUrl(description.getUrl());</span>
+<span class="fc" id="L70">    desc.setId(description.getId());</span>
+<span class="fc" id="L71">    desc.setLanguage(description.getLanguage().getCode());</span>
+<span class="fc" id="L72">    desc.setName(description.getName());</span>
+<span class="fc" id="L73">    desc.setDescription(description.getDescription());</span>
+<span class="fc" id="L74">    return desc;</span>
+  }
+
+  @Override
+  public ReadableManufacturer merge(Manufacturer source, ReadableManufacturer destination,
+                                    MerchantStore store, Language language) {
+<span class="nc" id="L80">    return destination;</span>
+  }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

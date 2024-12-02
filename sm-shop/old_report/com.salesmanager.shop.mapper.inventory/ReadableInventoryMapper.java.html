@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReadableInventoryMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.mapper.inventory</a> &gt; <span class="el_source">ReadableInventoryMapper.java</span></div><h1>ReadableInventoryMapper.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.mapper.inventory;
+
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.drools.core.util.StringUtils;
+import org.jsoup.helper.Validate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.catalog.pricing.PricingService;
+import com.salesmanager.core.model.catalog.product.availability.ProductAvailability;
+import com.salesmanager.core.model.catalog.product.price.FinalPrice;
+import com.salesmanager.core.model.catalog.product.price.ProductPrice;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.mapper.Mapper;
+import com.salesmanager.shop.model.catalog.product.ReadableProductPrice;
+import com.salesmanager.shop.model.catalog.product.inventory.ReadableInventory;
+import com.salesmanager.shop.model.store.ReadableMerchantStore;
+import com.salesmanager.shop.populator.catalog.ReadableProductPricePopulator;
+import com.salesmanager.shop.populator.store.ReadableMerchantStorePopulator;
+import com.salesmanager.shop.store.api.exception.ConversionRuntimeException;
+import com.salesmanager.shop.utils.DateUtil;
+
+@Component
+<span class="fc" id="L30">public class ReadableInventoryMapper implements Mapper&lt;ProductAvailability, ReadableInventory&gt; {</span>
+
+	@Autowired
+	private PricingService pricingService;
+
+	@Autowired
+	private ReadableMerchantStorePopulator readableMerchantStorePopulator;
+
+	@Override
+	public ReadableInventory convert(ProductAvailability source, MerchantStore store, Language language) {
+<span class="nc" id="L40">		ReadableInventory availability = new ReadableInventory();</span>
+<span class="nc" id="L41">		return merge(source, availability, store, language);</span>
+	}
+
+	@Override
+	public ReadableInventory merge(ProductAvailability source, ReadableInventory destination, MerchantStore store,
+			Language language) {
+<span class="nc" id="L47">		Validate.notNull(destination, &quot;Destination Product availability cannot be null&quot;);</span>
+<span class="nc" id="L48">		Validate.notNull(source, &quot;Source Product availability cannot be null&quot;);</span>
+
+		try {
+<span class="nc bnc" id="L51" title="All 2 branches missed.">			destination.setQuantity(source.getProductQuantity() != null ? source.getProductQuantity().intValue() : 0);</span>
+<span class="nc" id="L52">			destination.setProductQuantityOrderMax(</span>
+<span class="nc bnc" id="L53" title="All 2 branches missed.">					source.getProductQuantityOrderMax() != null ? source.getProductQuantityOrderMax().intValue() : 0);</span>
+<span class="nc" id="L54">			destination.setProductQuantityOrderMin(</span>
+<span class="nc bnc" id="L55" title="All 2 branches missed.">					source.getProductQuantityOrderMin() != null ? source.getProductQuantityOrderMin().intValue() : 0);</span>
+<span class="nc" id="L56">			destination.setOwner(source.getOwner());</span>
+<span class="nc" id="L57">			destination.setId(source.getId());</span>
+<span class="nc" id="L58">			destination.setRegion(source.getRegion());</span>
+<span class="nc" id="L59">			destination.setRegionVariant(source.getRegionVariant());</span>
+<span class="nc" id="L60">			destination.setStore(store(store, language));</span>
+<span class="nc bnc" id="L61" title="All 2 branches missed.">			if (source.getAvailable() != null) {</span>
+<span class="nc bnc" id="L62" title="All 2 branches missed.">				if (source.getProductDateAvailable() != null) {</span>
+<span class="nc" id="L63">					boolean isAfter = LocalDate.parse(DateUtil.getPresentDate())</span>
+<span class="nc" id="L64">							.isAfter(LocalDate.parse(DateUtil.formatDate(source.getProductDateAvailable())));</span>
+<span class="nc bnc" id="L65" title="All 4 branches missed.">					if (isAfter &amp;&amp; source.getAvailable().booleanValue()) {</span>
+<span class="nc" id="L66">						destination.setAvailable(true);</span>
+					}
+<span class="nc" id="L68">					destination.setDateAvailable(DateUtil.formatDate(source.getProductDateAvailable()));</span>
+<span class="nc" id="L69">				} else {</span>
+<span class="nc" id="L70">					destination.setAvailable(source.getAvailable().booleanValue());</span>
+				}
+			}
+
+<span class="nc bnc" id="L74" title="All 2 branches missed.">			if (source.getAuditSection() != null) {</span>
+<span class="nc bnc" id="L75" title="All 2 branches missed.">				if (source.getAuditSection().getDateCreated() != null) {</span>
+<span class="nc" id="L76">					destination.setCreationDate(DateUtil.formatDate(source.getAuditSection().getDateCreated()));</span>
+				}
+			}
+
+<span class="nc" id="L80">			List&lt;ReadableProductPrice&gt; prices = prices(source, store, language);</span>
+<span class="nc" id="L81">			destination.setPrices(prices);</span>
+
+<span class="nc bnc" id="L83" title="All 2 branches missed.">			if(!StringUtils.isEmpty(source.getSku())) {</span>
+<span class="nc" id="L84">				destination.setSku(source.getSku());</span>
+			} else {
+<span class="nc" id="L86">				destination.setSku(source.getProduct().getSku());</span>
+			}
+
+<span class="nc" id="L89">			FinalPrice price = null;</span>
+			//try {
+<span class="nc" id="L91">				price = pricingService.calculateProductPrice(source);</span>
+<span class="nc" id="L92">				destination.setPrice(price.getStringPrice());</span>
+			//} catch (ServiceException e) {
+			//	throw new ConversionRuntimeException(&quot;Unable to get product price&quot;, e);
+			//}
+
+<span class="nc" id="L97">		} catch (Exception e) {</span>
+<span class="nc" id="L98">			throw new ConversionRuntimeException(&quot;Error while converting Inventory&quot;, e);</span>
+<span class="nc" id="L99">		}</span>
+
+<span class="nc" id="L101">		return destination;</span>
+	}
+
+	private ReadableMerchantStore store(MerchantStore store, Language language) throws ConversionException {
+<span class="nc bnc" id="L105" title="All 2 branches missed.">		if (language == null) {</span>
+<span class="nc" id="L106">			language = store.getDefaultLanguage();</span>
+		}
+		/*
+		 * ReadableMerchantStorePopulator populator = new
+		 * ReadableMerchantStorePopulator();
+		 * populator.setCountryService(countryService);
+		 * populator.setZoneService(zoneService);
+		 */
+<span class="nc" id="L114">		return readableMerchantStorePopulator.populate(store, new ReadableMerchantStore(), store, language);</span>
+	}
+
+	private List&lt;ReadableProductPrice&gt; prices(ProductAvailability source, MerchantStore store, Language language)
+			throws ConversionException {
+
+<span class="nc" id="L120">		ReadableProductPricePopulator populator = null;</span>
+<span class="nc" id="L121">		List&lt;ReadableProductPrice&gt; prices = new ArrayList&lt;ReadableProductPrice&gt;();</span>
+
+<span class="nc bnc" id="L123" title="All 2 branches missed.">		for (ProductPrice price : source.getPrices()) {</span>
+
+<span class="nc" id="L125">			populator = new ReadableProductPricePopulator();</span>
+<span class="nc" id="L126">			populator.setPricingService(pricingService);</span>
+<span class="nc" id="L127">			ReadableProductPrice p = populator.populate(price, new ReadableProductPrice(), store, language);</span>
+<span class="nc" id="L128">			prices.add(p);</span>
+
+<span class="nc" id="L130">		}</span>
+<span class="nc" id="L131">		return prices;</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

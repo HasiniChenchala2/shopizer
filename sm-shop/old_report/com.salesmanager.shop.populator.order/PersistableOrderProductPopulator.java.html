@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PersistableOrderProductPopulator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.populator.order</a> &gt; <span class="el_source">PersistableOrderProductPopulator.java</span></div><h1>PersistableOrderProductPopulator.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.populator.order;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.Validate;
+
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.services.catalog.product.ProductService;
+import com.salesmanager.core.business.services.catalog.product.attribute.ProductAttributeService;
+import com.salesmanager.core.business.services.catalog.product.file.DigitalProductService;
+import com.salesmanager.core.business.utils.AbstractDataPopulator;
+import com.salesmanager.core.model.catalog.product.Product;
+import com.salesmanager.core.model.catalog.product.file.DigitalProduct;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.order.orderproduct.OrderProduct;
+import com.salesmanager.core.model.order.orderproduct.OrderProductAttribute;
+import com.salesmanager.core.model.order.orderproduct.OrderProductDownload;
+import com.salesmanager.core.model.order.orderproduct.OrderProductPrice;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.constants.ApplicationConstants;
+import com.salesmanager.shop.model.catalog.product.attribute.ProductAttribute;
+import com.salesmanager.shop.model.order.PersistableOrderProduct;
+
+<span class="nc" id="L27">public class PersistableOrderProductPopulator extends</span>
+		AbstractDataPopulator&lt;PersistableOrderProduct, OrderProduct&gt; {
+	
+	private ProductService productService;
+	private DigitalProductService digitalProductService;
+	private ProductAttributeService productAttributeService;
+
+
+	public ProductAttributeService getProductAttributeService() {
+<span class="nc" id="L36">		return productAttributeService;</span>
+	}
+
+	public void setProductAttributeService(
+			ProductAttributeService productAttributeService) {
+<span class="nc" id="L41">		this.productAttributeService = productAttributeService;</span>
+<span class="nc" id="L42">	}</span>
+
+	public DigitalProductService getDigitalProductService() {
+<span class="nc" id="L45">		return digitalProductService;</span>
+	}
+
+	public void setDigitalProductService(DigitalProductService digitalProductService) {
+<span class="nc" id="L49">		this.digitalProductService = digitalProductService;</span>
+<span class="nc" id="L50">	}</span>
+
+	/**
+	 * Converts a ShoppingCartItem carried in the ShoppingCart to an OrderProduct
+	 * that will be saved in the system
+	 */
+	@Override
+	public OrderProduct populate(PersistableOrderProduct source, OrderProduct target,
+			MerchantStore store, Language language) throws ConversionException {
+		
+<span class="nc" id="L60">		Validate.notNull(productService,&quot;productService must be set&quot;);</span>
+<span class="nc" id="L61">		Validate.notNull(digitalProductService,&quot;digitalProductService must be set&quot;);</span>
+<span class="nc" id="L62">		Validate.notNull(productAttributeService,&quot;productAttributeService must be set&quot;);</span>
+
+		
+		try {
+<span class="nc" id="L66">			Product modelProduct = productService.getById(source.getProduct().getId());</span>
+<span class="nc bnc" id="L67" title="All 2 branches missed.">			if(modelProduct==null) {</span>
+<span class="nc" id="L68">				throw new ConversionException(&quot;Cannot get product with id (productId) &quot; + source.getProduct().getId());</span>
+			}
+			
+<span class="nc bnc" id="L71" title="All 2 branches missed.">			if(modelProduct.getMerchantStore().getId().intValue()!=store.getId().intValue()) {</span>
+<span class="nc" id="L72">				throw new ConversionException(&quot;Invalid product id &quot; + source.getProduct().getId());</span>
+			}
+
+<span class="nc" id="L75">			DigitalProduct digitalProduct = digitalProductService.getByProduct(store, modelProduct);</span>
+			
+<span class="nc bnc" id="L77" title="All 2 branches missed.">			if(digitalProduct!=null) {</span>
+<span class="nc" id="L78">				OrderProductDownload orderProductDownload = new OrderProductDownload();	</span>
+<span class="nc" id="L79">				orderProductDownload.setOrderProductFilename(digitalProduct.getProductFileName());</span>
+<span class="nc" id="L80">				orderProductDownload.setOrderProduct(target);</span>
+<span class="nc" id="L81">				orderProductDownload.setDownloadCount(0);</span>
+<span class="nc" id="L82">				orderProductDownload.setMaxdays(ApplicationConstants.MAX_DOWNLOAD_DAYS);</span>
+<span class="nc" id="L83">				target.getDownloads().add(orderProductDownload);</span>
+			}
+
+<span class="nc" id="L86">			target.setOneTimeCharge(source.getPrice());	</span>
+<span class="nc" id="L87">			target.setProductName(source.getProduct().getDescription().getName());</span>
+<span class="nc" id="L88">			target.setProductQuantity(source.getOrderedQuantity());</span>
+<span class="nc" id="L89">			target.setSku(source.getProduct().getSku());</span>
+			
+<span class="nc" id="L91">			OrderProductPrice orderProductPrice = new OrderProductPrice();</span>
+<span class="nc" id="L92">			orderProductPrice.setDefaultPrice(true);</span>
+<span class="nc" id="L93">			orderProductPrice.setProductPrice(source.getPrice());</span>
+<span class="nc" id="L94">			orderProductPrice.setOrderProduct(target);</span>
+			
+
+			
+<span class="nc" id="L98">			Set&lt;OrderProductPrice&gt; prices = new HashSet&lt;OrderProductPrice&gt;();</span>
+<span class="nc" id="L99">			prices.add(orderProductPrice);</span>
+
+			/** DO NOT SUPPORT MUTIPLE PRICES **/
+/*			//Other prices
+			List&lt;FinalPrice&gt; otherPrices = finalPrice.getAdditionalPrices();
+			if(otherPrices!=null) {
+				for(FinalPrice otherPrice : otherPrices) {
+					OrderProductPrice other = orderProductPrice(otherPrice);
+					other.setOrderProduct(target);
+					prices.add(other);
+				}
+			}*/
+			
+<span class="nc" id="L112">			target.setPrices(prices);</span>
+			
+			//OrderProductAttribute
+<span class="nc" id="L115">			List&lt;ProductAttribute&gt; attributeItems = source.getAttributes();</span>
+<span class="nc bnc" id="L116" title="All 2 branches missed.">			if(!CollectionUtils.isEmpty(attributeItems)) {</span>
+<span class="nc" id="L117">				Set&lt;OrderProductAttribute&gt; attributes = new HashSet&lt;OrderProductAttribute&gt;();</span>
+<span class="nc bnc" id="L118" title="All 2 branches missed.">				for(ProductAttribute attribute : attributeItems) {</span>
+<span class="nc" id="L119">					OrderProductAttribute orderProductAttribute = new OrderProductAttribute();</span>
+<span class="nc" id="L120">					orderProductAttribute.setOrderProduct(target);</span>
+<span class="nc" id="L121">					Long id = attribute.getId();</span>
+<span class="nc" id="L122">					com.salesmanager.core.model.catalog.product.attribute.ProductAttribute attr = productAttributeService.getById(id);</span>
+<span class="nc bnc" id="L123" title="All 2 branches missed.">					if(attr==null) {</span>
+<span class="nc" id="L124">						throw new ConversionException(&quot;Attribute id &quot; + id + &quot; does not exists&quot;);</span>
+					}
+					
+<span class="nc bnc" id="L127" title="All 2 branches missed.">					if(attr.getProduct().getMerchantStore().getId().intValue()!=store.getId().intValue()) {</span>
+<span class="nc" id="L128">						throw new ConversionException(&quot;Attribute id &quot; + id + &quot; invalid for this store&quot;);</span>
+					}
+					
+<span class="nc" id="L131">					orderProductAttribute.setProductAttributeIsFree(attr.getProductAttributeIsFree());</span>
+<span class="nc" id="L132">					orderProductAttribute.setProductAttributeName(attr.getProductOption().getDescriptionsSettoList().get(0).getName());</span>
+<span class="nc" id="L133">					orderProductAttribute.setProductAttributeValueName(attr.getProductOptionValue().getDescriptionsSettoList().get(0).getName());</span>
+<span class="nc" id="L134">					orderProductAttribute.setProductAttributePrice(attr.getProductAttributePrice());</span>
+<span class="nc" id="L135">					orderProductAttribute.setProductAttributeWeight(attr.getProductAttributeWeight());</span>
+<span class="nc" id="L136">					orderProductAttribute.setProductOptionId(attr.getProductOption().getId());</span>
+<span class="nc" id="L137">					orderProductAttribute.setProductOptionValueId(attr.getProductOptionValue().getId());</span>
+<span class="nc" id="L138">					attributes.add(orderProductAttribute);</span>
+<span class="nc" id="L139">				}</span>
+<span class="nc" id="L140">				target.setOrderAttributes(attributes);</span>
+			}
+
+			
+<span class="nc" id="L144">		} catch (Exception e) {</span>
+<span class="nc" id="L145">			throw new ConversionException(e);</span>
+<span class="nc" id="L146">		}</span>
+		
+		
+<span class="nc" id="L149">		return target;</span>
+	}
+
+	@Override
+	protected OrderProduct createTarget() {
+<span class="nc" id="L154">		return null;</span>
+	}
+
+	public void setProductService(ProductService productService) {
+<span class="nc" id="L158">		this.productService = productService;</span>
+<span class="nc" id="L159">	}</span>
+
+	public ProductService getProductService() {
+<span class="nc" id="L162">		return productService;</span>
+	}
+	
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

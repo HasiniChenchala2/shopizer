@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OrderProductPopulator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.populator.order</a> &gt; <span class="el_source">OrderProductPopulator.java</span></div><h1>OrderProductPopulator.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.populator.order;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.Validate;
+
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.services.catalog.product.ProductService;
+import com.salesmanager.core.business.services.catalog.product.attribute.ProductAttributeService;
+import com.salesmanager.core.business.services.catalog.product.file.DigitalProductService;
+import com.salesmanager.core.business.utils.AbstractDataPopulator;
+import com.salesmanager.core.model.catalog.product.Product;
+import com.salesmanager.core.model.catalog.product.attribute.ProductAttribute;
+import com.salesmanager.core.model.catalog.product.file.DigitalProduct;
+import com.salesmanager.core.model.catalog.product.price.FinalPrice;
+import com.salesmanager.core.model.catalog.product.price.ProductPrice;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.order.orderproduct.OrderProduct;
+import com.salesmanager.core.model.order.orderproduct.OrderProductAttribute;
+import com.salesmanager.core.model.order.orderproduct.OrderProductDownload;
+import com.salesmanager.core.model.order.orderproduct.OrderProductPrice;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.core.model.shoppingcart.ShoppingCartAttributeItem;
+import com.salesmanager.core.model.shoppingcart.ShoppingCartItem;
+import com.salesmanager.shop.constants.ApplicationConstants;
+
+<span class="nc" id="L30">public class OrderProductPopulator extends</span>
+		AbstractDataPopulator&lt;ShoppingCartItem, OrderProduct&gt; {
+	
+	private ProductService productService;
+	private DigitalProductService digitalProductService;
+	private ProductAttributeService productAttributeService;
+
+
+	public ProductAttributeService getProductAttributeService() {
+<span class="nc" id="L39">		return productAttributeService;</span>
+	}
+
+	public void setProductAttributeService(
+			ProductAttributeService productAttributeService) {
+<span class="nc" id="L44">		this.productAttributeService = productAttributeService;</span>
+<span class="nc" id="L45">	}</span>
+
+	public DigitalProductService getDigitalProductService() {
+<span class="nc" id="L48">		return digitalProductService;</span>
+	}
+
+	public void setDigitalProductService(DigitalProductService digitalProductService) {
+<span class="nc" id="L52">		this.digitalProductService = digitalProductService;</span>
+<span class="nc" id="L53">	}</span>
+
+	/**
+	 * Converts a ShoppingCartItem carried in the ShoppingCart to an OrderProduct
+	 * that will be saved in the system
+	 */
+	@Override
+	public OrderProduct populate(ShoppingCartItem source, OrderProduct target,
+			MerchantStore store, Language language) throws ConversionException {
+		
+<span class="nc" id="L63">		Validate.notNull(productService,&quot;productService must be set&quot;);</span>
+<span class="nc" id="L64">		Validate.notNull(digitalProductService,&quot;digitalProductService must be set&quot;);</span>
+<span class="nc" id="L65">		Validate.notNull(productAttributeService,&quot;productAttributeService must be set&quot;);</span>
+
+		
+		try {
+<span class="nc" id="L69">			Product modelProduct = productService.getBySku(source.getSku(), store, language);</span>
+<span class="nc bnc" id="L70" title="All 2 branches missed.">			if(modelProduct==null) {</span>
+<span class="nc" id="L71">				throw new ConversionException(&quot;Cannot get product with sku &quot; + source.getSku());</span>
+			}
+			
+<span class="nc bnc" id="L74" title="All 2 branches missed.">			if(modelProduct.getMerchantStore().getId().intValue()!=store.getId().intValue()) {</span>
+<span class="nc" id="L75">				throw new ConversionException(&quot;Invalid product with sku &quot; + source.getSku());</span>
+			}
+
+<span class="nc" id="L78">			DigitalProduct digitalProduct = digitalProductService.getByProduct(store, modelProduct);</span>
+			
+<span class="nc bnc" id="L80" title="All 2 branches missed.">			if(digitalProduct!=null) {</span>
+<span class="nc" id="L81">				OrderProductDownload orderProductDownload = new OrderProductDownload();	</span>
+<span class="nc" id="L82">				orderProductDownload.setOrderProductFilename(digitalProduct.getProductFileName());</span>
+<span class="nc" id="L83">				orderProductDownload.setOrderProduct(target);</span>
+<span class="nc" id="L84">				orderProductDownload.setDownloadCount(0);</span>
+<span class="nc" id="L85">				orderProductDownload.setMaxdays(ApplicationConstants.MAX_DOWNLOAD_DAYS);</span>
+<span class="nc" id="L86">				target.getDownloads().add(orderProductDownload);</span>
+			}
+
+<span class="nc" id="L89">			target.setOneTimeCharge(source.getItemPrice());	</span>
+<span class="nc" id="L90">			target.setProductName(source.getProduct().getDescriptions().iterator().next().getName());</span>
+<span class="nc" id="L91">			target.setProductQuantity(source.getQuantity());</span>
+<span class="nc" id="L92">			target.setSku(source.getProduct().getSku());</span>
+			
+<span class="nc" id="L94">			FinalPrice finalPrice = source.getFinalPrice();</span>
+<span class="nc bnc" id="L95" title="All 2 branches missed.">			if(finalPrice==null) {</span>
+<span class="nc" id="L96">				throw new ConversionException(&quot;Object final price not populated in shoppingCartItem (source)&quot;);</span>
+			}
+			//Default price
+<span class="nc" id="L99">			OrderProductPrice orderProductPrice = orderProductPrice(finalPrice);</span>
+<span class="nc" id="L100">			orderProductPrice.setOrderProduct(target);</span>
+			
+<span class="nc" id="L102">			Set&lt;OrderProductPrice&gt; prices = new HashSet&lt;OrderProductPrice&gt;();</span>
+<span class="nc" id="L103">			prices.add(orderProductPrice);</span>
+
+			//Other prices
+<span class="nc" id="L106">			List&lt;FinalPrice&gt; otherPrices = finalPrice.getAdditionalPrices();</span>
+<span class="nc bnc" id="L107" title="All 2 branches missed.">			if(otherPrices!=null) {</span>
+<span class="nc bnc" id="L108" title="All 2 branches missed.">				for(FinalPrice otherPrice : otherPrices) {</span>
+<span class="nc" id="L109">					OrderProductPrice other = orderProductPrice(otherPrice);</span>
+<span class="nc" id="L110">					other.setOrderProduct(target);</span>
+<span class="nc" id="L111">					prices.add(other);</span>
+<span class="nc" id="L112">				}</span>
+			}
+			
+<span class="nc" id="L115">			target.setPrices(prices);</span>
+			
+			//OrderProductAttribute
+<span class="nc" id="L118">			Set&lt;ShoppingCartAttributeItem&gt; attributeItems = source.getAttributes();</span>
+<span class="nc bnc" id="L119" title="All 2 branches missed.">			if(!CollectionUtils.isEmpty(attributeItems)) {</span>
+<span class="nc" id="L120">				Set&lt;OrderProductAttribute&gt; attributes = new HashSet&lt;OrderProductAttribute&gt;();</span>
+<span class="nc bnc" id="L121" title="All 2 branches missed.">				for(ShoppingCartAttributeItem attribute : attributeItems) {</span>
+<span class="nc" id="L122">					OrderProductAttribute orderProductAttribute = new OrderProductAttribute();</span>
+<span class="nc" id="L123">					orderProductAttribute.setOrderProduct(target);</span>
+<span class="nc" id="L124">					Long id = attribute.getProductAttributeId();</span>
+<span class="nc" id="L125">					ProductAttribute attr = productAttributeService.getById(id);</span>
+<span class="nc bnc" id="L126" title="All 2 branches missed.">					if(attr==null) {</span>
+<span class="nc" id="L127">						throw new ConversionException(&quot;Attribute id &quot; + id + &quot; does not exists&quot;);</span>
+					}
+					
+<span class="nc bnc" id="L130" title="All 2 branches missed.">					if(attr.getProduct().getMerchantStore().getId().intValue()!=store.getId().intValue()) {</span>
+<span class="nc" id="L131">						throw new ConversionException(&quot;Attribute id &quot; + id + &quot; invalid for this store&quot;);</span>
+					}
+					
+<span class="nc" id="L134">					orderProductAttribute.setProductAttributeIsFree(attr.getProductAttributeIsFree());</span>
+<span class="nc" id="L135">					orderProductAttribute.setProductAttributeName(attr.getProductOption().getDescriptionsSettoList().get(0).getName());</span>
+<span class="nc" id="L136">					orderProductAttribute.setProductAttributeValueName(attr.getProductOptionValue().getDescriptionsSettoList().get(0).getName());</span>
+<span class="nc" id="L137">					orderProductAttribute.setProductAttributePrice(attr.getProductAttributePrice());</span>
+<span class="nc" id="L138">					orderProductAttribute.setProductAttributeWeight(attr.getProductAttributeWeight());</span>
+<span class="nc" id="L139">					orderProductAttribute.setProductOptionId(attr.getProductOption().getId());</span>
+<span class="nc" id="L140">					orderProductAttribute.setProductOptionValueId(attr.getProductOptionValue().getId());</span>
+<span class="nc" id="L141">					attributes.add(orderProductAttribute);</span>
+<span class="nc" id="L142">				}</span>
+<span class="nc" id="L143">				target.setOrderAttributes(attributes);</span>
+			}
+
+			
+<span class="nc" id="L147">		} catch (Exception e) {</span>
+<span class="nc" id="L148">			throw new ConversionException(e);</span>
+<span class="nc" id="L149">		}</span>
+		
+		
+<span class="nc" id="L152">		return target;</span>
+	}
+
+	@Override
+	protected OrderProduct createTarget() {
+<span class="nc" id="L157">		return null;</span>
+	}
+
+	public void setProductService(ProductService productService) {
+<span class="nc" id="L161">		this.productService = productService;</span>
+<span class="nc" id="L162">	}</span>
+
+	public ProductService getProductService() {
+<span class="nc" id="L165">		return productService;</span>
+	}
+	
+	private OrderProductPrice orderProductPrice(FinalPrice price) {
+		
+<span class="nc" id="L170">		OrderProductPrice orderProductPrice = new OrderProductPrice();</span>
+		
+<span class="nc" id="L172">		ProductPrice productPrice = price.getProductPrice();</span>
+		
+<span class="nc" id="L174">		orderProductPrice.setDefaultPrice(productPrice.isDefaultPrice());</span>
+
+<span class="nc" id="L176">		orderProductPrice.setProductPrice(price.getFinalPrice());</span>
+<span class="nc" id="L177">		orderProductPrice.setProductPriceCode(productPrice.getCode());</span>
+<span class="nc bnc" id="L178" title="All 4 branches missed.">		if(productPrice.getDescriptions()!=null &amp;&amp; productPrice.getDescriptions().size()&gt;0) {</span>
+<span class="nc" id="L179">			orderProductPrice.setProductPriceName(productPrice.getDescriptions().iterator().next().getName());</span>
+		}
+<span class="nc bnc" id="L181" title="All 2 branches missed.">		if(price.isDiscounted()) {</span>
+<span class="nc" id="L182">			orderProductPrice.setProductPriceSpecial(productPrice.getProductPriceSpecialAmount());</span>
+<span class="nc" id="L183">			orderProductPrice.setProductPriceSpecialStartDate(productPrice.getProductPriceSpecialStartDate());</span>
+<span class="nc" id="L184">			orderProductPrice.setProductPriceSpecialEndDate(productPrice.getProductPriceSpecialEndDate());</span>
+		}
+		
+<span class="nc" id="L187">		return orderProductPrice;</span>
+	}
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

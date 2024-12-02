@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CustomerEntityPopulator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.populator.customer</a> &gt; <span class="el_source">CustomerEntityPopulator.java</span></div><h1>CustomerEntityPopulator.java</h1><pre class="source lang-java linenums">/**
+ *
+ */
+package com.salesmanager.shop.populator.customer;
+
+import org.apache.commons.lang3.StringUtils;
+
+import com.salesmanager.core.business.exception.ConversionException;
+import com.salesmanager.core.business.utils.AbstractDataPopulator;
+import com.salesmanager.core.model.customer.Customer;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.model.customer.CustomerEntity;
+import com.salesmanager.shop.model.customer.address.Address;
+
+
+
+/**
+ * &lt;p&gt;
+ * CustomerEntityPopulator will help to populate {@link CustomerEntity} from {@link Customer} CustomerEntity will be
+ * used to show data on the UI side.
+ * &lt;/p&gt;
+ *
+ * @author Umesh Awasthi
+ * @version 1.2
+ */
+<span class="nc" id="L27">public class CustomerEntityPopulator</span>
+    extends AbstractDataPopulator&lt;Customer, CustomerEntity&gt;
+{
+
+    @Override
+    public CustomerEntity populate( final Customer source, final CustomerEntity target,
+                                    final MerchantStore merchantStore, final Language language )
+        throws ConversionException
+    {
+        try
+        {
+
+            
+<span class="nc" id="L40">            target.setId( source.getId() );</span>
+<span class="nc bnc" id="L41" title="All 2 branches missed.">            if(StringUtils.isNotBlank( source.getEmailAddress() )){</span>
+<span class="nc" id="L42">                target.setEmailAddress( source.getEmailAddress() );</span>
+            }
+            
+          
+
+<span class="nc bnc" id="L47" title="All 2 branches missed.">            if ( source.getBilling() != null )</span>
+            {
+<span class="nc" id="L49">                Address address = new Address();</span>
+<span class="nc" id="L50">                address.setCity( source.getBilling().getCity() );</span>
+<span class="nc" id="L51">                address.setAddress(source.getBilling().getAddress());</span>
+<span class="nc" id="L52">                address.setCompany( source.getBilling().getCompany() );</span>
+<span class="nc" id="L53">                address.setFirstName( source.getBilling().getFirstName() );</span>
+<span class="nc" id="L54">                address.setLastName( source.getBilling().getLastName() );</span>
+<span class="nc" id="L55">                address.setPostalCode( source.getBilling().getPostalCode() );</span>
+<span class="nc" id="L56">                address.setPhone( source.getBilling().getTelephone() );</span>
+<span class="nc bnc" id="L57" title="All 2 branches missed.">                if ( source.getBilling().getCountry() != null )</span>
+                {
+<span class="nc" id="L59">                    address.setCountry( source.getBilling().getCountry().getIsoCode() );</span>
+                }
+<span class="nc bnc" id="L61" title="All 2 branches missed.">                if ( source.getBilling().getZone() != null )</span>
+                {
+<span class="nc" id="L63">                    address.setZone( source.getBilling().getZone().getCode() );</span>
+                }
+                
+<span class="nc" id="L66">                address.setStateProvince(source.getBilling().getState());</span>
+
+<span class="nc" id="L68">                target.setBilling( address );</span>
+            }
+            
+<span class="nc bnc" id="L71" title="All 2 branches missed.">    		if(source.getCustomerReviewAvg() != null) {</span>
+<span class="nc" id="L72">    			target.setRating(source.getCustomerReviewAvg().doubleValue());</span>
+    		}
+    		
+<span class="nc bnc" id="L75" title="All 2 branches missed.">    		if(source.getCustomerReviewCount() != null) {</span>
+<span class="nc" id="L76">    			target.setRatingCount(source.getCustomerReviewCount().intValue());</span>
+    		}
+
+<span class="nc bnc" id="L79" title="All 2 branches missed.">            if ( source.getDelivery() != null )</span>
+            {
+<span class="nc" id="L81">                Address address = new Address();</span>
+<span class="nc" id="L82">                address.setCity( source.getDelivery().getCity() );</span>
+<span class="nc" id="L83">                address.setAddress(source.getDelivery().getAddress());</span>
+<span class="nc" id="L84">                address.setCompany( source.getDelivery().getCompany() );</span>
+<span class="nc" id="L85">                address.setFirstName( source.getDelivery().getFirstName() );</span>
+<span class="nc" id="L86">                address.setLastName( source.getDelivery().getLastName() );</span>
+<span class="nc" id="L87">                address.setPostalCode( source.getDelivery().getPostalCode() );</span>
+<span class="nc" id="L88">                address.setPhone( source.getDelivery().getTelephone() );</span>
+<span class="nc bnc" id="L89" title="All 2 branches missed.">                if ( source.getDelivery().getCountry() != null )</span>
+                {
+<span class="nc" id="L91">                    address.setCountry( source.getDelivery().getCountry().getIsoCode() );</span>
+                }
+<span class="nc bnc" id="L93" title="All 2 branches missed.">                if ( source.getDelivery().getZone() != null )</span>
+                {
+<span class="nc" id="L95">                    address.setZone( source.getDelivery().getZone().getCode() );</span>
+                }
+                
+<span class="nc" id="L98">                address.setStateProvince(source.getDelivery().getState());</span>
+
+<span class="nc" id="L100">                target.setDelivery( address );</span>
+            }
+
+        }
+<span class="nc" id="L104">        catch ( Exception e )</span>
+        {
+<span class="nc" id="L106">            throw new ConversionException( e );</span>
+<span class="nc" id="L107">        }</span>
+
+<span class="nc" id="L109">        return target;</span>
+    }
+
+    @Override
+    protected CustomerEntity createTarget()
+    {
+<span class="nc" id="L115">        return new CustomerEntity();</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

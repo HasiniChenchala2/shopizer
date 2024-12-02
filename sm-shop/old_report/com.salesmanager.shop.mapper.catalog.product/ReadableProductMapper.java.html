@@ -1,0 +1,692 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReadableProductMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sm-shop</a> &gt; <a href="index.source.html" class="el_package">com.salesmanager.shop.mapper.catalog.product</a> &gt; <span class="el_source">ReadableProductMapper.java</span></div><h1>ReadableProductMapper.java</h1><pre class="source lang-java linenums">package com.salesmanager.shop.mapper.catalog.product;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Validate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Component;
+
+import com.salesmanager.core.business.exception.ServiceException;
+import com.salesmanager.core.business.services.catalog.pricing.PricingService;
+import com.salesmanager.core.model.catalog.category.Category;
+import com.salesmanager.core.model.catalog.product.Product;
+import com.salesmanager.core.model.catalog.product.attribute.ProductAttribute;
+import com.salesmanager.core.model.catalog.product.attribute.ProductOption;
+import com.salesmanager.core.model.catalog.product.attribute.ProductOptionDescription;
+import com.salesmanager.core.model.catalog.product.attribute.ProductOptionValue;
+import com.salesmanager.core.model.catalog.product.attribute.ProductOptionValueDescription;
+import com.salesmanager.core.model.catalog.product.availability.ProductAvailability;
+import com.salesmanager.core.model.catalog.product.description.ProductDescription;
+import com.salesmanager.core.model.catalog.product.image.ProductImage;
+import com.salesmanager.core.model.catalog.product.price.FinalPrice;
+import com.salesmanager.core.model.catalog.product.price.ProductPrice;
+import com.salesmanager.core.model.catalog.product.price.ProductPriceDescription;
+import com.salesmanager.core.model.catalog.product.variant.ProductVariant;
+import com.salesmanager.core.model.merchant.MerchantStore;
+import com.salesmanager.core.model.reference.language.Language;
+import com.salesmanager.shop.mapper.Mapper;
+import com.salesmanager.shop.mapper.catalog.ReadableCategoryMapper;
+import com.salesmanager.shop.mapper.catalog.ReadableManufacturerMapper;
+import com.salesmanager.shop.mapper.catalog.ReadableProductTypeMapper;
+import com.salesmanager.shop.model.catalog.category.ReadableCategory;
+import com.salesmanager.shop.model.catalog.manufacturer.ReadableManufacturer;
+import com.salesmanager.shop.model.catalog.product.ReadableImage;
+import com.salesmanager.shop.model.catalog.product.ReadableProduct;
+import com.salesmanager.shop.model.catalog.product.ReadableProductPrice;
+import com.salesmanager.shop.model.catalog.product.attribute.ReadableProductAttribute;
+import com.salesmanager.shop.model.catalog.product.attribute.ReadableProductAttributeValue;
+import com.salesmanager.shop.model.catalog.product.attribute.ReadableProductOption;
+import com.salesmanager.shop.model.catalog.product.attribute.ReadableProductProperty;
+import com.salesmanager.shop.model.catalog.product.attribute.ReadableProductPropertyValue;
+import com.salesmanager.shop.model.catalog.product.attribute.api.ReadableProductOptionValue;
+import com.salesmanager.shop.model.catalog.product.product.ProductSpecification;
+import com.salesmanager.shop.model.catalog.product.product.variant.ReadableProductVariant;
+import com.salesmanager.shop.model.catalog.product.type.ReadableProductType;
+import com.salesmanager.shop.model.references.DimensionUnitOfMeasure;
+import com.salesmanager.shop.model.references.WeightUnitOfMeasure;
+import com.salesmanager.shop.store.api.exception.ConversionRuntimeException;
+import com.salesmanager.shop.utils.DateUtil;
+import com.salesmanager.shop.utils.ImageFilePath;
+
+/**
+ * Works for product v2 model
+ * 
+ * @author carlsamson
+ *
+ */
+@Component
+<span class="fc" id="L66">public class ReadableProductMapper implements Mapper&lt;Product, ReadableProduct&gt; {</span>
+
+	// uses code that is similar to ProductDefinition
+	@Autowired
+	@Qualifier(&quot;img&quot;)
+	private ImageFilePath imageUtils;
+
+	@Autowired
+	private ReadableCategoryMapper readableCategoryMapper;
+
+	@Autowired
+	private ReadableProductTypeMapper readableProductTypeMapper;
+
+	@Autowired
+	private ReadableProductVariantMapper readableProductVariantMapper;
+
+	@Autowired
+	private ReadableManufacturerMapper readableManufacturerMapper;
+
+	@Autowired
+	private PricingService pricingService;
+
+	@Override
+	public ReadableProduct convert(Product source, MerchantStore store, Language language) {
+<span class="fc" id="L90">		ReadableProduct product = new ReadableProduct();</span>
+<span class="fc" id="L91">		return this.merge(source, product, store, language);</span>
+	}
+
+	@Override
+	public ReadableProduct merge(Product source, ReadableProduct destination, MerchantStore store, Language language) {
+
+<span class="fc" id="L97">		Validate.notNull(source, &quot;Product cannot be null&quot;);</span>
+<span class="fc" id="L98">		Validate.notNull(destination, &quot;Product destination cannot be null&quot;);</span>
+
+
+		// read only product values
+		// will contain options
+<span class="fc" id="L103">		TreeMap&lt;Long, ReadableProductOption&gt; selectableOptions = new TreeMap&lt;Long, ReadableProductOption&gt;();</span>
+
+<span class="fc" id="L105">		destination.setSku(source.getSku());</span>
+<span class="fc" id="L106">		destination.setRefSku(source.getRefSku());</span>
+<span class="fc" id="L107">		destination.setId(source.getId());</span>
+<span class="fc" id="L108">		destination.setDateAvailable(DateUtil.formatDate(source.getDateAvailable()));</span>
+
+<span class="fc" id="L110">		ProductDescription description = null;</span>
+<span class="pc bpc" id="L111" title="2 of 4 branches missed.">		if (source.getDescriptions() != null &amp;&amp; source.getDescriptions().size() &gt; 0) {</span>
+<span class="pc bpc" id="L112" title="1 of 2 branches missed.">			for (ProductDescription desc : source.getDescriptions()) {</span>
+<span class="pc bpc" id="L113" title="2 of 4 branches missed.">				if (language != null &amp;&amp; desc.getLanguage() != null</span>
+<span class="pc bpc" id="L114" title="1 of 2 branches missed.">						&amp;&amp; desc.getLanguage().getId().intValue() == language.getId().intValue()) {</span>
+<span class="fc" id="L115">					description = desc;</span>
+<span class="fc" id="L116">					break;</span>
+				}
+<span class="nc" id="L118">			}</span>
+		}
+<span class="fc" id="L120">		destination.setId(source.getId());</span>
+<span class="fc" id="L121">		destination.setAvailable(source.isAvailable());</span>
+<span class="fc" id="L122">		destination.setProductShipeable(source.isProductShipeable());</span>
+
+<span class="fc" id="L124">		destination.setPreOrder(source.isPreOrder());</span>
+<span class="fc" id="L125">		destination.setRefSku(source.getRefSku());</span>
+<span class="fc" id="L126">		destination.setSortOrder(source.getSortOrder());</span>
+
+<span class="pc bpc" id="L128" title="1 of 2 branches missed.">		if (source.getType() != null) {</span>
+<span class="nc" id="L129">			ReadableProductType readableType = readableProductTypeMapper.convert(source.getType(), store, language);</span>
+<span class="nc" id="L130">			destination.setType(readableType);</span>
+		}
+
+<span class="pc bpc" id="L133" title="1 of 2 branches missed.">		if (source.getDateAvailable() != null) {</span>
+<span class="fc" id="L134">			destination.setDateAvailable(DateUtil.formatDate(source.getDateAvailable()));</span>
+		}
+
+<span class="pc bpc" id="L137" title="1 of 2 branches missed.">		if (source.getAuditSection() != null) {</span>
+<span class="fc" id="L138">			destination.setCreationDate(DateUtil.formatDate(source.getAuditSection().getDateCreated()));</span>
+		}
+
+<span class="fc" id="L141">		destination.setProductVirtual(source.getProductVirtual());</span>
+
+<span class="pc bpc" id="L143" title="1 of 2 branches missed.">		if (source.getProductReviewCount() != null) {</span>
+<span class="fc" id="L144">			destination.setRatingCount(source.getProductReviewCount().intValue());</span>
+		}
+
+<span class="pc bpc" id="L147" title="1 of 2 branches missed.">		if (source.getManufacturer() != null) {</span>
+<span class="fc" id="L148">			ReadableManufacturer manufacturer = readableManufacturerMapper.convert(source.getManufacturer(), store,</span>
+					language);
+<span class="fc" id="L150">			destination.setManufacturer(manufacturer);</span>
+		}
+
+		// images
+<span class="fc" id="L154">		Set&lt;ProductImage&gt; images = source.getImages();</span>
+<span class="pc bpc" id="L155" title="1 of 2 branches missed.">		if (CollectionUtils.isNotEmpty(images)) {</span>
+
+<span class="nc" id="L157">			List&lt;ReadableImage&gt; imageList = images.stream().map(i -&gt; this.convertImage(source, i, store))</span>
+<span class="nc" id="L158">					.collect(Collectors.toList());</span>
+<span class="nc" id="L159">			destination.setImages(imageList);</span>
+		}
+
+<span class="pc bpc" id="L162" title="1 of 2 branches missed.">		if (!CollectionUtils.isEmpty(source.getAttributes())) {</span>
+
+<span class="nc" id="L164">			Set&lt;ProductAttribute&gt; attributes = source.getAttributes();</span>
+
+<span class="nc bnc" id="L166" title="All 2 branches missed.">			if (!CollectionUtils.isEmpty(attributes)) {</span>
+
+<span class="nc bnc" id="L168" title="All 2 branches missed.">				for (ProductAttribute attribute : attributes) {</span>
+<span class="nc" id="L169">					ReadableProductOption opt = null;</span>
+<span class="nc" id="L170">					ReadableProductAttribute attr = null;</span>
+<span class="nc" id="L171">					ReadableProductProperty property = null;</span>
+<span class="nc" id="L172">					ReadableProductPropertyValue propertyValue = null;</span>
+<span class="nc" id="L173">					ReadableProductAttributeValue attrValue = new ReadableProductAttributeValue();</span>
+
+<span class="nc" id="L175">					ProductOptionValue optionValue = attribute.getProductOptionValue();</span>
+
+					// we need to set readonly attributes only
+<span class="nc bnc" id="L178" title="All 2 branches missed.">					if (attribute.getAttributeDisplayOnly()) {// read only attribute = property</span>
+
+<span class="nc" id="L180">						property = createProperty(attribute, language);</span>
+
+<span class="nc" id="L182">						ReadableProductOption readableOption = new ReadableProductOption(); // that is the property</span>
+<span class="nc" id="L183">						ReadableProductPropertyValue readableOptionValue = new ReadableProductPropertyValue();</span>
+
+<span class="nc" id="L185">						readableOption.setCode(attribute.getProductOption().getCode());</span>
+<span class="nc" id="L186">						readableOption.setId(attribute.getProductOption().getId());</span>
+
+<span class="nc" id="L188">						Set&lt;ProductOptionDescription&gt; podescriptions = attribute.getProductOption().getDescriptions();</span>
+<span class="nc bnc" id="L189" title="All 4 branches missed.">						if (podescriptions != null &amp;&amp; podescriptions.size() &gt; 0) {</span>
+<span class="nc bnc" id="L190" title="All 2 branches missed.">							for (ProductOptionDescription optionDescription : podescriptions) {</span>
+<span class="nc bnc" id="L191" title="All 2 branches missed.">								if (optionDescription.getLanguage().getCode().equals(language.getCode())) {</span>
+<span class="nc" id="L192">									readableOption.setName(optionDescription.getName());</span>
+								}
+<span class="nc" id="L194">							}</span>
+						}
+
+<span class="nc" id="L197">						property.setProperty(readableOption);</span>
+
+<span class="nc" id="L199">						Set&lt;ProductOptionValueDescription&gt; povdescriptions = attribute.getProductOptionValue()</span>
+<span class="nc" id="L200">								.getDescriptions();</span>
+<span class="nc" id="L201">						readableOptionValue.setId(attribute.getProductOptionValue().getId());</span>
+<span class="nc" id="L202">						readableOptionValue.setCode(optionValue.getCode());</span>
+<span class="nc bnc" id="L203" title="All 4 branches missed.">						if (povdescriptions != null &amp;&amp; povdescriptions.size() &gt; 0) {</span>
+<span class="nc bnc" id="L204" title="All 2 branches missed.">							for (ProductOptionValueDescription optionValueDescription : povdescriptions) {</span>
+<span class="nc bnc" id="L205" title="All 2 branches missed.">								if (optionValueDescription.getLanguage().getCode().equals(language.getCode())) {</span>
+<span class="nc" id="L206">									readableOptionValue.setName(optionValueDescription.getName());</span>
+								}
+<span class="nc" id="L208">							}</span>
+						}
+
+<span class="nc" id="L211">						property.setPropertyValue(readableOptionValue);</span>
+<span class="nc" id="L212">						destination.getProperties().add(property);</span>
+
+<span class="nc" id="L214">					} else {// selectable option</span>
+
+						/**
+						 * Returns a list of ReadableProductOptions
+						 * 
+						 * name lang type code List ReadableProductOptionValueEntity name description
+						 * image order default
+						 */
+
+<span class="nc bnc" id="L223" title="All 2 branches missed.">						if (selectableOptions == null) {</span>
+<span class="nc" id="L224">							selectableOptions = new TreeMap&lt;Long, ReadableProductOption&gt;();</span>
+						}
+<span class="nc" id="L226">						opt = selectableOptions.get(attribute.getProductOption().getId());</span>
+<span class="nc bnc" id="L227" title="All 2 branches missed.">						if (opt == null) {</span>
+<span class="nc" id="L228">							opt = createOption(attribute.getProductOption(), language);</span>
+						}
+<span class="nc bnc" id="L230" title="All 2 branches missed.">						if (opt != null) {</span>
+<span class="nc" id="L231">							selectableOptions.put(attribute.getProductOption().getId(), opt);</span>
+						}
+
+<span class="nc" id="L234">						ReadableProductOptionValue optValue = new ReadableProductOptionValue();</span>
+
+<span class="nc" id="L236">						optValue.setDefaultValue(attribute.getAttributeDefault());</span>
+						// optValue.setId(attribute.getProductOptionValue().getId());
+<span class="nc" id="L238">						optValue.setId(attribute.getId());</span>
+<span class="nc" id="L239">						optValue.setCode(attribute.getProductOptionValue().getCode());</span>
+
+<span class="nc" id="L241">						com.salesmanager.shop.model.catalog.product.attribute.ProductOptionValueDescription valueDescription = new com.salesmanager.shop.model.catalog.product.attribute.ProductOptionValueDescription();</span>
+<span class="nc" id="L242">						valueDescription.setLanguage(language.getCode());</span>
+						// optValue.setLang(language.getCode());
+<span class="nc bnc" id="L244" title="All 2 branches missed.">						if (attribute.getProductAttributePrice() != null</span>
+<span class="nc bnc" id="L245" title="All 2 branches missed.">								&amp;&amp; attribute.getProductAttributePrice().doubleValue() &gt; 0) {</span>
+<span class="nc" id="L246">							String formatedPrice = null;</span>
+							try {
+<span class="nc" id="L248">								formatedPrice = pricingService.getDisplayAmount(attribute.getProductAttributePrice(),</span>
+										store);
+<span class="nc" id="L250">								optValue.setPrice(formatedPrice);</span>
+<span class="nc" id="L251">							} catch (ServiceException e) {</span>
+<span class="nc" id="L252">								throw new ConversionRuntimeException(</span>
+										&quot;Error converting product option, an exception occured with pricingService&quot;, e);
+<span class="nc" id="L254">							}</span>
+						}
+
+<span class="nc bnc" id="L257" title="All 2 branches missed.">						if (!StringUtils.isBlank(attribute.getProductOptionValue().getProductOptionValueImage())) {</span>
+<span class="nc" id="L258">							optValue.setImage(imageUtils.buildProductPropertyImageUtils(store,</span>
+<span class="nc" id="L259">									attribute.getProductOptionValue().getProductOptionValueImage()));</span>
+						}
+<span class="nc" id="L261">						optValue.setSortOrder(0);</span>
+<span class="nc bnc" id="L262" title="All 2 branches missed.">						if (attribute.getProductOptionSortOrder() != null) {</span>
+<span class="nc" id="L263">							optValue.setSortOrder(attribute.getProductOptionSortOrder().intValue());</span>
+						}
+
+<span class="nc" id="L266">						List&lt;ProductOptionValueDescription&gt; podescriptions = optionValue.getDescriptionsSettoList();</span>
+<span class="nc" id="L267">						ProductOptionValueDescription podescription = null;</span>
+<span class="nc bnc" id="L268" title="All 4 branches missed.">						if (podescriptions != null &amp;&amp; podescriptions.size() &gt; 0) {</span>
+<span class="nc" id="L269">							podescription = podescriptions.get(0);</span>
+<span class="nc bnc" id="L270" title="All 2 branches missed.">							if (podescriptions.size() &gt; 1) {</span>
+<span class="nc bnc" id="L271" title="All 2 branches missed.">								for (ProductOptionValueDescription optionValueDescription : podescriptions) {</span>
+<span class="nc" id="L272">									if (optionValueDescription.getLanguage().getId().intValue() == language.getId()</span>
+<span class="nc bnc" id="L273" title="All 2 branches missed.">											.intValue()) {</span>
+<span class="nc" id="L274">										podescription = optionValueDescription;</span>
+<span class="nc" id="L275">										break;</span>
+									}
+<span class="nc" id="L277">								}</span>
+							}
+						}
+<span class="nc" id="L280">						valueDescription.setName(podescription.getName());</span>
+<span class="nc" id="L281">						valueDescription.setDescription(podescription.getDescription());</span>
+<span class="nc" id="L282">						optValue.setDescription(valueDescription);</span>
+
+<span class="nc bnc" id="L284" title="All 2 branches missed.">						if (opt != null) {</span>
+<span class="nc" id="L285">							opt.getOptionValues().add(optValue);</span>
+						}
+					}
+<span class="nc" id="L288">				}</span>
+			}
+		}
+		
+<span class="fc" id="L292">		ReadableProductVariant defaultInstance = null;</span>
+
+		// variants
+<span class="pc bpc" id="L295" title="1 of 2 branches missed.">		if (!CollectionUtils.isEmpty(source.getVariants()))</span>
+
+		{
+<span class="nc" id="L298">			List&lt;ReadableProductVariant&gt; instances = source</span>
+<span class="nc" id="L299">					.getVariants().stream()</span>
+<span class="nc" id="L300">					.map(i -&gt; readableProductVariantMapper.convert(i, store, language)).collect(Collectors.toList());</span>
+<span class="nc" id="L301">			destination.setVariants(instances);</span>
+			
+			/**
+			 * When an item has instances
+			 * Take default instance
+			 * 
+			 * - Set item price as default instance price
+			 * - Set default image as default instance image
+			 */
+			
+			//get default instance
+<span class="nc" id="L312">			defaultInstance = instances.stream().filter(i -&gt; i.isDefaultSelection()).findAny().orElse(null);</span>
+			
+
+			/**
+			 * variants options list variation color
+			 */
+
+			/**
+			 * Returns a list of ReadableProductOptions
+			 * 
+			 * name lang type code List ReadableProductOptionValueEntity name description
+			 * image order default
+			 */
+
+			/**
+			 * Create options from instance Create a list of option values
+			 */
+
+<span class="nc bnc" id="L330" title="All 2 branches missed.">			for (ProductVariant instance : source.getVariants()) {</span>
+<span class="nc" id="L331">				instanceToOption(selectableOptions, instance, store, language);</span>
+<span class="nc" id="L332">			}</span>
+
+		}
+
+<span class="pc bpc" id="L336" title="1 of 2 branches missed.">		if (selectableOptions != null) {</span>
+<span class="fc" id="L337">			List&lt;ReadableProductOption&gt; options = new ArrayList&lt;ReadableProductOption&gt;(selectableOptions.values());</span>
+<span class="fc" id="L338">			destination.setOptions(options);</span>
+		}
+		
+		// availability
+<span class="fc" id="L342">		ProductAvailability availability = null;</span>
+<span class="pc bpc" id="L343" title="1 of 2 branches missed.">		for (ProductAvailability a : source.getAvailabilities()) {</span>
+			// TODO validate region
+			// if(availability.getRegion().equals(Constants.ALL_REGIONS)) {//TODO REL 3.X
+			// accept a region
+			
+			/**
+			 * Default availability
+			 * store
+			 * product
+			 * instance null
+			 * region variant null
+			 */
+			
+			
+<span class="fc" id="L357">			availability = a;</span>
+<span class="pc bpc" id="L358" title="1 of 2 branches missed.">			destination.setQuantity(availability.getProductQuantity() == null ? 1 : availability.getProductQuantity());</span>
+<span class="fc" id="L359">			destination.setQuantityOrderMaximum(</span>
+<span class="pc bpc" id="L360" title="1 of 2 branches missed.">					availability.getProductQuantityOrderMax() == null ? 1 : availability.getProductQuantityOrderMax());</span>
+<span class="fc" id="L361">			destination.setQuantityOrderMinimum(</span>
+<span class="pc bpc" id="L362" title="1 of 2 branches missed.">					availability.getProductQuantityOrderMin() == null ? 1 : availability.getProductQuantityOrderMin());</span>
+<span class="pc bpc" id="L363" title="2 of 4 branches missed.">			if (availability.getProductQuantity().intValue() &gt; 0 &amp;&amp; destination.isAvailable()) {</span>
+<span class="fc" id="L364">				destination.setCanBePurchased(true);</span>
+			}
+			
+<span class="pc bpc" id="L367" title="2 of 4 branches missed.">			if(a.getProductVariant()==null &amp;&amp; StringUtils.isEmpty(a.getRegionVariant())) {</span>
+<span class="fc" id="L368">				break;</span>
+			}
+<span class="nc" id="L370">		}</span>
+		
+		//if default instance
+
+<span class="fc" id="L374">		destination.setSku(source.getSku());</span>
+
+		try {
+<span class="fc" id="L377">			FinalPrice price = pricingService.calculateProductPrice(source);</span>
+<span class="pc bpc" id="L378" title="1 of 2 branches missed.">			if (price != null) {</span>
+
+<span class="fc" id="L380">				destination.setFinalPrice(pricingService.getDisplayAmount(price.getFinalPrice(), store));</span>
+<span class="fc" id="L381">				destination.setPrice(price.getFinalPrice());</span>
+<span class="fc" id="L382">				destination.setOriginalPrice(pricingService.getDisplayAmount(price.getOriginalPrice(), store));</span>
+
+<span class="pc bpc" id="L384" title="1 of 2 branches missed.">				if (price.isDiscounted()) {</span>
+<span class="fc" id="L385">					destination.setDiscounted(true);</span>
+				}
+
+				// price appender
+<span class="pc bpc" id="L389" title="1 of 2 branches missed.">				if (availability != null) {</span>
+<span class="fc" id="L390">					Set&lt;ProductPrice&gt; prices = availability.getPrices();</span>
+<span class="pc bpc" id="L391" title="1 of 2 branches missed.">					if (!CollectionUtils.isEmpty(prices)) {</span>
+<span class="fc" id="L392">						ReadableProductPrice readableProductPrice = new ReadableProductPrice();</span>
+<span class="fc" id="L393">						readableProductPrice.setDiscounted(destination.isDiscounted());</span>
+<span class="fc" id="L394">						readableProductPrice.setFinalPrice(destination.getFinalPrice());</span>
+<span class="fc" id="L395">						readableProductPrice.setOriginalPrice(destination.getOriginalPrice());</span>
+
+<span class="fc" id="L397">						Optional&lt;ProductPrice&gt; pr = prices.stream()</span>
+<span class="fc" id="L398">								.filter(p -&gt; p.getCode().equals(ProductPrice.DEFAULT_PRICE_CODE)).findFirst();</span>
+
+<span class="fc" id="L400">						destination.setProductPrice(readableProductPrice);</span>
+
+<span class="pc bpc" id="L402" title="2 of 4 branches missed.">						if (pr.isPresent() &amp;&amp; language !=null) {</span>
+<span class="fc" id="L403">							readableProductPrice.setId(pr.get().getId());</span>
+<span class="fc" id="L404">							Optional&lt;ProductPriceDescription&gt; d = pr.get().getDescriptions().stream()</span>
+<span class="fc" id="L405">									.filter(desc -&gt; desc.getLanguage().getCode().equals(language.getCode()))</span>
+<span class="fc" id="L406">									.findFirst();</span>
+<span class="pc bpc" id="L407" title="1 of 2 branches missed.">							if (d.isPresent()) {</span>
+<span class="fc" id="L408">								com.salesmanager.shop.model.catalog.product.ProductPriceDescription priceDescription = new com.salesmanager.shop.model.catalog.product.ProductPriceDescription();</span>
+<span class="fc" id="L409">								priceDescription.setLanguage(language.getCode());</span>
+<span class="fc" id="L410">								priceDescription.setId(d.get().getId());</span>
+<span class="fc" id="L411">								priceDescription.setPriceAppender(d.get().getPriceAppender());</span>
+<span class="fc" id="L412">								readableProductPrice.setDescription(priceDescription);</span>
+							}
+						}
+
+					}
+				}
+
+			}
+
+<span class="nc" id="L421">		} catch (Exception e) {</span>
+<span class="nc" id="L422">			throw new ConversionRuntimeException(&quot;An error while converting product price&quot;, e);</span>
+<span class="fc" id="L423">		}</span>
+
+<span class="pc bpc" id="L425" title="1 of 2 branches missed.">		if (source.getProductReviewAvg() != null) {</span>
+<span class="fc" id="L426">			double avg = source.getProductReviewAvg().doubleValue();</span>
+<span class="fc" id="L427">			double rating = Math.round(avg * 2) / 2.0f;</span>
+<span class="fc" id="L428">			destination.setRating(rating);</span>
+		}
+
+<span class="pc bpc" id="L431" title="1 of 2 branches missed.">		if (source.getProductReviewCount() != null) {</span>
+<span class="fc" id="L432">			destination.setRatingCount(source.getProductReviewCount().intValue());</span>
+		}
+
+<span class="pc bpc" id="L435" title="1 of 2 branches missed.">		if (description != null) {</span>
+<span class="fc" id="L436">			com.salesmanager.shop.model.catalog.product.ProductDescription tragetDescription = populateDescription(</span>
+					description);
+<span class="fc" id="L438">			destination.setDescription(tragetDescription);</span>
+
+		}
+
+<span class="pc bpc" id="L442" title="1 of 2 branches missed.">		if (!CollectionUtils.isEmpty(source.getCategories())) {</span>
+<span class="fc" id="L443">			List&lt;ReadableCategory&gt; categoryList = new ArrayList&lt;ReadableCategory&gt;();</span>
+<span class="fc bfc" id="L444" title="All 2 branches covered.">			for (Category category : source.getCategories()) {</span>
+<span class="fc" id="L445">				ReadableCategory readableCategory = readableCategoryMapper.convert(category, store, language);</span>
+<span class="fc" id="L446">				categoryList.add(readableCategory);</span>
+
+<span class="fc" id="L448">			}</span>
+<span class="fc" id="L449">			destination.setCategories(categoryList);</span>
+		}
+
+<span class="fc" id="L452">		ProductSpecification specifications = new ProductSpecification();</span>
+<span class="fc" id="L453">		specifications.setHeight(source.getProductHeight());</span>
+<span class="fc" id="L454">		specifications.setLength(source.getProductLength());</span>
+<span class="fc" id="L455">		specifications.setWeight(source.getProductWeight());</span>
+<span class="fc" id="L456">		specifications.setWidth(source.getProductWidth());</span>
+<span class="pc bpc" id="L457" title="1 of 2 branches missed.">		if (!StringUtils.isBlank(store.getSeizeunitcode())) {</span>
+<span class="fc" id="L458">			specifications</span>
+<span class="fc" id="L459">					.setDimensionUnitOfMeasure(DimensionUnitOfMeasure.valueOf(store.getSeizeunitcode().toLowerCase()));</span>
+		}
+<span class="pc bpc" id="L461" title="1 of 2 branches missed.">		if (!StringUtils.isBlank(store.getWeightunitcode())) {</span>
+<span class="fc" id="L462">			specifications.setWeightUnitOfMeasure(WeightUnitOfMeasure.valueOf(store.getWeightunitcode().toLowerCase()));</span>
+		}
+<span class="fc" id="L464">		destination.setProductSpecifications(specifications);</span>
+
+<span class="fc" id="L466">		destination.setSortOrder(source.getSortOrder());</span>
+
+<span class="fc" id="L468">		return destination;</span>
+	}
+
+	private ReadableImage convertImage(Product product, ProductImage image, MerchantStore store) {
+<span class="nc" id="L472">		ReadableImage prdImage = new ReadableImage();</span>
+<span class="nc" id="L473">		prdImage.setImageName(image.getProductImage());</span>
+<span class="nc" id="L474">		prdImage.setDefaultImage(image.isDefaultImage());</span>
+
+		// TODO product variant image
+<span class="nc" id="L477">		StringBuilder imgPath = new StringBuilder();</span>
+<span class="nc" id="L478">		imgPath.append(imageUtils.getContextPath())</span>
+<span class="nc" id="L479">				.append(imageUtils.buildProductImageUtils(store, product.getSku(), image.getProductImage()));</span>
+
+<span class="nc" id="L481">		prdImage.setImageUrl(imgPath.toString());</span>
+<span class="nc" id="L482">		prdImage.setId(image.getId());</span>
+<span class="nc" id="L483">		prdImage.setImageType(image.getImageType());</span>
+<span class="nc bnc" id="L484" title="All 2 branches missed.">		if (image.getProductImageUrl() != null) {</span>
+<span class="nc" id="L485">			prdImage.setExternalUrl(image.getProductImageUrl());</span>
+		}
+<span class="nc bnc" id="L487" title="All 4 branches missed.">		if (image.getImageType() == 1 &amp;&amp; image.getProductImageUrl() != null) {// video</span>
+<span class="nc" id="L488">			prdImage.setVideoUrl(image.getProductImageUrl());</span>
+		}
+
+<span class="nc bnc" id="L491" title="All 2 branches missed.">		if (prdImage.isDefaultImage()) {</span>
+<span class="nc" id="L492">			prdImage.setDefaultImage(true);</span>
+		}
+
+<span class="nc" id="L495">		return prdImage;</span>
+	}
+
+	private com.salesmanager.shop.model.catalog.product.ProductDescription populateDescription(
+			ProductDescription description) {
+<span class="pc bpc" id="L500" title="1 of 2 branches missed.">		if (description == null) {</span>
+<span class="nc" id="L501">			return null;</span>
+		}
+
+<span class="fc" id="L504">		com.salesmanager.shop.model.catalog.product.ProductDescription tragetDescription = new com.salesmanager.shop.model.catalog.product.ProductDescription();</span>
+<span class="fc" id="L505">		tragetDescription.setFriendlyUrl(description.getSeUrl());</span>
+<span class="fc" id="L506">		tragetDescription.setName(description.getName());</span>
+<span class="fc" id="L507">		tragetDescription.setId(description.getId());</span>
+<span class="pc bpc" id="L508" title="1 of 2 branches missed.">		if (!StringUtils.isBlank(description.getMetatagTitle())) {</span>
+<span class="nc" id="L509">			tragetDescription.setTitle(description.getMetatagTitle());</span>
+		} else {
+<span class="fc" id="L511">			tragetDescription.setTitle(description.getName());</span>
+		}
+<span class="fc" id="L513">		tragetDescription.setMetaDescription(description.getMetatagDescription());</span>
+<span class="fc" id="L514">		tragetDescription.setDescription(description.getDescription());</span>
+<span class="fc" id="L515">		tragetDescription.setHighlights(description.getProductHighlight());</span>
+<span class="fc" id="L516">		tragetDescription.setLanguage(description.getLanguage().getCode());</span>
+<span class="fc" id="L517">		tragetDescription.setKeyWords(description.getMetatagKeywords());</span>
+
+<span class="pc bpc" id="L519" title="1 of 2 branches missed.">		if (description.getLanguage() != null) {</span>
+<span class="fc" id="L520">			tragetDescription.setLanguage(description.getLanguage().getCode());</span>
+		}
+<span class="fc" id="L522">		return tragetDescription;</span>
+	}
+
+	private ReadableProductProperty createProperty(ProductAttribute productAttribute, Language language) {
+
+<span class="nc" id="L527">		ReadableProductProperty attr = new ReadableProductProperty();</span>
+<span class="nc" id="L528">		attr.setId(productAttribute.getProductOption().getId());// attribute of the option</span>
+<span class="nc" id="L529">		attr.setType(productAttribute.getProductOption().getProductOptionType());</span>
+
+<span class="nc" id="L531">		List&lt;ProductOptionDescription&gt; descriptions = productAttribute.getProductOption().getDescriptionsSettoList();</span>
+
+<span class="nc" id="L533">		ReadableProductPropertyValue propertyValue = new ReadableProductPropertyValue();</span>
+
+<span class="nc bnc" id="L535" title="All 4 branches missed.">		if (descriptions != null &amp;&amp; descriptions.size() &gt; 0) {</span>
+<span class="nc bnc" id="L536" title="All 2 branches missed.">			for (ProductOptionDescription optionDescription : descriptions) {</span>
+<span class="nc" id="L537">				com.salesmanager.shop.model.catalog.product.attribute.ProductOptionValueDescription productOptionValueDescription = new com.salesmanager.shop.model.catalog.product.attribute.ProductOptionValueDescription();</span>
+<span class="nc" id="L538">				productOptionValueDescription.setId(optionDescription.getId());</span>
+<span class="nc" id="L539">				productOptionValueDescription.setLanguage(optionDescription.getLanguage().getCode());</span>
+<span class="nc" id="L540">				productOptionValueDescription.setName(optionDescription.getName());</span>
+<span class="nc" id="L541">				propertyValue.getValues().add(productOptionValueDescription);</span>
+
+<span class="nc" id="L543">			}</span>
+		}
+
+<span class="nc" id="L546">		attr.setCode(productAttribute.getProductOption().getCode());</span>
+<span class="nc" id="L547">		return attr;</span>
+
+	}
+
+	private Optional&lt;ReadableProductOptionValue&gt; optionValue(ProductOptionValue optionValue, MerchantStore store,
+			Language language) {
+
+<span class="nc bnc" id="L554" title="All 2 branches missed.">		if (optionValue == null) {</span>
+<span class="nc" id="L555">			return Optional.empty();</span>
+		}
+
+<span class="nc" id="L558">		ReadableProductOptionValue optValue = new ReadableProductOptionValue();</span>
+
+<span class="nc" id="L560">		com.salesmanager.shop.model.catalog.product.attribute.ProductOptionValueDescription valueDescription = new com.salesmanager.shop.model.catalog.product.attribute.ProductOptionValueDescription();</span>
+<span class="nc" id="L561">		valueDescription.setLanguage(language.getCode());</span>
+
+<span class="nc bnc" id="L563" title="All 2 branches missed.">		if (!StringUtils.isBlank(optionValue.getProductOptionValueImage())) {</span>
+<span class="nc" id="L564">			optValue.setImage(</span>
+<span class="nc" id="L565">					imageUtils.buildProductPropertyImageUtils(store, optionValue.getProductOptionValueImage()));</span>
+		}
+<span class="nc" id="L567">		optValue.setSortOrder(0);</span>
+
+<span class="nc bnc" id="L569" title="All 2 branches missed.">		if (optionValue.getProductOptionValueSortOrder() != null) {</span>
+<span class="nc" id="L570">			optValue.setSortOrder(optionValue.getProductOptionValueSortOrder().intValue());</span>
+		}
+
+<span class="nc" id="L573">		optValue.setCode(optionValue.getCode());</span>
+
+<span class="nc" id="L575">		List&lt;ProductOptionValueDescription&gt; podescriptions = optionValue.getDescriptionsSettoList();</span>
+<span class="nc" id="L576">		ProductOptionValueDescription podescription = null;</span>
+<span class="nc bnc" id="L577" title="All 4 branches missed.">		if (podescriptions != null &amp;&amp; podescriptions.size() &gt; 0) {</span>
+<span class="nc" id="L578">			podescription = podescriptions.get(0);</span>
+<span class="nc bnc" id="L579" title="All 2 branches missed.">			if (podescriptions.size() &gt; 1) {</span>
+<span class="nc bnc" id="L580" title="All 2 branches missed.">				for (ProductOptionValueDescription optionValueDescription : podescriptions) {</span>
+<span class="nc bnc" id="L581" title="All 2 branches missed.">					if (optionValueDescription.getLanguage().getId().intValue() == language.getId().intValue()) {</span>
+<span class="nc" id="L582">						podescription = optionValueDescription;</span>
+<span class="nc" id="L583">						break;</span>
+					}
+<span class="nc" id="L585">				}</span>
+			}
+		}
+<span class="nc" id="L588">		valueDescription.setName(podescription.getName());</span>
+<span class="nc" id="L589">		valueDescription.setDescription(podescription.getDescription());</span>
+<span class="nc" id="L590">		optValue.setDescription(valueDescription);</span>
+
+<span class="nc" id="L592">		return Optional.of(optValue);</span>
+
+	}
+
+	private void instanceToOption(TreeMap&lt;Long, ReadableProductOption&gt; selectableOptions, ProductVariant instance,
+			MerchantStore store, Language language) {
+
+
+<span class="nc" id="L600">		ReadableProductOption option = this.option(selectableOptions, instance.getVariation().getProductOption(), language);</span>
+<span class="nc" id="L601">		option.setVariant(true);</span>
+
+
+		// take care of option value
+<span class="nc" id="L605">		Optional&lt;ReadableProductOptionValue&gt; optionOptionValue = this</span>
+<span class="nc" id="L606">				.optionValue(instance.getVariation().getProductOptionValue(), store, language);</span>
+
+<span class="nc bnc" id="L608" title="All 2 branches missed.">		if (optionOptionValue.isPresent()) {</span>
+<span class="nc" id="L609">			optionOptionValue.get().setId(instance.getId());</span>
+<span class="nc bnc" id="L610" title="All 2 branches missed.">			if (instance.isDefaultSelection()) {</span>
+<span class="nc" id="L611">				optionOptionValue.get().setDefaultValue(true);</span>
+			}
+<span class="nc" id="L613">			addOptionValue(option, optionOptionValue.get());</span>
+
+		}
+
+<span class="nc bnc" id="L617" title="All 2 branches missed.">		if (instance.getVariationValue() != null) {</span>
+<span class="nc" id="L618">			ReadableProductOption optionValue = this.option(selectableOptions, instance.getVariationValue().getProductOption(), language);</span>
+
+			// take care of option value
+<span class="nc" id="L621">			Optional&lt;ReadableProductOptionValue&gt; optionValueOptionValue = this</span>
+<span class="nc" id="L622">					.optionValue(instance.getVariationValue().getProductOptionValue(), store, language);</span>
+
+
+<span class="nc bnc" id="L625" title="All 2 branches missed.">			if (optionValueOptionValue.isPresent()) {</span>
+<span class="nc" id="L626">				optionValueOptionValue.get().setId(instance.getId());</span>
+<span class="nc bnc" id="L627" title="All 2 branches missed.">				if (instance.isDefaultSelection()) {</span>
+<span class="nc" id="L628">					optionValueOptionValue.get().setDefaultValue(true);</span>
+				}
+<span class="nc" id="L630">				addOptionValue(optionValue, optionValueOptionValue.get());</span>
+			}
+
+		}
+
+<span class="nc" id="L635">	}</span>
+	
+	private void addOptionValue(ReadableProductOption option, ReadableProductOptionValue optionValue) {
+		
+<span class="nc" id="L639">		ReadableProductOptionValue find = option.getOptionValues().stream()</span>
+<span class="nc bnc" id="L640" title="All 2 branches missed.">				  .filter(optValue -&gt; optValue.getCode()==optionValue.getCode())</span>
+<span class="nc" id="L641">				  .findAny()</span>
+<span class="nc" id="L642">				  .orElse(null);</span>
+		
+<span class="nc bnc" id="L644" title="All 2 branches missed.">		if(find == null) {</span>
+<span class="nc" id="L645">			option.getOptionValues().add(optionValue);</span>
+		}
+<span class="nc" id="L647">	}</span>
+	
+	private ReadableProductOption option(TreeMap&lt;Long, ReadableProductOption&gt; selectableOptions, ProductOption option, Language language) {
+<span class="nc bnc" id="L650" title="All 2 branches missed.">		if(selectableOptions.containsKey(option.getId())) {</span>
+<span class="nc" id="L651">			return selectableOptions.get(option.getId());</span>
+		}
+
+<span class="nc" id="L654">		ReadableProductOption readable = this.createOption(option, language);</span>
+<span class="nc" id="L655">		selectableOptions.put(readable.getId(), readable);</span>
+<span class="nc" id="L656">		return readable;</span>
+	}
+
+	private ReadableProductOption createOption(ProductOption opt, Language language) {
+
+<span class="nc" id="L661">		ReadableProductOption option = new ReadableProductOption();</span>
+<span class="nc" id="L662">		option.setId(opt.getId());// attribute of the option</span>
+<span class="nc" id="L663">		option.setType(opt.getProductOptionType());</span>
+<span class="nc" id="L664">		option.setCode(opt.getCode());</span>
+<span class="nc" id="L665">		List&lt;ProductOptionDescription&gt; descriptions = opt.getDescriptionsSettoList();</span>
+<span class="nc" id="L666">		ProductOptionDescription description = null;</span>
+<span class="nc bnc" id="L667" title="All 4 branches missed.">		if (descriptions != null &amp;&amp; descriptions.size() &gt; 0) {</span>
+<span class="nc" id="L668">			description = descriptions.get(0);</span>
+<span class="nc bnc" id="L669" title="All 2 branches missed.">			if (descriptions.size() &gt; 1) {</span>
+<span class="nc bnc" id="L670" title="All 2 branches missed.">				for (ProductOptionDescription optionDescription : descriptions) {</span>
+<span class="nc bnc" id="L671" title="All 2 branches missed.">					if (optionDescription.getLanguage().getCode().equals(language.getCode())) {</span>
+<span class="nc" id="L672">						description = optionDescription;</span>
+<span class="nc" id="L673">						break;</span>
+					}
+<span class="nc" id="L675">				}</span>
+			}
+		}
+
+<span class="nc bnc" id="L679" title="All 2 branches missed.">		if (description == null) {</span>
+<span class="nc" id="L680">			return null;</span>
+		}
+
+<span class="nc" id="L683">		option.setLang(language.getCode());</span>
+<span class="nc" id="L684">		option.setName(description.getName());</span>
+<span class="nc" id="L685">		option.setCode(opt.getCode());</span>
+
+<span class="nc" id="L687">		return option;</span>
+
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>
